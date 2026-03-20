@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useUpdateApplication } from "@workspace/api-client-react";
 import { GS_STATUS_COLORS, GS_STATUS_CHOICES } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
-import { GripVertical, User, BookOpen, Calendar, UserCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { GripVertical, User, BookOpen, Calendar, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Application {
@@ -227,31 +227,6 @@ export function KanbanBoard({
   const updateMut = useUpdateApplication();
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const dragAppRef = useRef<number | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const updateArrows = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 4);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // Small delay to let the DOM settle before measuring
-    const t = setTimeout(updateArrows, 50);
-    el.addEventListener("scroll", updateArrows, { passive: true });
-    const ro = new ResizeObserver(updateArrows);
-    ro.observe(el);
-    return () => { clearTimeout(t); el.removeEventListener("scroll", updateArrows); ro.disconnect(); };
-  }, [updateArrows, statusChoices.length, applications.length]);
-
-  const scrollBy = (amount: number) => {
-    scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
-  };
 
   const handleDragStart = (e: React.DragEvent, appId: number) => {
     e.dataTransfer.effectAllowed = "move";
@@ -282,49 +257,23 @@ export function KanbanBoard({
   }, {});
 
   return (
-    <div className="relative">
-      {/* Left arrow */}
-      {canScrollLeft && (
-        <button
-          onClick={() => scrollBy(-310)}
-          className="fixed left-[76px] top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-foreground hover:bg-primary hover:text-white hover:border-primary transition-all"
-          aria-label="Scroll left"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-      )}
-
-      {/* Right arrow */}
-      {canScrollRight && (
-        <button
-          onClick={() => scrollBy(310)}
-          className="fixed right-4 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-foreground hover:bg-primary hover:text-white hover:border-primary transition-all"
-          aria-label="Scroll right"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      )}
-
-      {/* Board — scrolls horizontally, grows vertically with content */}
-      <div
-        ref={scrollRef}
-        className="flex gap-3 pb-2 items-start kanban-scroll"
-        style={{ overflowX: "auto" }}
-        onDragEnd={handleDragEnd}
-      >
-        {statusChoices.map((status) => (
-          <KanbanColumn
-            key={status}
-            status={status}
-            cards={columnMap[status] || []}
-            colorMap={statusColors}
-            draggingId={draggingId}
-            onDragStart={handleDragStart}
-            onDrop={handleDrop}
-            onCardClick={onCardClick}
-          />
-        ))}
-      </div>
+    <div
+      className="flex gap-3 pb-2 items-start kanban-scroll"
+      style={{ overflowX: "auto" }}
+      onDragEnd={handleDragEnd}
+    >
+      {statusChoices.map((status) => (
+        <KanbanColumn
+          key={status}
+          status={status}
+          cards={columnMap[status] || []}
+          colorMap={statusColors}
+          draggingId={draggingId}
+          onDragStart={handleDragStart}
+          onDrop={handleDrop}
+          onCardClick={onCardClick}
+        />
+      ))}
     </div>
   );
 }
