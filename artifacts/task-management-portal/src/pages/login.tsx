@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useForgotPassword, useResetPassword, useVerifyOtp } from "@workspace/api-client-react";
-import { Button, Input, Label, Card } from "@/components/ui-elements";
-import { Files, Lock, Mail, ArrowLeft, KeyRound, ShieldCheck, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Button, Input, Label } from "@/components/ui-elements";
+import {
+  Files, Lock, Mail, ArrowLeft, KeyRound, ShieldCheck,
+  AlertTriangle, Eye, EyeOff, CheckCircle2, GraduationCap,
+  Globe, BarChart3, Users,
+} from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +34,7 @@ function PasswordInput({
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
-      <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
       <Input
         type={show ? "text" : "password"}
         required={required}
@@ -38,14 +42,17 @@ function PasswordInput({
         autoFocus={autoFocus}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className={cn("pl-10 pr-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary", className)}
+        className={cn(
+          "pl-10 pr-10 h-11 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus-visible:border-primary focus-visible:ring-primary/20",
+          className
+        )}
         placeholder={placeholder || "••••••••"}
       />
       <button
         type="button"
         tabIndex={-1}
         onClick={() => setShow(s => !s)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
         aria-label={show ? "Hide password" : "Show password"}
       >
         {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -53,6 +60,29 @@ function PasswordInput({
     </div>
   );
 }
+
+function EmailInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <div className="relative">
+      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+      <Input
+        type="email"
+        required
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="pl-10 h-11 bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus-visible:border-primary focus-visible:ring-primary/20"
+        placeholder={placeholder || "you@example.com"}
+      />
+    </div>
+  );
+}
+
+const features = [
+  { icon: GraduationCap, label: "Track student visa & university applications" },
+  { icon: Globe,         label: "Manage GS & Offer department workflows" },
+  { icon: BarChart3,     label: "Real-time performance analytics" },
+  { icon: Users,         label: "Role-based team collaboration" },
+];
 
 export default function Login() {
   const { login } = useAuth();
@@ -187,192 +217,244 @@ export default function Login() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-slate-900">
-      <img
-        src={`${import.meta.env.BASE_URL}images/auth-bg.png`}
-        alt="Background"
-        className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent" />
+  const stepTitle: Record<Step, string> = {
+    credentials:      "Welcome back",
+    otp:              "Verify your identity",
+    forgot:           "Reset your password",
+    forgot_done:      "Check your inbox",
+    reset:            "Set a new password",
+    password_expired: "Password expired",
+  };
 
-      <div className="relative z-10 w-full max-w-md px-4">
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-blue-400 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-primary/30 rotate-3 hover:rotate-0 transition-transform">
-            <Files className="w-8 h-8 text-white" />
+  const stepSub: Record<Step, string> = {
+    credentials:      "Sign in to your account to continue",
+    otp:              "Enter the 6-digit code sent to your email",
+    forgot:           "We'll send a reset link to your email",
+    forgot_done:      "A reset link has been sent to your email",
+    reset:            "Choose a strong new password",
+    password_expired: "Your password must be updated before continuing",
+  };
+
+  return (
+    <div className="min-h-screen flex">
+      {/* ── Left panel: branding ── */}
+      <div className="hidden lg:flex lg:w-[52%] bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 relative overflow-hidden flex-col justify-between p-12">
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: "radial-gradient(circle at 25% 25%, #3b82f6 0%, transparent 50%), radial-gradient(circle at 75% 75%, #6366f1 0%, transparent 50%)" }}
+        />
+        <div className="absolute inset-0"
+          style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
+        />
+
+        {/* Logo */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <Files className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="text-white font-bold text-lg leading-tight">Admission Task</div>
+              <div className="text-blue-300 text-sm">Management Portal</div>
+            </div>
           </div>
-          <h1 className="text-3xl font-display font-bold text-white mb-2 tracking-tight">
-            {step === "credentials"      && "Welcome Back"}
-            {step === "otp"              && "Verify Your Identity"}
-            {step === "forgot"           && "Reset Password"}
-            {step === "forgot_done"      && "Check Your Email"}
-            {step === "reset"            && "Set New Password"}
-            {step === "password_expired" && "Password Expired"}
-          </h1>
-          <p className="text-slate-400">
-            {step === "credentials"      && "Sign in to the Task Management Portal"}
-            {step === "otp"              && "Enter the code sent to your email"}
-            {step === "forgot"           && "We'll send a reset link to your email"}
-            {step === "forgot_done"      && "A password reset link has been sent"}
-            {step === "reset"            && "Choose a new password for your account"}
-            {step === "password_expired" && "Your password must be updated every 90 days"}
-          </p>
         </div>
 
-        <Card className="p-8 glass-panel border-white/10 bg-white/5">
+        {/* Hero content */}
+        <div className="relative z-10">
+          <h2 className="text-4xl font-bold text-white leading-tight mb-4">
+            Streamline your<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-300">
+              admissions workflow
+            </span>
+          </h2>
+          <p className="text-slate-400 text-lg mb-10 leading-relaxed">
+            The all-in-one platform for managing student visa and university applications.
+          </p>
+          <div className="space-y-4">
+            {features.map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                  <Icon className="w-4 h-4 text-blue-300" />
+                </div>
+                <span className="text-slate-300 text-sm">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 text-slate-500 text-xs">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            System Online · Secure connection
+          </div>
+        </div>
+      </div>
+
+      {/* ── Right panel: form ── */}
+      <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-12">
+        {/* Mobile logo */}
+        <div className="flex items-center gap-2.5 mb-10 lg:hidden">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow">
+            <Files className="w-5 h-5 text-white" />
+          </div>
+          <span className="font-bold text-slate-800 text-lg">Admission Task Management</span>
+        </div>
+
+        <div className="w-full max-w-[400px]">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">{stepTitle[step]}</h1>
+            <p className="text-slate-500 text-sm">{stepSub[step]}</p>
+          </div>
+
+          {/* Alerts */}
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium flex items-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-destructive mr-2" />
+            <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               {error}
             </div>
           )}
           {info && !error && (
-            <div className="mb-4 p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
+            <div className="mb-5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
               {info}
             </div>
           )}
 
-          {/* ── Step: credentials ── */}
+          {/* ── credentials ── */}
           {step === "credentials" && (
             <form onSubmit={handleCredentials} className="space-y-5">
-              <div className="space-y-2">
-                <Label className="text-slate-200">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <Input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                    className="pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary"
-                    placeholder="admin@taskportal.com" />
+              <div className="space-y-1.5">
+                <Label className="text-slate-700 text-sm font-medium">Email address</Label>
+                <EmailInput value={email} onChange={setEmail} placeholder="admin@example.com" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-slate-700 text-sm font-medium">Password</Label>
+                  <button type="button" onClick={() => { setError(""); setStep("forgot"); }}
+                    className="text-xs text-primary hover:underline font-medium">
+                    Forgot password?
+                  </button>
                 </div>
+                <PasswordInput value={password} onChange={setPassword} required />
               </div>
-              <div className="space-y-2">
-                <Label className="text-slate-200">Password</Label>
-                <PasswordInput value={password} onChange={setPassword} placeholder="••••••••" required />
-              </div>
-              <div className="flex justify-end">
-                <button type="button" onClick={() => { setError(""); setStep("forgot"); }}
-                  className="text-xs text-primary hover:underline">
-                  Forgot password?
-                </button>
-              </div>
-              <Button type="submit" className="w-full text-lg h-12" isLoading={isLoading}>
-                Sign In
+              <Button type="submit" className="w-full h-11 text-base font-semibold" isLoading={isLoading}>
+                Sign in
               </Button>
             </form>
           )}
 
-          {/* ── Step: OTP ── */}
+          {/* ── OTP ── */}
           {step === "otp" && (
             <form onSubmit={handleOtp} className="space-y-5">
-              <div className="space-y-2">
-                <Label className="text-slate-200">Verification Code</Label>
+              <div className="space-y-1.5">
+                <Label className="text-slate-700 text-sm font-medium">Verification code</Label>
                 <div className="relative">
-                  <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <Input
                     type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
                     required value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                    className="pl-10 bg-white/10 border-white/10 text-white text-xl tracking-widest text-center font-bold placeholder:text-slate-500 focus-visible:border-primary"
+                    className="pl-10 h-11 bg-slate-50 border-slate-200 text-slate-800 text-2xl tracking-[0.5em] text-center font-bold placeholder:text-slate-400 placeholder:text-base placeholder:tracking-normal focus-visible:border-primary"
                     placeholder="000000" autoFocus />
                 </div>
                 <p className="text-xs text-slate-400">Code expires in 10 minutes.</p>
               </div>
-              <Button type="submit" className="w-full text-lg h-12" isLoading={isLoading}>
-                Verify & Sign In
+              <Button type="submit" className="w-full h-11 text-base font-semibold" isLoading={isLoading}>
+                Verify &amp; Sign In
               </Button>
               <button type="button" onClick={() => { setStep("credentials"); setOtpCode(""); setError(""); setInfo(""); }}
-                className="w-full flex items-center justify-center gap-1.5 text-sm text-slate-400 hover:text-white mt-1">
-                <ArrowLeft className="w-4 h-4" />Back to sign in
+                className="w-full flex items-center justify-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors">
+                <ArrowLeft className="w-4 h-4" /> Back to sign in
               </button>
             </form>
           )}
 
-          {/* ── Step: forgot password ── */}
+          {/* ── forgot password ── */}
           {step === "forgot" && (
             <form onSubmit={handleForgot} className="space-y-5">
-              <div className="space-y-2">
-                <Label className="text-slate-200">Your Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <Input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                    className="pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary"
-                    placeholder="you@example.com" />
-                </div>
+              <div className="space-y-1.5">
+                <Label className="text-slate-700 text-sm font-medium">Your email address</Label>
+                <EmailInput value={email} onChange={setEmail} placeholder="you@example.com" />
               </div>
-              <Button type="submit" className="w-full text-lg h-12" isLoading={isLoading || forgotMut.isPending}>
+              <Button type="submit" className="w-full h-11 text-base font-semibold" isLoading={isLoading || forgotMut.isPending}>
                 Send Reset Link
               </Button>
               <button type="button" onClick={() => { setStep("credentials"); setError(""); }}
-                className="w-full flex items-center justify-center gap-1.5 text-sm text-slate-400 hover:text-white">
-                <ArrowLeft className="w-4 h-4" />Back to sign in
+                className="w-full flex items-center justify-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors">
+                <ArrowLeft className="w-4 h-4" /> Back to sign in
               </button>
             </form>
           )}
 
-          {/* ── Step: forgot done ── */}
+          {/* ── forgot done ── */}
           {step === "forgot_done" && (
-            <div className="space-y-5 text-center">
-              <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto">
-                <Mail className="w-8 h-8 text-green-400" />
+            <div className="space-y-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center mx-auto">
+                <Mail className="w-7 h-7 text-emerald-500" />
               </div>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                If <strong className="text-white">{email}</strong> is registered, a password reset link has been sent.
-                Please check your inbox (and spam folder).
-              </p>
-              <Button variant="outline" className="w-full border-white/10 text-white hover:bg-white/10"
+              <div>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  If <strong className="text-slate-900">{email}</strong> is registered, a password reset link has been sent.
+                </p>
+                <p className="text-slate-400 text-xs mt-1">Check your inbox and spam folder.</p>
+              </div>
+              <Button variant="outline" className="w-full h-11"
                 onClick={() => { setStep("credentials"); setError(""); setInfo(""); }}>
-                <ArrowLeft className="w-4 h-4 mr-2" />Back to Sign In
+                <ArrowLeft className="w-4 h-4 mr-2" /> Back to Sign In
               </Button>
             </div>
           )}
 
-          {/* ── Step: reset password ── */}
+          {/* ── reset password ── */}
           {step === "reset" && (
             <form onSubmit={handleReset} className="space-y-5">
-              <div className="space-y-2">
-                <Label className="text-slate-200">New Password</Label>
+              <div className="space-y-1.5">
+                <Label className="text-slate-700 text-sm font-medium">New password</Label>
                 <PasswordInput value={newPassword} onChange={setNewPassword} icon={KeyRound} required minLength={6} />
               </div>
-              <div className="space-y-2">
-                <Label className="text-slate-200">Confirm Password</Label>
+              <div className="space-y-1.5">
+                <Label className="text-slate-700 text-sm font-medium">Confirm new password</Label>
                 <PasswordInput
                   value={confirmPassword} onChange={setConfirmPassword} icon={KeyRound} required minLength={6}
-                  className={confirmPassword && confirmPassword !== newPassword ? "border-destructive" : ""}
+                  className={confirmPassword && confirmPassword !== newPassword ? "border-red-400 focus-visible:border-red-400" : ""}
                 />
               </div>
-              <Button type="submit" className="w-full text-lg h-12" isLoading={isLoading || resetMut.isPending}>
+              <Button type="submit" className="w-full h-11 text-base font-semibold" isLoading={isLoading || resetMut.isPending}>
                 Set New Password
               </Button>
             </form>
           )}
 
-          {/* ── Step: password expired (force change) ── */}
+          {/* ── password expired ── */}
           {step === "password_expired" && (
             <form onSubmit={handleExpiredPasswordChange} className="space-y-5">
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>Your password must be changed before you can continue. Please choose a strong new password.</span>
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" />
+                <span>Your password must be changed before you can continue.</span>
               </div>
-              <div className="space-y-2">
-                <Label className="text-slate-200">Current Password</Label>
-                <PasswordInput value={expiredCurrentPassword} onChange={setExpiredCurrentPassword} placeholder="Your current password" required />
+              <div className="space-y-1.5">
+                <Label className="text-slate-700 text-sm font-medium">Current password</Label>
+                <PasswordInput value={expiredCurrentPassword} onChange={setExpiredCurrentPassword} required />
               </div>
-              <div className="space-y-2">
-                <Label className="text-slate-200">New Password</Label>
-                <PasswordInput value={expiredNewPassword} onChange={setExpiredNewPassword} icon={KeyRound}
-                  placeholder="Min 8 chars, upper, lower, number, symbol" required />
+              <div className="space-y-1.5">
+                <Label className="text-slate-700 text-sm font-medium">New password</Label>
+                <PasswordInput value={expiredNewPassword} onChange={setExpiredNewPassword} icon={KeyRound} required />
               </div>
-              <div className="space-y-2">
-                <Label className="text-slate-200">Confirm New Password</Label>
+              <div className="space-y-1.5">
+                <Label className="text-slate-700 text-sm font-medium">Confirm new password</Label>
                 <PasswordInput
                   value={expiredConfirmPassword} onChange={setExpiredConfirmPassword} icon={KeyRound} required
-                  className={expiredConfirmPassword && expiredConfirmPassword !== expiredNewPassword ? "border-destructive" : ""}
+                  className={expiredConfirmPassword && expiredConfirmPassword !== expiredNewPassword ? "border-red-400" : ""}
                 />
               </div>
-              <Button type="submit" className="w-full text-lg h-12" isLoading={isLoading}>
-                Update Password & Sign In
+              <Button type="submit" className="w-full h-11 text-base font-semibold" isLoading={isLoading}>
+                Update Password &amp; Sign In
               </Button>
             </form>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );

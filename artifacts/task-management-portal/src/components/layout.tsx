@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Files, CheckCircle, Users, GraduationCap,
   Building2, Settings, LogOut, Menu, Briefcase, FileCheck2,
   Globe, BarChart3, UserCheck, Calendar, KeyRound, AlertTriangle,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button, Input, Label, Modal } from "./ui-elements";
@@ -78,6 +78,40 @@ function useInactivityLogout(logout: () => void) {
 
 // ─── Change password modal ───────────────────────────────────────────────────
 
+function PasswordField({
+  label, value, onChange, placeholder, minLength, className,
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; minLength?: number; className?: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="relative">
+        <Input
+          type={show ? "text" : "password"}
+          required
+          minLength={minLength}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder || "••••••••"}
+          className={cn("pr-10", className)}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setShow(s => !s)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={show ? "Hide password" : "Show password"}
+        >
+          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ChangePasswordModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [current, setCurrent] = useState("");
   const [next, setNext]       = useState("");
@@ -109,19 +143,12 @@ function ChangePasswordModal({ open, onClose }: { open: boolean; onClose: () => 
         {error && (
           <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm border border-destructive/20">{error}</div>
         )}
-        <div className="space-y-2">
-          <Label>Current Password</Label>
-          <Input type="password" required value={current} onChange={e => setCurrent(e.target.value)} placeholder="••••••••" />
-        </div>
-        <div className="space-y-2">
-          <Label>New Password</Label>
-          <Input type="password" required minLength={6} value={next} onChange={e => setNext(e.target.value)} placeholder="••••••••" />
-        </div>
-        <div className="space-y-2">
-          <Label>Confirm New Password</Label>
-          <Input type="password" required minLength={6} value={confirm} onChange={e => setConfirm(e.target.value)}
-            className={cn(confirm && confirm !== next && "border-destructive")} placeholder="••••••••" />
-        </div>
+        <PasswordField label="Current Password" value={current} onChange={setCurrent} />
+        <PasswordField label="New Password" value={next} onChange={setNext} minLength={6} />
+        <PasswordField
+          label="Confirm New Password" value={confirm} onChange={setConfirm} minLength={6}
+          className={cn(confirm && confirm !== next && "border-destructive")}
+        />
         <div className="flex justify-end gap-3 pt-2 border-t">
           <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
           <Button type="submit" isLoading={mut.isPending}>Update Password</Button>
