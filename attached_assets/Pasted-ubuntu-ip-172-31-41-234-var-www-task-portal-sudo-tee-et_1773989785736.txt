@@ -1,0 +1,31 @@
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo tee /etc/task-portal.env > /dev/null <<EOF
+DATABASE_URL=postgresql:///task_portal?host=/var/run/postgresql
+SESSION_SECRET=$(openssl rand -hex 32)
+EOF
+
+sudo systemctl restart task-portal-api
+sleep 3
+sudo systemctl status task-portal-api
+sudo journalctl -u task-portal-api -n 15 --no-pager
+● task-portal-api.service - Task Portal API
+     Loaded: loaded (/etc/systemd/system/task-portal-api.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Fri 2026-03-20 06:57:25 UTC; 1s ago
+    Process: 3158080 ExecStart=/var/www/task-portal/venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 (code=exited, status=3)
+   Main PID: 3158080 (code=exited, status=3)
+        CPU: 1.394s
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]:     return dialect.connect(*cargs_tup, **cparams)
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]:   File "/var/www/task-portal/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]:     return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]:   File "/var/www/task-portal/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]:     conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]: sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: No such file or directory
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]:         Is the server running locally and accepting connections on that socket?
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]: (Background on this error at: https://sqlalche.me/e/20/e3q8)
+Mar 20 06:57:25 ip-172-31-41-234 python[3158080]: ERROR:    Application startup failed. Exiting.
+Mar 20 06:57:25 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=3/NOTIMPLEMENTED
+Mar 20 06:57:25 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:57:25 ip-172-31-41-234 systemd[1]: task-portal-api.service: Consumed 1.394s CPU time.
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ 
