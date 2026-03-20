@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useUpdateApplication } from "@workspace/api-client-react";
 import { GS_STATUS_COLORS, GS_STATUS_CHOICES } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -147,7 +147,7 @@ function KanbanCard({
   );
 }
 
-function KanbanColumn({
+function KanbanCardColumn({
   status,
   cards,
   colorMap,
@@ -165,53 +165,35 @@ function KanbanColumn({
   onCardClick?: (app: Application) => void;
 }) {
   const [isOver, setIsOver] = useState(false);
-  const color = colorMap[status] || { bg: "#f1f5f9", text: "#64748b" };
 
   return (
-    <div className="flex flex-col w-[290px] min-w-[290px] max-w-[290px] shrink-0">
-      {/* Sticky column header */}
-      <div
-        className="sticky top-0 z-10 flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide shrink-0"
-        style={{ backgroundColor: color.bg, color: color.text }}
-      >
-        <span className="truncate">{status}</span>
-        <span
-          className="ml-2 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
-          style={{ backgroundColor: color.text + "22", color: color.text }}
-        >
-          {cards.length}
-        </span>
-      </div>
-
-      {/* Card list — grows with content, no internal scroll */}
-      <div
-        className={cn(
-          "rounded-b-xl p-2 space-y-2 transition-colors",
-          isOver ? "bg-primary/5 ring-2 ring-primary/30 ring-inset" : "bg-muted/40"
-        )}
-        onDragOver={(e) => { e.preventDefault(); setIsOver(true); }}
-        onDragLeave={() => setIsOver(false)}
-        onDrop={(e) => { e.preventDefault(); setIsOver(false); onDrop(status); }}
-      >
-        {cards.length === 0 && (
-          <div className="flex items-center justify-center text-xs text-muted-foreground/40 italic select-none py-6">
-            {isOver ? "Drop here" : "No applications"}
-          </div>
-        )}
-        {cards.map((app) => (
-          <KanbanCard
-            key={app.id}
-            app={app}
-            colorMap={colorMap}
-            onDragStart={onDragStart}
-            isDragging={draggingId === app.id}
-            onCardClick={onCardClick}
-          />
-        ))}
-        {isOver && cards.length > 0 && (
-          <div className="h-1.5 rounded-full bg-primary/40 mx-1" />
-        )}
-      </div>
+    <div
+      className={cn(
+        "w-[290px] min-w-[290px] max-w-[290px] shrink-0 rounded-b-xl p-2 space-y-2 transition-colors",
+        isOver ? "bg-primary/5 ring-2 ring-primary/30 ring-inset" : "bg-muted/40"
+      )}
+      onDragOver={(e) => { e.preventDefault(); setIsOver(true); }}
+      onDragLeave={() => setIsOver(false)}
+      onDrop={(e) => { e.preventDefault(); setIsOver(false); onDrop(status); }}
+    >
+      {cards.length === 0 && (
+        <div className="flex items-center justify-center text-xs text-muted-foreground/40 italic select-none py-6">
+          {isOver ? "Drop here" : "No applications"}
+        </div>
+      )}
+      {cards.map((app) => (
+        <KanbanCard
+          key={app.id}
+          app={app}
+          colorMap={colorMap}
+          onDragStart={onDragStart}
+          isDragging={draggingId === app.id}
+          onCardClick={onCardClick}
+        />
+      ))}
+      {isOver && cards.length > 0 && (
+        <div className="h-1.5 rounded-full bg-primary/40 mx-1" />
+      )}
     </div>
   );
 }
@@ -227,6 +209,15 @@ export function KanbanBoard({
   const updateMut = useUpdateApplication();
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const dragAppRef = useRef<number | null>(null);
+
+  const headerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const onCardScroll = useCallback(() => {
+    if (headerRef.current && cardRef.current) {
+      headerRef.current.scrollLeft = cardRef.current.scrollLeft;
+    }
+  }, []);
 
   const handleDragStart = (e: React.DragEvent, appId: number) => {
     e.dataTransfer.effectAllowed = "move";
@@ -257,23 +248,55 @@ export function KanbanBoard({
   }, {});
 
   return (
-    <div
-      className="flex gap-3 pb-2 items-start kanban-scroll"
-      style={{ overflowX: "auto" }}
-      onDragEnd={handleDragEnd}
-    >
-      {statusChoices.map((status) => (
-        <KanbanColumn
-          key={status}
-          status={status}
-          cards={columnMap[status] || []}
-          colorMap={statusColors}
-          draggingId={draggingId}
-          onDragStart={handleDragStart}
-          onDrop={handleDrop}
-          onCardClick={onCardClick}
-        />
-      ))}
+    <div>
+      {/* Sticky status header bar — outside the scroll container so sticky works */}
+      <div
+        ref={headerRef}
+        className="sticky top-0 z-20 flex gap-3 mb-0"
+        style={{ overflowX: "hidden" }}
+      >
+        {statusChoices.map((status) => {
+          const color = statusColors[status] || { bg: "#f1f5f9", text: "#64748b" };
+          const count = columnMap[status]?.length ?? 0;
+          return (
+            <div
+              key={status}
+              className="w-[290px] min-w-[290px] max-w-[290px] shrink-0 flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide"
+              style={{ backgroundColor: color.bg, color: color.text }}
+            >
+              <span className="truncate">{status}</span>
+              <span
+                className="ml-2 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                style={{ backgroundColor: color.text + "22", color: color.text }}
+              >
+                {count}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Card columns — scrolls horizontally, grows vertically */}
+      <div
+        ref={cardRef}
+        className="flex gap-3 pb-2 items-start kanban-scroll"
+        style={{ overflowX: "auto" }}
+        onScroll={onCardScroll}
+        onDragEnd={handleDragEnd}
+      >
+        {statusChoices.map((status) => (
+          <KanbanCardColumn
+            key={status}
+            status={status}
+            cards={columnMap[status] || []}
+            colorMap={statusColors}
+            draggingId={draggingId}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+            onCardClick={onCardClick}
+          />
+        ))}
+      </div>
     </div>
   );
 }
