@@ -31,14 +31,31 @@ def seed_roles(db):
         print(f"[seed] Seeded {len(default_roles)} default roles")
 
 
+def seed_admin_user(db):
+    """Ensure the primary admin user always exists."""
+    existing = db.query(models.User).filter(models.User.email == "au@studyinfocentre.com").first()
+    if not existing:
+        db.add(models.User(
+            email="au@studyinfocentre.com",
+            full_name="Admin User",
+            hashed_password=get_password_hash("Bijay@y123"),
+            role="admin",
+            is_active=True,
+        ))
+        db.commit()
+        print("[seed] Created admin user: au@studyinfocentre.com")
+
+
 def seed():
     db = SessionLocal()
     try:
         # Always seed statuses and roles (idempotent)
         seed_statuses(db)
         seed_roles(db)
+        # Always ensure primary admin exists
+        seed_admin_user(db)
 
-        if db.query(models.User).count() > 0:
+        if db.query(models.User).count() > 1:
             print("Database already seeded, skipping.")
             return
 

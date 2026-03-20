@@ -64,7 +64,15 @@ export default function Reports() {
   const { user } = useAuth();
   const isManager = user?.role === "admin" || user?.role === "manager";
   const [deptFilter, setDeptFilter] = useState<"" | "gs" | "offer">("");
-  const [reportTab, setReportTab] = useState<ReportTab>("workload");
+  const [reportTab, setReportTab] = useState<ReportTab>(() => {
+    const p = new URLSearchParams(window.location.search).get("tab");
+    return (["workload", "timing", "stages"] as ReportTab[]).includes(p as ReportTab) ? (p as ReportTab) : "workload";
+  });
+
+  const changeReportTab = (tab: ReportTab) => {
+    setReportTab(tab);
+    window.history.replaceState(null, "", `${window.location.pathname}?tab=${tab}`);
+  };
   const [stagesDept, setStagesDept] = useState<"gs" | "offer">("gs");
   const [stagesUserId, setStagesUserId] = useState<string>("");
   const [dateFrom, setDateFrom] = useState("");
@@ -198,7 +206,7 @@ export default function Reports() {
           ].map(tab => {
             const Icon = tab.icon;
             return (
-              <button key={tab.id} onClick={() => setReportTab(tab.id)}
+              <button key={tab.id} onClick={() => changeReportTab(tab.id)}
                 className={cn(
                   "px-5 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-2",
                   reportTab === tab.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"

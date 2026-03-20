@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useForgotPassword, useResetPassword, useVerifyOtp } from "@workspace/api-client-react";
 import { Button, Input, Label, Card } from "@/components/ui-elements";
-import { Files, Lock, Mail, ArrowLeft, KeyRound, ShieldCheck } from "lucide-react";
+import { Files, Lock, Mail, ArrowLeft, KeyRound, ShieldCheck, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
-type Step = "credentials" | "otp" | "forgot" | "reset" | "forgot_done";
+type Step = "credentials" | "otp" | "forgot" | "reset" | "forgot_done" | "password_expired";
 
 export default function Login() {
   const { login } = useAuth();
@@ -21,6 +21,9 @@ export default function Login() {
   );
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [expiredCurrentPassword, setExpiredCurrentPassword] = useState("");
+  const [expiredNewPassword, setExpiredNewPassword] = useState("");
+  const [expiredConfirmPassword, setExpiredConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -40,14 +43,42 @@ export default function Login() {
     setIsLoading(true);
     try {
       const result = await login({ email, password });
-      // If OTP required, backend returns { otp_required: true, ... }
       if (result?.otp_required) {
         setInfo(result.message || "Check your email for a verification code.");
         setStep("otp");
+      } else if (result?.password_expired) {
+        setStep("password_expired");
       }
-      // If token returned, useAuth navigates automatically — nothing to do here.
+      // Otherwise useAuth has already navigated to "/"
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleExpiredPasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (expiredNewPassword !== expiredConfirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/auth/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({ current_password: expiredCurrentPassword, new_password: expiredNewPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to change password");
+      window.location.href = "/";
+    } catch (err: any) {
+      setError(err.message || "Failed to change password");
     } finally {
       setIsLoading(false);
     }
@@ -58,10 +89,14 @@ export default function Login() {
     setError("");
     setIsLoading(true);
     try {
-      const result = await verifyOtpMut.mutateAsync({ email, code: otpCode });
+      const result: any = await verifyOtpMut.mutateAsync({ email, code: otpCode });
       if (result.access_token) {
         localStorage.setItem("access_token", result.access_token);
-        window.location.href = "/";
+        if (result.password_expired) {
+          setStep("password_expired");
+        } else {
+          window.location.href = "/";
+        }
       }
     } catch (err: any) {
       setError(err.message || "Invalid or expired code");
@@ -123,18 +158,20 @@ export default function Login() {
             <Files className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-display font-bold text-white mb-2 tracking-tight">
-            {step === "credentials" && "Welcome Back"}
-            {step === "otp"         && "Verify Your Identity"}
-            {step === "forgot"      && "Reset Password"}
-            {step === "forgot_done" && "Check Your Email"}
-            {step === "reset"       && "Set New Password"}
+            {step === "credentials"      && "Welcome Back"}
+            {step === "otp"              && "Verify Your Identity"}
+            {step === "forgot"           && "Reset Password"}
+            {step === "forgot_done"      && "Check Your Email"}
+            {step === "reset"            && "Set New Password"}
+            {step === "password_expired" && "Password Expired"}
           </h1>
           <p className="text-slate-400">
-            {step === "credentials" && "Sign in to the Task Management Portal"}
-            {step === "otp"         && "Enter the code sent to your email"}
-            {step === "forgot"      && "We'll send a reset link to your email"}
-            {step === "forgot_done" && "A password reset link has been sent"}
-            {step === "reset"       && "Choose a new password for your account"}
+            {step === "credentials"      && "Sign in to the Task Management Portal"}
+            {step === "otp"              && "Enter the code sent to your email"}
+            {step === "forgot"           && "We'll send a reset link to your email"}
+            {step === "forgot_done"      && "A password reset link has been sent"}
+            {step === "reset"            && "Choose a new password for your account"}
+            {step === "password_expired" && "Your password must be updated every 90 days"}
           </p>
         </div>
 
@@ -273,6 +310,47 @@ export default function Login() {
               </div>
               <Button type="submit" className="w-full text-lg h-12" isLoading={isLoading || resetMut.isPending}>
                 Set New Password
+              </Button>
+            </form>
+          )}
+
+          {/* ── Step: password expired (force change) ── */}
+          {step === "password_expired" && (
+            <form onSubmit={handleExpiredPasswordChange} className="space-y-5">
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>Your password is over 90 days old and must be changed before you can continue. Please choose a strong new password.</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-200">Current Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <Input type="password" required value={expiredCurrentPassword} onChange={e => setExpiredCurrentPassword(e.target.value)}
+                    className="pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary"
+                    placeholder="Your current password" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-200">New Password</Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <Input type="password" required value={expiredNewPassword} onChange={e => setExpiredNewPassword(e.target.value)}
+                    className="pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary"
+                    placeholder="Min 8 chars, upper, lower, number, symbol" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-200">Confirm New Password</Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <Input type="password" required value={expiredConfirmPassword} onChange={e => setExpiredConfirmPassword(e.target.value)}
+                    className={cn("pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary",
+                      expiredConfirmPassword && expiredConfirmPassword !== expiredNewPassword && "border-destructive")}
+                    placeholder="••••••••" />
+                </div>
+              </div>
+              <Button type="submit" className="w-full text-lg h-12" isLoading={isLoading}>
+                Update Password & Sign In
               </Button>
             </form>
           )}

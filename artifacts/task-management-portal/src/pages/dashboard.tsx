@@ -1,8 +1,7 @@
-import { useGetDashboardSummary, useGetStatusCount, useGetUniversityCount, useListUsers } from "@workspace/api-client-react";
+import { useGetDashboardSummary, useGetUniversityCount, useListUsers } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui-elements";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { Files, Clock, CheckCircle2, XCircle, TrendingUp, Wifi, WifiOff, Calendar } from "lucide-react";
+import { Files, Clock, CheckCircle2, XCircle, Wifi, WifiOff, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const availabilityConfig: Record<string, { label: string; icon: any; cls: string; dot: string }> = {
@@ -13,7 +12,6 @@ const availabilityConfig: Record<string, { label: string; icon: any; cls: string
 
 export default function Dashboard() {
   const { data: summary } = useGetDashboardSummary();
-  const { data: statusCounts } = useGetStatusCount();
   const { data: uniCounts } = useGetUniversityCount();
   const { data: users } = useListUsers();
 
@@ -105,29 +103,6 @@ export default function Dashboard() {
               })}
             </div>
           )}
-        </Card>
-
-        <Card className="p-6 flex flex-col">
-          <div className="flex items-center mb-6">
-            <TrendingUp className="w-5 h-5 text-primary mr-2" />
-            <h3 className="font-display font-semibold text-lg">Status Distribution</h3>
-          </div>
-          <div className="flex-1 min-h-[300px]">
-            {statusCounts && statusCounts.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={statusCounts} cx="50%" cy="50%" innerRadius={80} outerRadius={110} paddingAngle={2} dataKey="count" nameKey="status">
-                    {statusCounts.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color !== '#eee' ? entry.color.replace('0.', '1.') : '#94a3b8'} stroke="rgba(255,255,255,0.5)" strokeWidth={2} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">No data available</div>
-            )}
-          </div>
         </Card>
 
         <Card className="p-6 overflow-hidden">

@@ -34,6 +34,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if ((result as any).access_token) {
       localStorage.setItem("access_token", (result as any).access_token);
       setHasToken(true);
+      if ((result as any).password_expired) {
+        // Password expired — return result, login.tsx will show force-change step
+        return result;
+      }
       setLocation("/");
     }
     return result;

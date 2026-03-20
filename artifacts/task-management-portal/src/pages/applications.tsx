@@ -81,7 +81,15 @@ export default function GsApplications() {
   const [assigneeFilter, setAssigneeFilter] = useState<number | "">("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const p = new URLSearchParams(window.location.search).get("view");
+    return p === "kanban" ? "kanban" : "table";
+  });
+
+  const changeView = (mode: ViewMode) => {
+    setViewMode(mode);
+    window.history.replaceState(null, "", `${window.location.pathname}?view=${mode}`);
+  };
   const [selectedFollowers, setSelectedFollowers] = useState<number[]>([]);
 
   const { data: applications, isLoading } = useListApplications({
@@ -166,10 +174,10 @@ export default function GsApplications() {
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex rounded-xl border border-border overflow-hidden bg-muted/40">
-              <button onClick={() => setViewMode("table")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+              <button onClick={() => changeView("table")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
                 <List className="w-4 h-4" />Table
               </button>
-              <button onClick={() => setViewMode("kanban")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+              <button onClick={() => changeView("kanban")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
                 <LayoutGrid className="w-4 h-4" />Board
               </button>
             </div>

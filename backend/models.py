@@ -58,6 +58,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     availability_status = Column(String(50), default="available", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    password_changed_at = Column(DateTime, default=datetime.utcnow)
 
     assigned_applications = relationship(
         "Application", foreign_keys="Application.assigned_to_id", back_populates="assigned_to"

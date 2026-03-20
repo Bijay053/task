@@ -1,4 +1,5 @@
 import random
+import re
 import secrets
 import string
 from datetime import datetime, timedelta
@@ -23,9 +24,57 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 OTP_EXPIRE_MINUTES    = 10
 RESET_EXPIRE_MINUTES  = 30
+PASSWORD_EXPIRY_DAYS  = 90
+
+COMMON_PASSWORDS = {
+    "password", "password1", "password123", "123456", "12345678", "qwerty",
+    "abc123", "letmein", "admin", "admin123", "welcome", "welcome1",
+    "monkey", "dragon", "master", "1234567890", "passw0rd", "iloveyou",
+    "sunshine", "princess", "football", "shadow", "superman", "michael",
+    "login", "access", "trustno1", "hello", "charlie", "donald",
+}
+
+
+def _validate_password_strength(password: str, full_name: str = "") -> None:
+    """Raise HTTPException if password does not meet strength requirements."""
+    errors = []
+    if len(password) < 8:
+        errors.append("at least 8 characters")
+    if not re.search(r"[A-Z]", password):
+        errors.append("at least one uppercase letter")
+    if not re.search(r"[a-z]", password):
+        errors.append("at least one lowercase letter")
+    if not re.search(r"\d", password):
+        errors.append("at least one number")
+    if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?`~]", password):
+        errors.append("at least one special character (!@#$%^&*…)")
+
+    if password.lower() in COMMON_PASSWORDS:
+        errors.append("must not be a commonly used password")
+
+    if full_name:
+        name_parts = [p.lower() for p in full_name.split() if len(p) >= 3]
+        for part in name_parts:
+            if part in password.lower():
+                errors.append("must not contain your name")
+                break
+
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain: " + ", ".join(errors),
+        )
 
 
 # ─── helpers ────────────────────────────────────────────────────────────────
+
+def _is_password_expired(user: models.User) -> bool:
+    """Return True if the user's password is older than PASSWORD_EXPIRY_DAYS."""
+    changed_at = getattr(user, "password_changed_at", None) or user.created_at
+    if changed_at is None:
+        return False
+    return (datetime.utcnow() - changed_at).days >= PASSWORD_EXPIRY_DAYS
+
 
 def _log(db: Session, user: Optional[models.User], action: str,
          detail: str = "", request: Optional[Request] = None):
@@ -113,7 +162,8 @@ def login(data: schemas.LoginRequest, request: Request, db: Session = Depends(ge
     # No SMTP — issue token directly
     token = create_access_token({"sub": str(user.id)})
     _log(db, user, "login", "Direct login (no OTP)", request)
-    return {"access_token": token, "token_type": "bearer", "user": user}
+    password_expired = _is_password_expired(user)
+    return {"access_token": token, "token_type": "bearer", "user": user, "password_expired": password_expired}
 
 
 # ─── OTP verify (step 2) ─────────────────────────────────────────────────────
@@ -142,7 +192,8 @@ def verify_otp(data: OtpVerify, request: Request, db: Session = Depends(get_db))
 
     token = create_access_token({"sub": str(user.id)})
     _log(db, user, "login", "Login via OTP", request)
-    return {"access_token": token, "token_type": "bearer", "user": user}
+    password_expired = _is_password_expired(user)
+    return {"access_token": token, "token_type": "bearer", "user": user, "password_expired": password_expired}
 
 
 # ─── logout ──────────────────────────────────────────────────────────────────
@@ -175,10 +226,10 @@ def change_password(
 ):
     if not verify_password(data.current_password, current_user.hashed_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
-    if len(data.new_password) < 6:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must be at least 6 characters")
+    _validate_password_strength(data.new_password, current_user.full_name)
 
     current_user.hashed_password = get_password_hash(data.new_password)
+    current_user.password_changed_at = datetime.utcnow()
     db.commit()
     _log(db, current_user, "change_password", "User changed their own password", request)
     return {"message": "Password changed successfully"}
@@ -245,11 +296,11 @@ def reset_password(
     )
     if not rec:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset link")
-    if len(data.new_password) < 6:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password must be at least 6 characters")
 
     user = rec.user
+    _validate_password_strength(data.new_password, user.full_name)
     user.hashed_password = get_password_hash(data.new_password)
+    user.password_changed_at = datetime.utcnow()
     rec.used = True
     db.commit()
     _log(db, user, "reset_password", "Password reset via email token", request)
