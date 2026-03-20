@@ -429,12 +429,6 @@ export function Layout({ children }: { children: ReactNode }) {
             <span className="text-sm text-muted-foreground hidden md:inline-flex items-center bg-muted px-3 py-1 rounded-full font-medium">
               <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />System Online
             </span>
-            <button
-              onClick={() => setChangePwOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors hover:border-primary/40"
-            >
-              <KeyRound className="w-3.5 h-3.5" />Change Password
-            </button>
           </div>
         </header>
 
