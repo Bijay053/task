@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Label, Modal, Select, StatusBadge } from "@/components/ui-elements";
-import { BellRing, ShieldAlert, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown, Layers, Webhook, Save, Users } from "lucide-react";
+import { BellRing, ShieldAlert, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown, Layers, Webhook, Save, Users, Pin, Check } from "lucide-react";
 import {
   useTestEmail, useTestChat, useListStatuses, useCreateStatus,
   useUpdateStatus, useDeleteStatus, useReorderStatuses,
@@ -116,6 +116,8 @@ function StatusManager({ department }: { department: "gs" | "offer" }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: statuses, isLoading } = useListStatuses({ department });
+  const { data: deptSettings } = useGetDeptSettings(department);
+  const setSettingMut = useSetDeptSetting();
   const createMut = useCreateStatus();
   const updateMut = useUpdateStatus();
   const deleteMut = useDeleteStatus();
@@ -166,31 +168,89 @@ function StatusManager({ department }: { department: "gs" | "offer" }) {
     queryClient.invalidateQueries({ queryKey: ["/api/statuses"] });
   };
 
+  const tabStatusesSetting = deptSettings?.find(s => s.key === `${department}_tab_statuses`)?.value || "";
+  const pinnedSet = new Set(tabStatusesSetting ? tabStatusesSetting.split(",").map((s: string) => s.trim()).filter(Boolean) : []);
+
+  const toggleTabStatus = async (statusName: string) => {
+    const updated = new Set(pinnedSet);
+    if (updated.has(statusName)) {
+      updated.delete(statusName);
+    } else {
+      updated.add(statusName);
+    }
+    const value = Array.from(updated).join(",");
+    await setSettingMut.mutateAsync({ department, key: `${department}_tab_statuses`, data: { value: value || null } });
+    queryClient.invalidateQueries({ queryKey: [`/api/dept-settings/${department}`] });
+  };
+
   if (isLoading) return <div className="py-8 text-center text-muted-foreground">Loading statuses...</div>;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{statuses?.length || 0} statuses configured. Drag or use arrows to reorder.</p>
-        <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" />Add Status</Button>
+    <>
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">{statuses?.length || 0} statuses configured. Drag or use arrows to reorder.</p>
+          <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" />Add Status</Button>
+        </div>
+        <div className="space-y-2">
+          {statuses?.map((s, i) => (
+            <StatusRow
+              key={s.id}
+              status={s}
+              isFirst={i === 0}
+              isLast={i === (statuses.length - 1)}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onMoveUp={(id) => moveStatus(id, "up")}
+              onMoveDown={(id) => moveStatus(id, "down")}
+            />
+          ))}
+          {statuses?.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">No statuses yet. Add one above.</div>
+          )}
+        </div>
       </div>
-      <div className="space-y-2">
-        {statuses?.map((s, i) => (
-          <StatusRow
-            key={s.id}
-            status={s}
-            isFirst={i === 0}
-            isLast={i === (statuses.length - 1)}
-            onEdit={openEdit}
-            onDelete={handleDelete}
-            onMoveUp={(id) => moveStatus(id, "up")}
-            onMoveDown={(id) => moveStatus(id, "down")}
-          />
-        ))}
-        {statuses?.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">No statuses yet. Add one above.</div>
-        )}
-      </div>
+
+      {/* Quick Filter Tabs section — admin can pin statuses as tabs in the applications page */}
+      {department === "gs" && (
+        <div className="border-t pt-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <Pin className="w-4 h-4 text-primary" />
+            <h4 className="font-semibold text-sm">Quick Filter Tabs</h4>
+          </div>
+          <p className="text-xs text-muted-foreground">Select which statuses appear as pinned quick-filter tabs at the top of the GS Applications page.</p>
+          <div className="flex flex-wrap gap-2">
+            {statuses?.map(s => {
+              const isPinned = pinnedSet.has(s.name);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => toggleTabStatus(s.name)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-sm font-medium transition-all",
+                    isPinned
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  )}
+                >
+                  {isPinned && <Check className="w-3.5 h-3.5" />}
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: s.bg_color }}
+                  />
+                  {s.name}
+                </button>
+              );
+            })}
+          </div>
+          {pinnedSet.size > 0 && (
+            <p className="text-xs text-primary">{pinnedSet.size} status{pinnedSet.size !== 1 ? "es" : ""} pinned as tabs.</p>
+          )}
+        </div>
+      )}
+    </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingStatus ? "Edit Status" : "Add New Status"}>
         <div className="space-y-5">
@@ -217,10 +277,7 @@ function StatusManager({ department }: { department: "gs" | "offer" }) {
           <div className="space-y-2">
             <Label>Preview</Label>
             <div className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30">
-              <span
-                className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold"
-                style={{ backgroundColor: bgColor, color: textColor }}
-              >
+              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold" style={{ backgroundColor: bgColor, color: textColor }}>
                 {name || "Status Preview"}
               </span>
             </div>
@@ -233,7 +290,7 @@ function StatusManager({ department }: { department: "gs" | "offer" }) {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }
 

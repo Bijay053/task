@@ -1,18 +1,22 @@
 import { useState } from "react";
 import {
   useListUsers, useCreateUser, useUpdateUser,
-  useGetUserPermissions, useSetUserPermission
+  useGetUserPermissions, useSetUserPermission,
+  useGetRolePermissions, useSetRolePermission
 } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Modal, Label, Select } from "@/components/ui-elements";
-import { Plus, Edit2, ShieldAlert, Shield, Check, X } from "lucide-react";
+import { Plus, Edit2, ShieldAlert, Shield, Check, X, Users as UsersIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 type UsersTab = "team" | "permissions";
+type PermSubTab = "by_user" | "by_role";
 
 const DEPARTMENTS = ["gs", "offer"];
+const ROLES = ["admin", "manager", "team_leader", "agent"];
 
 function PermissionsPanel({ userId, userName }: { userId: number; userName: string }) {
   const queryClient = useQueryClient();
@@ -32,13 +36,6 @@ function PermissionsPanel({ userId, userName }: { userId: number; userName: stri
   };
 
   if (isLoading) return <div className="py-4 text-center text-muted-foreground">Loading permissions...</div>;
-
-  const permFields: { key: "can_view" | "can_edit" | "can_delete" | "can_upload"; label: string }[] = [
-    { key: "can_view", label: "View" },
-    { key: "can_edit", label: "Edit" },
-    { key: "can_upload", label: "Upload" },
-    { key: "can_delete", label: "Delete" },
-  ];
 
   return (
     <div className="space-y-4">
@@ -76,6 +73,100 @@ function PermissionsPanel({ userId, userName }: { userId: number; userName: stri
   );
 }
 
+const permFields: { key: "can_view" | "can_edit" | "can_delete" | "can_upload"; label: string }[] = [
+  { key: "can_view", label: "View" },
+  { key: "can_edit", label: "Edit" },
+  { key: "can_upload", label: "Upload" },
+  { key: "can_delete", label: "Delete" },
+];
+
+function RolePermissionsPanel() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [selectedRole, setSelectedRole] = useState<string>(ROLES[0]);
+  const { data: perms, isLoading } = useGetRolePermissions(selectedRole);
+  const setRolePermMut = useSetRolePermission();
+
+  const getPerm = (dept: string) => perms?.find((p: any) => p.department === dept);
+
+  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_delete" | "can_upload") => {
+    const p = getPerm(dept) || { can_view: true, can_edit: true, can_delete: false, can_upload: false };
+    try {
+      await setRolePermMut.mutateAsync({
+        role: selectedRole,
+        department: dept,
+        data: { can_view: p.can_view, can_edit: p.can_edit, can_delete: p.can_delete, can_upload: p.can_upload ?? false, [field]: !(p as any)[field] }
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/permissions/role/${selectedRole}`] });
+      toast({ title: "Role permissions updated", description: `Applied to all ${selectedRole}s.` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-4">
+        <div className="flex gap-2 flex-wrap">
+          {ROLES.map(r => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setSelectedRole(r)}
+              className={cn(
+                "px-4 py-2 rounded-lg text-sm font-medium border-2 capitalize transition-colors",
+                selectedRole === r ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+              )}
+            >
+              {r.replace("_", " ")}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3">
+        <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+          Changes here apply to <strong>all users</strong> with the <strong>{selectedRole.replace("_", " ")}</strong> role. Individual user overrides (set via "By User") take precedence.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="py-4 text-center text-muted-foreground">Loading role permissions...</div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3">
+          {DEPARTMENTS.map(dept => {
+            const p = getPerm(dept) || { can_view: true, can_edit: true, can_delete: false, can_upload: false };
+            const label = dept === "gs" ? "GS Department" : "Offer Department";
+            return (
+              <div key={dept} className="flex items-center gap-4 p-4 rounded-xl border border-border bg-muted/20">
+                <div className="w-36 font-semibold text-sm">{label}</div>
+                {permFields.map(({ key, label: permLabel }) => (
+                  <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+                    <button
+                      type="button"
+                      onClick={() => toggle(dept, key)}
+                      className={cn(
+                        "w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-colors",
+                        (p as any)[key] ? "border-primary bg-primary text-white" : "border-border bg-card text-muted-foreground"
+                      )}
+                    >
+                      {(p as any)[key] ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                    </button>
+                    <span className="text-xs text-muted-foreground">{permLabel}</span>
+                  </label>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">
+        <strong>View</strong> — access the section. <strong>Edit</strong> — create & modify records. <strong>Upload</strong> — bulk upload files. <strong>Delete</strong> — remove records permanently.
+      </p>
+    </div>
+  );
+}
+
 export default function Users() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -84,6 +175,7 @@ export default function Users() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<UsersTab>("team");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [permSubTab, setPermSubTab] = useState<PermSubTab>("by_user");
 
   const createMut = useCreateUser();
   const updateMut = useUpdateUser();
@@ -220,38 +312,71 @@ export default function Users() {
         )}
 
         {activeTab === "permissions" && (
-          <div className="flex gap-6 flex-1 min-h-0">
-            <Card className="w-64 shrink-0 flex flex-col overflow-hidden">
-              <div className="p-4 font-semibold text-sm text-muted-foreground border-b">Select Staff Member</div>
-              <div className="flex-1 overflow-y-auto">
-                {users?.map(u => (
-                  <button
-                    key={u.id}
-                    onClick={() => setSelectedUserId(u.id)}
-                    className={cn(
-                      "w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-muted/50 transition-colors border-b border-border/50",
-                      selectedUserId === u.id && "bg-primary/5 border-l-2 border-l-primary"
-                    )}
-                  >
-                    <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">{u.full_name.charAt(0)}</div>
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">{u.full_name}</div>
-                      <div className="text-xs text-muted-foreground truncate">{u.role}</div>
+          <div className="flex flex-col gap-4 flex-1 min-h-0">
+            {/* Sub-tab switcher */}
+            <div className="flex gap-1 border-b border-border shrink-0">
+              {[
+                { id: "by_user" as PermSubTab, label: "By User", icon: <Shield className="w-4 h-4" /> },
+                { id: "by_role" as PermSubTab, label: "By Role", icon: <UsersIcon className="w-4 h-4" /> },
+              ].map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setPermSubTab(sub.id)}
+                  className={cn(
+                    "px-5 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5",
+                    permSubTab === sub.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {sub.icon}{sub.label}
+                </button>
+              ))}
+            </div>
+
+            {permSubTab === "by_user" && (
+              <div className="flex gap-6 flex-1 min-h-0">
+                <Card className="w-64 shrink-0 flex flex-col overflow-hidden">
+                  <div className="p-4 font-semibold text-sm text-muted-foreground border-b">Select Staff Member</div>
+                  <div className="flex-1 overflow-y-auto">
+                    {users?.map(u => (
+                      <button
+                        key={u.id}
+                        onClick={() => setSelectedUserId(u.id)}
+                        className={cn(
+                          "w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-muted/50 transition-colors border-b border-border/50",
+                          selectedUserId === u.id && "bg-primary/5 border-l-2 border-l-primary"
+                        )}
+                      >
+                        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">{u.full_name.charAt(0)}</div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">{u.full_name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{u.role}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </Card>
+                <Card className="flex-1 p-6 overflow-y-auto">
+                  {selectedUser ? (
+                    <PermissionsPanel userId={selectedUser.id} userName={selectedUser.full_name} />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                      <Shield className="w-12 h-12 mb-4 opacity-30" />
+                      <p>Select a staff member to manage their department access.</p>
                     </div>
-                  </button>
-                ))}
+                  )}
+                </Card>
               </div>
-            </Card>
-            <Card className="flex-1 p-6 overflow-y-auto">
-              {selectedUser ? (
-                <PermissionsPanel userId={selectedUser.id} userName={selectedUser.full_name} />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <Shield className="w-12 h-12 mb-4 opacity-30" />
-                  <p>Select a staff member to manage their department access.</p>
+            )}
+
+            {permSubTab === "by_role" && (
+              <Card className="flex-1 p-6 overflow-y-auto">
+                <div className="mb-4">
+                  <h3 className="font-semibold text-base">Role-Based Permissions</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Set default permissions for an entire role. These apply to all users with that role unless overridden at the user level.</p>
                 </div>
-              )}
-            </Card>
+                <RolePermissionsPanel />
+              </Card>
+            )}
           </div>
         )}
       </div>

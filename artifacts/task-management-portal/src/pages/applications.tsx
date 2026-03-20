@@ -1,7 +1,8 @@
 import { useState } from "react";
 import {
   useListApplications, useCreateApplication, useUpdateApplication,
-  useListStudents, useListUniversities, useListUsers, useListStatuses, useListAgents
+  useListStudents, useListUniversities, useListUsers, useListStatuses, useListAgents,
+  useGetDeptSettings
 } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Select, StatusBadge, Modal, Label, Textarea } from "@/components/ui-elements";
@@ -91,6 +92,7 @@ export default function GsApplications() {
   const { data: statuses } = useListStatuses({ department: "gs" });
   const { data: users } = useListUsers();
   const { data: agents } = useListAgents();
+  const { data: gsSettings } = useGetDeptSettings("gs");
 
   const createMut = useCreateApplication();
   const updateMut = useUpdateApplication();
@@ -98,6 +100,10 @@ export default function GsApplications() {
   const statusChoices = statuses?.map(s => s.name) || [];
   const statusColors: Record<string, { bg: string; text: string }> = {};
   statuses?.forEach(s => { statusColors[s.name] = { bg: s.bg_color, text: s.text_color }; });
+
+  // Parse pinned tab statuses from dept settings
+  const tabStatusesSetting = gsSettings?.find(s => s.key === "gs_tab_statuses")?.value || "";
+  const pinnedTabStatuses = tabStatusesSetting ? tabStatusesSetting.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
 
   const handleOpenEdit = (app: any) => { setEditingApp(app); setIsModalOpen(true); };
   const handleOpenCreate = () => { setEditingApp(null); setIsModalOpen(true); };
@@ -160,6 +166,34 @@ export default function GsApplications() {
             <Button size="lg" onClick={handleOpenCreate}><Plus className="w-5 h-5 mr-2" />New GS App</Button>
           </div>
         </div>
+
+        {/* Pinned status quick-filter tabs */}
+        {pinnedTabStatuses.length > 0 && (
+          <div className="flex gap-1 flex-wrap shrink-0 border-b border-border pb-0">
+            <button
+              onClick={() => setStatusFilter("")}
+              className={cn(
+                "px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 -mb-px transition-colors",
+                statusFilter === "" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >All</button>
+            {pinnedTabStatuses.map((s: string) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(prev => prev === s ? "" : s)}
+                className={cn(
+                  "px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 -mb-px transition-colors flex items-center gap-1.5",
+                  statusFilter === s ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {statusColors[s] && (
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: statusColors[s].bg }} />
+                )}
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
 
         <Card className="p-4 flex flex-col sm:flex-row gap-4 bg-muted/30 shrink-0">
           <div className="relative flex-1">

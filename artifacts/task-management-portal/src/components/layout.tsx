@@ -49,7 +49,6 @@ export function Layout({ children }: { children: ReactNode }) {
       label: "GS Department",
       items: [
         { href: "/applications", label: "GS Applications", icon: Files, roles: ["admin", "manager", "agent"] },
-        { href: "/approved", label: "Approved Students", icon: CheckCircle, roles: ["admin", "manager", "agent"] },
       ],
     },
     {

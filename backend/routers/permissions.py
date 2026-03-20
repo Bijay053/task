@@ -1,5 +1,5 @@
 """
-Department-level permission management per user.
+Department-level permission management per user and per role.
 """
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,7 +25,6 @@ def get_user_permissions(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    # Users can see their own perms; admin/manager can see anyone's
     if current_user.role not in ("admin", "manager") and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
     return db.query(models.UserDeptPermission).filter(
@@ -55,3 +54,53 @@ def set_user_permission(
     db.commit()
     db.refresh(perm)
     return perm
+
+
+@router.get("/role/{role}", response_model=List[schemas.UserDeptPermOut])
+def get_role_permissions(
+    role: str,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(require_admin),
+):
+    """Return permissions for any one user of the given role (as a representative sample)."""
+    user = db.query(models.User).filter(models.User.role == role).first()
+    if not user:
+        return []
+    return db.query(models.UserDeptPermission).filter(
+        models.UserDeptPermission.user_id == user.id
+    ).all()
+
+
+@router.put("/role/{role}/{department}", response_model=schemas.UserDeptPermOut)
+def set_role_permission(
+    role: str,
+    department: str,
+    data: schemas.UserDeptPermUpdate,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(require_admin),
+):
+    """Apply the same permission settings to ALL users of a given role."""
+    users = db.query(models.User).filter(models.User.role == role).all()
+    last_perm = None
+    for user in users:
+        perm = db.query(models.UserDeptPermission).filter(
+            models.UserDeptPermission.user_id == user.id,
+            models.UserDeptPermission.department == department,
+        ).first()
+        if not perm:
+            perm = models.UserDeptPermission(user_id=user.id, department=department)
+            db.add(perm)
+        perm.can_view = data.can_view
+        perm.can_edit = data.can_edit
+        perm.can_delete = data.can_delete
+        perm.can_upload = data.can_upload
+        last_perm = perm
+    db.commit()
+    if last_perm:
+        db.refresh(last_perm)
+        return last_perm
+    return schemas.UserDeptPermOut(
+        id=0, user_id=0, department=department,
+        can_view=data.can_view, can_edit=data.can_edit,
+        can_delete=data.can_delete, can_upload=data.can_upload,
+    )

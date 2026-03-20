@@ -1,23 +1,28 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
-import { Card, StatusBadge } from "@/components/ui-elements";
+import { Card, Button, Modal, Label, Select, Textarea } from "@/components/ui-elements";
 import { KanbanBoard } from "@/components/kanban-board";
-import { useMyApplications, useListStatuses } from "@workspace/api-client-react";
+import { useMyApplications, useListStatuses, useUpdateApplication } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List, Edit2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "table" | "kanban";
 type DeptTab = "gs" | "offer";
 
 export default function MyTasks() {
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [dept, setDept] = useState<DeptTab>("gs");
+  const [editingApp, setEditingApp] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: gsApps, isLoading: gsLoading } = useMyApplications({ department: "gs" });
   const { data: offerApps, isLoading: offerLoading } = useMyApplications({ department: "offer" });
   const { data: gsStatuses } = useListStatuses({ department: "gs" });
   const { data: offerStatuses } = useListStatuses({ department: "offer" });
+  const updateMut = useUpdateApplication();
 
   const applications = dept === "gs" ? gsApps : offerApps;
   const isLoading = dept === "gs" ? gsLoading : offerLoading;
@@ -25,6 +30,31 @@ export default function MyTasks() {
   const statusChoices = rawStatuses?.map(s => s.name) || [];
   const statusColors: Record<string, { bg: string; text: string }> = {};
   rawStatuses?.forEach(s => { statusColors[s.name] = { bg: s.bg_color, text: s.text_color }; });
+
+  const openEdit = (app: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingApp(app);
+    setIsModalOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const data: any = {
+      application_status: fd.get("application_status") as string,
+      remarks: fd.get("remarks") as string || null,
+    };
+    if (dept === "gs") {
+      data.priority = fd.get("priority") as string;
+    }
+    await updateMut.mutateAsync({ appId: editingApp.id, data });
+    queryClient.invalidateQueries({ queryKey: ["/api/applications/my"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+    setIsModalOpen(false);
+  };
+
+  const displayName = (app: any) => app.student?.full_name || app.student_name || "Unknown Student";
+  const displayUni = (app: any) => app.university?.name || app.university_name || "-";
 
   return (
     <Layout>
@@ -34,7 +64,6 @@ export default function MyTasks() {
             <h1 className="text-3xl font-display font-bold tracking-tight">My Tasks</h1>
             <p className="text-muted-foreground mt-1">Applications currently assigned to you.</p>
           </div>
-
           <div className="flex items-center gap-3">
             <div className="flex rounded-xl border border-border overflow-hidden bg-muted/40">
               <button
@@ -53,22 +82,19 @@ export default function MyTasks() {
           </div>
         </div>
 
-        {/* Department tabs */}
         <div className="flex gap-1 border-b border-border shrink-0">
-          <button
-            onClick={() => setDept("gs")}
-            className={cn("px-4 py-2 text-sm font-semibold border-b-2 transition-colors -mb-px", dept === "gs" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
-          >
-            GS Department
-            {gsApps && <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground rounded-full px-1.5 py-0.5">{gsApps.length}</span>}
-          </button>
-          <button
-            onClick={() => setDept("offer")}
-            className={cn("px-4 py-2 text-sm font-semibold border-b-2 transition-colors -mb-px", dept === "offer" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
-          >
-            Offer Department
-            {offerApps && <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground rounded-full px-1.5 py-0.5">{offerApps.length}</span>}
-          </button>
+          {(["gs", "offer"] as DeptTab[]).map(d => (
+            <button key={d} onClick={() => setDept(d)}
+              className={cn("px-4 py-2 text-sm font-semibold border-b-2 transition-colors -mb-px",
+                dept === d ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
+              {d === "gs" ? "GS Department" : "Offer Department"}
+              {(d === "gs" ? gsApps : offerApps) && (
+                <span className="ml-2 text-xs font-normal bg-muted text-muted-foreground rounded-full px-1.5 py-0.5">
+                  {(d === "gs" ? gsApps : offerApps)?.length}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
         {viewMode === "table" ? (
@@ -77,7 +103,7 @@ export default function MyTasks() {
               <table className="spreadsheet-table w-full h-full">
                 <thead>
                   <tr>
-                    <th className="w-12 text-center">ID</th>
+                    <th className="w-12 text-center">#</th>
                     <th>Student Name</th>
                     <th>University &amp; Course</th>
                     <th>Intake</th>
@@ -85,23 +111,24 @@ export default function MyTasks() {
                     <th>Status</th>
                     {dept === "gs" && <th>Priority</th>}
                     <th>Assigned Date</th>
+                    <th className="text-right w-24">Action</th>
                   </tr>
                 </thead>
                 <tbody className="align-top">
                   {isLoading ? (
-                    <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Loading your tasks...</td></tr>
+                    <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">Loading your tasks...</td></tr>
                   ) : applications?.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No {dept === "gs" ? "GS" : "Offer"} tasks assigned to you.</td></tr>
+                    <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No {dept === "gs" ? "GS" : "Offer"} tasks assigned to you.</td></tr>
                   ) : (
                     applications?.map((app) => (
-                      <tr key={app.id} className="hover:bg-muted/30">
+                      <tr key={app.id} className="hover:bg-muted/30 group cursor-pointer" onClick={() => openEdit(app)}>
                         <td className="text-center text-muted-foreground text-xs">{app.id}</td>
-                        <td className="font-semibold">{app.student?.full_name || (app as any).student_name || "-"}</td>
+                        <td className="font-semibold">{displayName(app)}</td>
                         <td>
-                          <div className="font-medium text-primary">{app.university?.name || (app as any).university_name || "-"}</div>
-                          <div className="text-xs text-muted-foreground">{app.course || "-"}</div>
+                          <div className="font-medium text-primary">{displayUni(app)}</div>
+                          <div className="text-xs text-muted-foreground">{(app as any).course || "-"}</div>
                         </td>
-                        <td>{app.intake || "-"}</td>
+                        <td>{(app as any).intake || "-"}</td>
                         {dept === "offer" && (
                           <td>
                             {(app as any).channel ? (
@@ -110,19 +137,26 @@ export default function MyTasks() {
                           </td>
                         )}
                         <td>
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: statusColors[app.application_status]?.bg || "#f1f5f9", color: statusColors[app.application_status]?.text || "#475569" }}>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                            style={{ backgroundColor: statusColors[app.application_status]?.bg || "#f1f5f9", color: statusColors[app.application_status]?.text || "#475569" }}>
                             {app.application_status}
                           </span>
                         </td>
                         {dept === "gs" && (
                           <td>
-                            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${app.priority === "high" ? "bg-red-100 text-red-700" : app.priority === "low" ? "bg-slate-100 text-slate-600" : "bg-blue-100 text-blue-700"}`}>
-                              {app.priority || "normal"}
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${(app as any).priority === "high" ? "bg-red-100 text-red-700" : (app as any).priority === "low" ? "bg-slate-100 text-slate-600" : "bg-blue-100 text-blue-700"}`}>
+                              {(app as any).priority || "normal"}
                             </span>
                           </td>
                         )}
                         <td className="text-muted-foreground text-sm">
                           {app.assigned_date ? format(new Date(app.assigned_date), "MMM d, yyyy") : "-"}
+                        </td>
+                        <td className="text-right">
+                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100"
+                            onClick={(e) => openEdit(app, e)}>
+                            <Edit2 className="w-3.5 h-3.5 mr-1" />Update
+                          </Button>
                         </td>
                       </tr>
                     ))
@@ -146,6 +180,42 @@ export default function MyTasks() {
           </div>
         )}
       </div>
+
+      {/* Quick Update Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Update Task">
+        {editingApp && (
+          <form onSubmit={handleUpdate} className="space-y-4">
+            <div className="p-3 rounded-xl bg-muted/40 border">
+              <div className="font-semibold">{displayName(editingApp)}</div>
+              <div className="text-sm text-muted-foreground">{displayUni(editingApp)} · {(editingApp as any).course || "No course"}</div>
+            </div>
+            <div className="space-y-2">
+              <Label>Status *</Label>
+              <Select name="application_status" defaultValue={editingApp.application_status} required>
+                {statusChoices.map(s => <option key={s} value={s}>{s}</option>)}
+              </Select>
+            </div>
+            {dept === "gs" && (
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select name="priority" defaultValue={(editingApp as any).priority || "normal"}>
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Remarks / Notes</Label>
+              <Textarea name="remarks" defaultValue={(editingApp as any).remarks || ""} placeholder="Add a note about this update..." rows={3} />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+              <Button type="submit" isLoading={updateMut.isPending}>Save Update</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </Layout>
   );
 }

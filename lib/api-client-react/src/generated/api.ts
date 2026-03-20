@@ -2550,6 +2550,29 @@ export const useSetUserPermission = <TError = ErrorType<unknown>, TContext = unk
 ): UseMutationResult<Awaited<ReturnType<typeof setUserPermission>>, TError, { userId: number; department: string; data: UserDeptPermUpdate }, TContext> =>
   useMutation({ mutationFn: ({ userId, department, data }) => setUserPermission(userId, department, data, options?.request), ...options?.mutation });
 
+export const getRolePermissions = async (role: string, options?: RequestInit): Promise<UserDeptPermOut[]> =>
+  customFetch<UserDeptPermOut[]>(`/api/permissions/role/${role}`, { ...options, method: "GET" });
+export const getRolePermissionsQueryKey = (role: string) => [`/api/permissions/role/${role}`] as const;
+export const getGetRolePermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getRolePermissions>>, TError = ErrorType<unknown>>(role: string, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getRolePermissions>>, TError, TData>; request?: SecondParameter<typeof customFetch> }) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getRolePermissionsQueryKey(role);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getRolePermissions>>> = ({ signal }) => getRolePermissions(role, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: !!role, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof getRolePermissions>>, TError, TData> & { queryKey: QueryKey };
+};
+export function useGetRolePermissions<TData = Awaited<ReturnType<typeof getRolePermissions>>, TError = ErrorType<unknown>>(role: string, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getRolePermissions>>, TError, TData>; request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRolePermissionsQueryOptions(role, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+export const setRolePermission = async (role: string, department: string, data: UserDeptPermUpdate, options?: RequestInit): Promise<UserDeptPermOut> =>
+  customFetch<UserDeptPermOut>(`/api/permissions/role/${role}/${department}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+export const useSetRolePermission = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof setRolePermission>>, TError, { role: string; department: string; data: UserDeptPermUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof setRolePermission>>, TError, { role: string; department: string; data: UserDeptPermUpdate }, TContext> =>
+  useMutation({ mutationFn: ({ role, department, data }) => setRolePermission(role, department, data, options?.request), ...options?.mutation });
+
 // ─── Bulk Upload ────────────────────────────────────────────────────────────────
 
 export const bulkUpload = async (department: string, file: File, options?: RequestInit): Promise<BulkUploadResult> => {
