@@ -56,16 +56,11 @@ function KanbanCard({
   const color = colorMap[app.application_status] || { bg: "#f1f5f9", text: "#64748b" };
 
   const handleClick = (e: React.MouseEvent) => {
-    if (onCardClick) {
-      e.stopPropagation();
-      onCardClick(app);
-    }
+    if (onCardClick) { e.stopPropagation(); onCardClick(app); }
   };
 
-  const studentName =
-    app.student?.full_name || app.student_name || "Unknown Student";
-  const uniName =
-    app.university?.name || app.university_name || null;
+  const studentName = app.student?.full_name || app.student_name || "Unknown Student";
+  const uniName = app.university?.name || app.university_name || null;
 
   return (
     <div
@@ -124,9 +119,9 @@ function KanbanCard({
             </div>
           )}
           {(app.agent?.name || app.channel) && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground/60 truncate">
-              <UserCheck className="w-3 h-3 shrink-0" />
-              <span className="truncate">{app.agent?.name || app.channel}</span>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground/60">
+              <UserCheck className="w-3 h-3" />
+              <span className="truncate max-w-[80px]">{app.agent?.name || app.channel}</span>
             </div>
           )}
         </div>
@@ -173,10 +168,10 @@ function KanbanColumn({
   const color = colorMap[status] || { bg: "#f1f5f9", text: "#64748b" };
 
   return (
-    <div className="flex flex-col w-[290px] min-w-[290px] max-w-[290px] shrink-0 h-full">
-      {/* Column header */}
+    <div className="flex flex-col w-[290px] min-w-[290px] max-w-[290px] shrink-0">
+      {/* Sticky column header */}
       <div
-        className="flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide shrink-0"
+        className="sticky top-0 z-10 flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide shrink-0"
         style={{ backgroundColor: color.bg, color: color.text }}
       >
         <span className="truncate">{status}</span>
@@ -188,10 +183,10 @@ function KanbanColumn({
         </span>
       </div>
 
-      {/* Card list — scrolls internally */}
+      {/* Card list — grows with content, no internal scroll */}
       <div
         className={cn(
-          "rounded-b-xl p-2 space-y-2 transition-colors flex-1 overflow-y-auto",
+          "rounded-b-xl p-2 space-y-2 transition-colors",
           isOver ? "bg-primary/5 ring-2 ring-primary/30 ring-inset" : "bg-muted/40"
         )}
         onDragOver={(e) => { e.preventDefault(); setIsOver(true); }}
@@ -246,12 +241,13 @@ export function KanbanBoard({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    updateArrows();
+    // Small delay to let the DOM settle before measuring
+    const t = setTimeout(updateArrows, 50);
     el.addEventListener("scroll", updateArrows, { passive: true });
     const ro = new ResizeObserver(updateArrows);
     ro.observe(el);
-    return () => { el.removeEventListener("scroll", updateArrows); ro.disconnect(); };
-  }, [updateArrows, statusChoices.length]);
+    return () => { clearTimeout(t); el.removeEventListener("scroll", updateArrows); ro.disconnect(); };
+  }, [updateArrows, statusChoices.length, applications.length]);
 
   const scrollBy = (amount: number) => {
     scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
@@ -280,34 +276,18 @@ export function KanbanBoard({
     );
   };
 
-  const handleWheel = useCallback((e: WheelEvent) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-      e.preventDefault();
-      el.scrollLeft += e.shiftKey ? e.deltaY : e.deltaX;
-    }
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener("wheel", handleWheel, { passive: false });
-    return () => el.removeEventListener("wheel", handleWheel);
-  }, [handleWheel]);
-
   const columnMap = statusChoices.reduce<Record<string, Application[]>>((acc, status) => {
     acc[status] = applications.filter((a) => a.application_status === status);
     return acc;
   }, {});
 
   return (
-    <div className="relative h-full flex flex-col">
+    <div className="relative">
       {/* Left arrow */}
       {canScrollLeft && (
         <button
-          onClick={() => scrollBy(-320)}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-foreground hover:bg-primary hover:text-white hover:border-primary transition-all -ml-1"
+          onClick={() => scrollBy(-310)}
+          className="fixed left-[76px] top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-foreground hover:bg-primary hover:text-white hover:border-primary transition-all"
           aria-label="Scroll left"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -317,19 +297,19 @@ export function KanbanBoard({
       {/* Right arrow */}
       {canScrollRight && (
         <button
-          onClick={() => scrollBy(320)}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-foreground hover:bg-primary hover:text-white hover:border-primary transition-all -mr-1"
+          onClick={() => scrollBy(310)}
+          className="fixed right-4 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-foreground hover:bg-primary hover:text-white hover:border-primary transition-all"
           aria-label="Scroll right"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
       )}
 
-      {/* Board scroll container */}
+      {/* Board — scrolls horizontally, grows vertically with content */}
       <div
         ref={scrollRef}
-        className="flex gap-3 pb-2 flex-1 min-h-0 kanban-scroll"
-        style={{ overflowX: "auto", overflowY: "hidden" }}
+        className="flex gap-3 pb-4 items-start"
+        style={{ overflowX: "auto" }}
         onDragEnd={handleDragEnd}
       >
         {statusChoices.map((status) => (
@@ -344,7 +324,6 @@ export function KanbanBoard({
             onCardClick={onCardClick}
           />
         ))}
-        <div className="shrink-0 w-2" aria-hidden />
       </div>
     </div>
   );
