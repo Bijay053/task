@@ -6,163 +6,247 @@ import {
 } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Modal, Label, Select } from "@/components/ui-elements";
-import { Plus, Edit2, ShieldAlert, Shield, Check, X, Users as UsersIcon } from "lucide-react";
+import { Plus, Edit2, ShieldAlert, Shield, Users as UsersIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 type UsersTab = "team" | "permissions";
-type PermSubTab = "by_user" | "by_role";
+type PermSubTab = "by_role" | "by_user";
 
-const DEPARTMENTS = ["gs", "offer"];
-const ROLES = ["admin", "manager", "team_leader", "agent"];
+const DEPARTMENTS: { key: string; label: string }[] = [
+  { key: "gs", label: "GS Department" },
+  { key: "offer", label: "Offer Department" },
+];
 
-function PermissionsPanel({ userId, userName }: { userId: number; userName: string }) {
-  const queryClient = useQueryClient();
-  const { data: perms, isLoading } = useGetUserPermissions(userId);
-  const setPermMut = useSetUserPermission();
+const PERM_COLS: { key: "can_view" | "can_edit" | "can_upload" | "can_delete"; label: string }[] = [
+  { key: "can_view",   label: "VIEW"   },
+  { key: "can_edit",   label: "EDIT"   },
+  { key: "can_upload", label: "UPLOAD" },
+  { key: "can_delete", label: "DELETE" },
+];
 
-  const getPerm = (dept: string) => perms?.find(p => p.department === dept);
+const ROLES = [
+  { key: "admin",       label: "Admin"       },
+  { key: "manager",     label: "Manager"     },
+  { key: "team_leader", label: "Team Leader" },
+  { key: "agent",       label: "Agent"       },
+];
 
-  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_delete" | "can_upload") => {
-    const p = getPerm(dept) || { can_view: true, can_edit: true, can_delete: false, can_upload: false };
-    await setPermMut.mutateAsync({
-      userId,
-      department: dept,
-      data: { can_view: p.can_view, can_edit: p.can_edit, can_delete: p.can_delete, can_upload: p.can_upload ?? false, [field]: !(p as any)[field] }
+function MatrixCheckbox({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className={cn(
+        "w-5 h-5 rounded border-2 flex items-center justify-center transition-all mx-auto",
+        checked
+          ? "bg-primary border-primary"
+          : "bg-white border-slate-300 hover:border-primary/60"
+      )}
+      aria-checked={checked}
+    >
+      {checked && (
+        <svg viewBox="0 0 10 8" className="w-3 h-3 fill-white">
+          <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+function PermMatrix({
+  perms,
+  onToggle,
+  isLoading,
+}: {
+  perms: any[] | undefined;
+  onToggle: (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete") => void;
+  isLoading: boolean;
+}) {
+  const getPerm = (dept: string) =>
+    perms?.find((p: any) => p.department === dept) ||
+    { can_view: true, can_edit: true, can_delete: false, can_upload: false };
+
+  const colAllChecked = (field: "can_view" | "can_edit" | "can_upload" | "can_delete") =>
+    DEPARTMENTS.every(d => getPerm(d.key)[field]);
+
+  const toggleAll = (field: "can_view" | "can_edit" | "can_upload" | "can_delete") => {
+    const allOn = colAllChecked(field);
+    DEPARTMENTS.forEach(d => {
+      const p = getPerm(d.key);
+      if (p[field] === allOn) onToggle(d.key, field);
     });
-    queryClient.invalidateQueries({ queryKey: [`/api/permissions/user/${userId}`] });
   };
 
-  if (isLoading) return <div className="py-4 text-center text-muted-foreground">Loading permissions...</div>;
-
   return (
-    <div className="space-y-4">
-      <div className="text-sm font-semibold text-muted-foreground mb-2">Permissions for: {userName}</div>
-      <div className="grid grid-cols-1 gap-3">
-        {DEPARTMENTS.map(dept => {
-          const p = getPerm(dept) || { can_view: true, can_edit: true, can_delete: false, can_upload: false };
-          const label = dept === "gs" ? "GS Department" : "Offer Department";
-          return (
-            <div key={dept} className="flex items-center gap-4 p-4 rounded-xl border border-border bg-muted/20">
-              <div className="w-36 font-semibold text-sm">{label}</div>
-              {permFields.map(({ key, label: permLabel }) => (
-                <label key={key} className="flex items-center gap-1.5 cursor-pointer">
-                  <button
-                    type="button"
-                    onClick={() => toggle(dept, key)}
-                    className={cn(
-                      "w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-colors",
-                      (p as any)[key] ? "border-primary bg-primary text-white" : "border-border bg-card text-muted-foreground"
-                    )}
-                  >
-                    {(p as any)[key] ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                  </button>
-                  <span className="text-xs text-muted-foreground">{permLabel}</span>
-                </label>
-              ))}
-            </div>
-          );
-        })}
-      </div>
-      <p className="text-xs text-muted-foreground mt-4">
-        <strong>View</strong> — access the section. <strong>Edit</strong> — create & modify records. <strong>Upload</strong> — bulk upload files. <strong>Delete</strong> — remove records permanently.
-      </p>
+    <div className="rounded-xl border border-border overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-primary text-white">
+            <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider w-56">
+              Module Permission
+            </th>
+            {PERM_COLS.map(col => (
+              <th key={col.key} className="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider">
+                <div className="flex flex-col items-center gap-1.5">
+                  <MatrixCheckbox
+                    checked={!isLoading && colAllChecked(col.key)}
+                    onChange={() => toggleAll(col.key)}
+                  />
+                  <span>{col.label}</span>
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {isLoading ? (
+            <tr>
+              <td colSpan={5} className="text-center py-10 text-muted-foreground">Loading permissions...</td>
+            </tr>
+          ) : (
+            DEPARTMENTS.map((dept, i) => {
+              const p = getPerm(dept.key);
+              return (
+                <tr key={dept.key} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
+                  <td className="px-5 py-4 font-semibold text-slate-700">{dept.label}</td>
+                  {PERM_COLS.map(col => (
+                    <td key={col.key} className="px-4 py-4 text-center">
+                      <MatrixCheckbox
+                        checked={!!p[col.key]}
+                        onChange={() => onToggle(dept.key, col.key)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-const permFields: { key: "can_view" | "can_edit" | "can_delete" | "can_upload"; label: string }[] = [
-  { key: "can_view", label: "View" },
-  { key: "can_edit", label: "Edit" },
-  { key: "can_upload", label: "Upload" },
-  { key: "can_delete", label: "Delete" },
-];
-
-function RolePermissionsPanel() {
+function RolePermissionsMatrix() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [selectedRole, setSelectedRole] = useState<string>(ROLES[0]);
+  const [selectedRole, setSelectedRole] = useState<string>(ROLES[0].key);
   const { data: perms, isLoading } = useGetRolePermissions(selectedRole);
   const setRolePermMut = useSetRolePermission();
 
-  const getPerm = (dept: string) => perms?.find((p: any) => p.department === dept);
+  const getPerm = (dept: string) =>
+    perms?.find((p: any) => p.department === dept) ||
+    { can_view: true, can_edit: true, can_delete: false, can_upload: false };
 
-  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_delete" | "can_upload") => {
-    const p = getPerm(dept) || { can_view: true, can_edit: true, can_delete: false, can_upload: false };
+  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete") => {
+    const p = getPerm(dept);
     try {
       await setRolePermMut.mutateAsync({
         role: selectedRole,
         department: dept,
-        data: { can_view: p.can_view, can_edit: p.can_edit, can_delete: p.can_delete, can_upload: p.can_upload ?? false, [field]: !(p as any)[field] }
+        data: {
+          can_view: p.can_view,
+          can_edit: p.can_edit,
+          can_delete: p.can_delete,
+          can_upload: p.can_upload ?? false,
+          [field]: !p[field],
+        },
       });
       queryClient.invalidateQueries({ queryKey: [`/api/permissions/role/${selectedRole}`] });
-      toast({ title: "Role permissions updated", description: `Applied to all ${selectedRole}s.` });
+      toast({ title: "Permissions updated", description: `Applied to all ${selectedRole.replace("_", " ")}s.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e.message });
     }
   };
 
+  const roleLabel = ROLES.find(r => r.key === selectedRole)?.label || selectedRole;
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-4">
-        <div className="flex gap-2 flex-wrap">
+    <div className="space-y-6">
+      {/* Role selector */}
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</Label>
+        <div className="flex flex-wrap gap-2">
           {ROLES.map(r => (
             <button
-              key={r}
+              key={r.key}
               type="button"
-              onClick={() => setSelectedRole(r)}
+              onClick={() => setSelectedRole(r.key)}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium border-2 capitalize transition-colors",
-                selectedRole === r ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+                "px-5 py-2 rounded-lg text-sm font-medium border-2 transition-colors",
+                selectedRole === r.key
+                  ? "border-primary bg-primary text-white shadow-sm"
+                  : "border-border text-muted-foreground bg-card hover:border-primary/40 hover:text-foreground"
               )}
             >
-              {r.replace("_", " ")}
+              {r.label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3">
-        <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
-          Changes here apply to <strong>all users</strong> with the <strong>{selectedRole.replace("_", " ")}</strong> role. Individual user overrides (set via "By User") take precedence.
-        </p>
+      {/* Info banner */}
+      <div className="flex items-start gap-3 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs">
+        <Shield className="w-4 h-4 shrink-0 mt-0.5" />
+        <span>
+          These defaults apply to <strong>all {roleLabel}s</strong>.
+          Individual user overrides (set via "By User") always take precedence.
+        </span>
       </div>
 
-      {isLoading ? (
-        <div className="py-4 text-center text-muted-foreground">Loading role permissions...</div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3">
-          {DEPARTMENTS.map(dept => {
-            const p = getPerm(dept) || { can_view: true, can_edit: true, can_delete: false, can_upload: false };
-            const label = dept === "gs" ? "GS Department" : "Offer Department";
-            return (
-              <div key={dept} className="flex items-center gap-4 p-4 rounded-xl border border-border bg-muted/20">
-                <div className="w-36 font-semibold text-sm">{label}</div>
-                {permFields.map(({ key, label: permLabel }) => (
-                  <label key={key} className="flex items-center gap-1.5 cursor-pointer">
-                    <button
-                      type="button"
-                      onClick={() => toggle(dept, key)}
-                      className={cn(
-                        "w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-colors",
-                        (p as any)[key] ? "border-primary bg-primary text-white" : "border-border bg-card text-muted-foreground"
-                      )}
-                    >
-                      {(p as any)[key] ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                    </button>
-                    <span className="text-xs text-muted-foreground">{permLabel}</span>
-                  </label>
-                ))}
-              </div>
-            );
-          })}
+      {/* Matrix */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Shield className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Permissions</span>
         </div>
-      )}
-      <p className="text-xs text-muted-foreground">
-        <strong>View</strong> — access the section. <strong>Edit</strong> — create & modify records. <strong>Upload</strong> — bulk upload files. <strong>Delete</strong> — remove records permanently.
-      </p>
+        <PermMatrix perms={perms} onToggle={toggle} isLoading={isLoading} />
+      </div>
+    </div>
+  );
+}
+
+function UserPermissionsMatrix({ userId, userName }: { userId: number; userName: string }) {
+  const queryClient = useQueryClient();
+  const { data: perms, isLoading } = useGetUserPermissions(userId);
+  const setPermMut = useSetUserPermission();
+
+  const getPerm = (dept: string) =>
+    perms?.find((p: any) => p.department === dept) ||
+    { can_view: true, can_edit: true, can_delete: false, can_upload: false };
+
+  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete") => {
+    const p = getPerm(dept);
+    await setPermMut.mutateAsync({
+      userId,
+      department: dept,
+      data: {
+        can_view: p.can_view,
+        can_edit: p.can_edit,
+        can_delete: p.can_delete,
+        can_upload: p.can_upload ?? false,
+        [field]: !p[field],
+      },
+    });
+    queryClient.invalidateQueries({ queryKey: [`/api/permissions/user/${userId}`] });
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <div className="text-base font-semibold">{userName}</div>
+        <div className="text-sm text-muted-foreground mt-0.5">Individual permission overrides for this staff member.</div>
+      </div>
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Shield className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Permissions</span>
+        </div>
+        <PermMatrix perms={perms} onToggle={toggle} isLoading={isLoading} />
+      </div>
     </div>
   );
 }
@@ -175,7 +259,7 @@ export default function Users() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<UsersTab>("team");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [permSubTab, setPermSubTab] = useState<PermSubTab>("by_user");
+  const [permSubTab, setPermSubTab] = useState<PermSubTab>("by_role");
 
   const createMut = useCreateUser();
   const updateMut = useUpdateUser();
@@ -238,24 +322,23 @@ export default function Users() {
           )}
         </div>
 
+        {/* Main tabs */}
         <div className="flex gap-1 border-b border-border shrink-0">
           {[
             { id: "team" as UsersTab, label: "Team Members" },
             { id: "permissions" as UsersTab, label: "Role & Permissions" },
           ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={cn(
                 "px-5 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors",
                 activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
+              )}>
               {tab.label}
             </button>
           ))}
         </div>
 
+        {/* ── Team Members ── */}
         {activeTab === "team" && (
           <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="table-container flex-1 h-full border-0 rounded-none">
@@ -285,7 +368,7 @@ export default function Users() {
                       <td className="text-muted-foreground">{u.email}</td>
                       <td>
                         <span className={cn("px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider", roleColors[u.role] || "bg-slate-100 text-slate-600")}>
-                          {u.role}
+                          {u.role.replace("_", " ")}
                         </span>
                       </td>
                       <td>
@@ -295,7 +378,8 @@ export default function Users() {
                       </td>
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => { setSelectedUserId(u.id); setActiveTab("permissions"); }}>
+                          <Button variant="ghost" size="sm"
+                            onClick={() => { setSelectedUserId(u.id); setPermSubTab("by_user"); setActiveTab("permissions"); }}>
                             <Shield className="w-4 h-4 mr-1" />Permissions
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => { setEditingItem(u); setIsModalOpen(true); }}>
@@ -311,76 +395,84 @@ export default function Users() {
           </Card>
         )}
 
+        {/* ── Role & Permissions ── */}
         {activeTab === "permissions" && (
           <div className="flex flex-col gap-4 flex-1 min-h-0">
-            {/* Sub-tab switcher */}
+            {/* Sub-tabs */}
             <div className="flex gap-1 border-b border-border shrink-0">
               {[
-                { id: "by_user" as PermSubTab, label: "By User", icon: <Shield className="w-4 h-4" /> },
                 { id: "by_role" as PermSubTab, label: "By Role", icon: <UsersIcon className="w-4 h-4" /> },
+                { id: "by_user" as PermSubTab, label: "By User", icon: <Shield className="w-4 h-4" /> },
               ].map(sub => (
-                <button
-                  key={sub.id}
-                  onClick={() => setPermSubTab(sub.id)}
+                <button key={sub.id} onClick={() => setPermSubTab(sub.id)}
                   className={cn(
                     "px-5 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5",
                     permSubTab === sub.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-                  )}
-                >
+                  )}>
                   {sub.icon}{sub.label}
                 </button>
               ))}
             </div>
 
+            {/* By Role — matrix */}
+            {permSubTab === "by_role" && (
+              <Card className="flex-1 p-6 overflow-y-auto">
+                <div className="mb-5">
+                  <h3 className="font-semibold text-base">Role-Based Permissions</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Set default permissions for each role. Individual overrides set via "By User" take precedence.
+                  </p>
+                </div>
+                <RolePermissionsMatrix />
+              </Card>
+            )}
+
+            {/* By User — split pane with matrix */}
             {permSubTab === "by_user" && (
-              <div className="flex gap-6 flex-1 min-h-0">
-                <Card className="w-64 shrink-0 flex flex-col overflow-hidden">
-                  <div className="p-4 font-semibold text-sm text-muted-foreground border-b">Select Staff Member</div>
+              <div className="flex gap-5 flex-1 min-h-0">
+                {/* Sidebar */}
+                <Card className="w-60 shrink-0 flex flex-col overflow-hidden">
+                  <div className="p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide border-b">
+                    Select Staff Member
+                  </div>
                   <div className="flex-1 overflow-y-auto">
                     {users?.map(u => (
-                      <button
-                        key={u.id}
-                        onClick={() => setSelectedUserId(u.id)}
+                      <button key={u.id} onClick={() => setSelectedUserId(u.id)}
                         className={cn(
                           "w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-muted/50 transition-colors border-b border-border/50",
                           selectedUserId === u.id && "bg-primary/5 border-l-2 border-l-primary"
-                        )}
-                      >
-                        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">{u.full_name.charAt(0)}</div>
+                        )}>
+                        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">
+                          {u.full_name.charAt(0)}
+                        </div>
                         <div className="min-w-0">
                           <div className="font-medium text-sm truncate">{u.full_name}</div>
-                          <div className="text-xs text-muted-foreground truncate">{u.role}</div>
+                          <div className="text-xs text-muted-foreground truncate capitalize">{u.role.replace("_", " ")}</div>
                         </div>
                       </button>
                     ))}
                   </div>
                 </Card>
+
+                {/* Matrix panel */}
                 <Card className="flex-1 p-6 overflow-y-auto">
                   {selectedUser ? (
-                    <PermissionsPanel userId={selectedUser.id} userName={selectedUser.full_name} />
+                    <UserPermissionsMatrix userId={selectedUser.id} userName={selectedUser.full_name} />
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                      <Shield className="w-12 h-12 mb-4 opacity-30" />
-                      <p>Select a staff member to manage their department access.</p>
+                      <Shield className="w-12 h-12 mb-4 opacity-20" />
+                      <p className="font-medium">Select a staff member</p>
+                      <p className="text-sm mt-1">Choose from the list to manage their permissions.</p>
                     </div>
                   )}
                 </Card>
               </div>
             )}
-
-            {permSubTab === "by_role" && (
-              <Card className="flex-1 p-6 overflow-y-auto">
-                <div className="mb-4">
-                  <h3 className="font-semibold text-base">Role-Based Permissions</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Set default permissions for an entire role. These apply to all users with that role unless overridden at the user level.</p>
-                </div>
-                <RolePermissionsPanel />
-              </Card>
-            )}
           </div>
         )}
       </div>
 
+      {/* Add / Edit User Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? "Edit User" : "New Team Member"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
