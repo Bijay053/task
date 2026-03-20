@@ -74,19 +74,26 @@ def _check_duplicate(
     student_name: Optional[str],
     student_id: Optional[int],
     university_id: Optional[int],
+    course: Optional[str] = None,
     exclude_id: Optional[int] = None,
 ) -> bool:
-    """Return True if a duplicate application exists (all three fields match)."""
-    if not app_id_val or not university_id:
-        return False
+    """Return True if a duplicate application exists (App ID, Student, University, Course all match)."""
     # Need at least one student identifier
     if not student_name and not student_id:
         return False
+    # Need at least two of: app_id, university, course to form a meaningful duplicate check
+    identifiers = [bool(app_id_val), bool(university_id), bool(course and course.strip())]
+    if sum(identifiers) < 1:
+        return False
     q = db.query(models.Application).filter(
         models.Application.department == department,
-        models.Application.app_id == app_id_val,
-        models.Application.university_id == university_id,
     )
+    if app_id_val:
+        q = q.filter(models.Application.app_id == app_id_val)
+    if university_id:
+        q = q.filter(models.Application.university_id == university_id)
+    if course and course.strip():
+        q = q.filter(models.Application.course.ilike(course.strip()))
     if student_id:
         q = q.filter(models.Application.student_id == student_id)
     else:
@@ -195,10 +202,10 @@ def create_application(
     if resolved_uni_id:
         app_data["university_id"] = resolved_uni_id
 
-    if _check_duplicate(db, dept, app_data.get("app_id"), app_data.get("student_name"), app_data.get("student_id"), app_data.get("university_id")):
+    if _check_duplicate(db, dept, app_data.get("app_id"), app_data.get("student_name"), app_data.get("student_id"), app_data.get("university_id"), app_data.get("course")):
         raise HTTPException(
             status_code=409,
-            detail="A duplicate application already exists with the same App ID, Student, and University in this department.",
+            detail="A duplicate application already exists with the same App ID, Student, University, and Course in this department.",
         )
 
     app = models.Application(**app_data)

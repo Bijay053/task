@@ -20,7 +20,7 @@ type ViewMode = "table" | "kanban";
 
 function StudentField({ defaultStudentId, defaultStudentName }: { defaultStudentId?: number | null; defaultStudentName?: string | null }) {
   const { data: students } = useListStudents();
-  const [mode, setMode] = useState<"directory" | "manual">(defaultStudentId ? "directory" : (defaultStudentName ? "manual" : "directory"));
+  const [mode, setMode] = useState<"directory" | "manual">(defaultStudentId ? "directory" : "manual");
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -49,7 +49,7 @@ function StudentField({ defaultStudentId, defaultStudentName }: { defaultStudent
 
 function UniversityField({ defaultUniversityId, defaultUniversityName }: { defaultUniversityId?: number | null; defaultUniversityName?: string | null }) {
   const { data: universities } = useListUniversities();
-  const [mode, setMode] = useState<"directory" | "manual">(defaultUniversityName && !defaultUniversityId ? "manual" : "directory");
+  const [mode, setMode] = useState<"directory" | "manual">(defaultUniversityId ? "directory" : "manual");
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
