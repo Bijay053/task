@@ -1,0 +1,18 @@
+        CPU: 1.429s
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo journalctl -u task-portal-api -n 15 --no-pager
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]:   File "/var/www/task-portal/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]:     return dialect.connect(*cargs_tup, **cparams)
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]:   File "/var/www/task-portal/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]:     return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]:   File "/var/www/task-portal/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]:     conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]: sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "taskuser"
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]: (Background on this error at: https://sqlalche.me/e/20/e3q8)
+Mar 20 06:50:43 ip-172-31-41-234 python[3154505]: ERROR:    Application startup failed. Exiting.
+Mar 20 06:50:44 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=3/NOTIMPLEMENTED
+Mar 20 06:50:44 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:50:44 ip-172-31-41-234 systemd[1]: task-portal-api.service: Consumed 1.424s CPU time.
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ 
