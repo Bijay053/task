@@ -4,9 +4,29 @@ from backend.auth import get_password_hash
 import backend.models as models
 
 
+def seed_statuses(db):
+    """Seed default statuses if none exist."""
+    for department, defaults in [("gs", models.GS_STATUS_DEFAULTS), ("offer", models.OFFER_STATUS_DEFAULTS)]:
+        count = db.query(models.AppStatus).filter(models.AppStatus.department == department).count()
+        if count == 0:
+            for name, text_color, bg_color, sort_order in defaults:
+                db.add(models.AppStatus(
+                    department=department,
+                    name=name,
+                    text_color=text_color,
+                    bg_color=bg_color,
+                    sort_order=sort_order,
+                ))
+            db.commit()
+            print(f"[seed] Seeded {len(defaults)} {department.upper()} statuses")
+
+
 def seed():
     db = SessionLocal()
     try:
+        # Always seed statuses (idempotent)
+        seed_statuses(db)
+
         if db.query(models.User).count() > 0:
             print("Database already seeded, skipping.")
             return

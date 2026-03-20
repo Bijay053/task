@@ -21,17 +21,25 @@ import type {
   ApplicationCreate,
   ApplicationOut,
   ApplicationUpdate,
+  AppStatusCreate,
+  AppStatusOut,
+  AppStatusReorder,
+  AppStatusUpdate,
   AssignUpdate,
   AssigneeCount,
+  BulkUploadResult,
   DashboardSummary,
   HealthStatus,
   ListApplicationsParams,
+  ListStatusesParams,
   MyApplicationsParams,
+  PerformanceReportParams,
   ListStudentsParams,
   ListUniversitiesParams,
   LoginRequest,
   MessageResponse,
   NotificationTest,
+  StaffPerformance,
   StatusCount,
   StatusUpdate,
   StudentCreate,
@@ -43,6 +51,8 @@ import type {
   UniversityOut,
   UniversityUpdate,
   UserCreate,
+  UserDeptPermOut,
+  UserDeptPermUpdate,
   UserOut,
   UserUpdate,
 } from "./api.schemas";
@@ -2397,3 +2407,148 @@ export const useTestChat = <
 > => {
   return useMutation(getTestChatMutationOptions(options));
 };
+
+// ─── Statuses ──────────────────────────────────────────────────────────────────
+
+export const listStatuses = async (params?: ListStatusesParams, options?: RequestInit): Promise<AppStatusOut[]> => {
+  const q = new URLSearchParams();
+  if (params?.department) q.append("department", params.department);
+  if (params?.include_inactive) q.append("include_inactive", "true");
+  const qs = q.toString();
+  return customFetch<AppStatusOut[]>(`/api/statuses/${qs ? `?${qs}` : ""}`, { ...options, method: "GET" });
+};
+
+export const getListStatusesQueryKey = (params?: ListStatusesParams) =>
+  [`/api/statuses`, ...(params ? [params] : [])] as const;
+
+export const getListStatusesQueryOptions = <TData = Awaited<ReturnType<typeof listStatuses>>, TError = ErrorType<unknown>>(
+  params?: ListStatusesParams,
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listStatuses>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListStatusesQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStatuses>>> = ({ signal }) => listStatuses(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof listStatuses>>, TError, TData> & { queryKey: QueryKey };
+};
+
+export function useListStatuses<TData = Awaited<ReturnType<typeof listStatuses>>, TError = ErrorType<unknown>>(
+  params?: ListStatusesParams,
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listStatuses>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStatusesQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+export const createStatus = async (data: AppStatusCreate, options?: RequestInit): Promise<AppStatusOut> =>
+  customFetch<AppStatusOut>("/api/statuses/", { ...options, method: "POST", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useCreateStatus = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof createStatus>>, TError, { data: AppStatusCreate }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof createStatus>>, TError, { data: AppStatusCreate }, TContext> =>
+  useMutation({ mutationFn: ({ data }) => createStatus(data, options?.request), ...options?.mutation });
+
+export const updateStatus = async (statusId: number, data: AppStatusUpdate, options?: RequestInit): Promise<AppStatusOut> =>
+  customFetch<AppStatusOut>(`/api/statuses/${statusId}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useUpdateStatus = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateStatus>>, TError, { statusId: number; data: AppStatusUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof updateStatus>>, TError, { statusId: number; data: AppStatusUpdate }, TContext> =>
+  useMutation({ mutationFn: ({ statusId, data }) => updateStatus(statusId, data, options?.request), ...options?.mutation });
+
+export const deleteStatus = async (statusId: number, options?: RequestInit): Promise<MessageResponse> =>
+  customFetch<MessageResponse>(`/api/statuses/${statusId}`, { ...options, method: "DELETE" });
+
+export const useDeleteStatus = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteStatus>>, TError, { statusId: number }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof deleteStatus>>, TError, { statusId: number }, TContext> =>
+  useMutation({ mutationFn: ({ statusId }) => deleteStatus(statusId, options?.request), ...options?.mutation });
+
+export const reorderStatuses = async (data: AppStatusReorder, options?: RequestInit): Promise<MessageResponse> =>
+  customFetch<MessageResponse>("/api/statuses/reorder", { ...options, method: "POST", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useReorderStatuses = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof reorderStatuses>>, TError, { data: AppStatusReorder }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof reorderStatuses>>, TError, { data: AppStatusReorder }, TContext> =>
+  useMutation({ mutationFn: ({ data }) => reorderStatuses(data, options?.request), ...options?.mutation });
+
+// ─── Performance Reports ────────────────────────────────────────────────────────
+
+export const getPerformanceReport = async (params?: PerformanceReportParams, options?: RequestInit): Promise<StaffPerformance[]> => {
+  const q = new URLSearchParams();
+  if (params?.department) q.append("department", params.department);
+  const qs = q.toString();
+  return customFetch<StaffPerformance[]>(`/api/reports/performance${qs ? `?${qs}` : ""}`, { ...options, method: "GET" });
+};
+
+export const getPerformanceReportQueryKey = (params?: PerformanceReportParams) =>
+  [`/api/reports/performance`, ...(params ? [params] : [])] as const;
+
+export const getPerformanceReportQueryOptions = <TData = Awaited<ReturnType<typeof getPerformanceReport>>, TError = ErrorType<unknown>>(
+  params?: PerformanceReportParams,
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getPerformanceReport>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getPerformanceReportQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPerformanceReport>>> = ({ signal }) => getPerformanceReport(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof getPerformanceReport>>, TError, TData> & { queryKey: QueryKey };
+};
+
+export function useGetPerformanceReport<TData = Awaited<ReturnType<typeof getPerformanceReport>>, TError = ErrorType<unknown>>(
+  params?: PerformanceReportParams,
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getPerformanceReport>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getPerformanceReportQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+// ─── Permissions ────────────────────────────────────────────────────────────────
+
+export const getUserPermissions = async (userId: number, options?: RequestInit): Promise<UserDeptPermOut[]> =>
+  customFetch<UserDeptPermOut[]>(`/api/permissions/user/${userId}`, { ...options, method: "GET" });
+
+export const getUserPermissionsQueryKey = (userId: number) => [`/api/permissions/user/${userId}`] as const;
+
+export const getGetUserPermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getUserPermissions>>, TError = ErrorType<unknown>>(
+  userId: number,
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getUserPermissions>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getUserPermissionsQueryKey(userId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserPermissions>>> = ({ signal }) => getUserPermissions(userId, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: !!userId, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof getUserPermissions>>, TError, TData> & { queryKey: QueryKey };
+};
+
+export function useGetUserPermissions<TData = Awaited<ReturnType<typeof getUserPermissions>>, TError = ErrorType<unknown>>(
+  userId: number,
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getUserPermissions>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetUserPermissionsQueryOptions(userId, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+export const setUserPermission = async (userId: number, department: string, data: UserDeptPermUpdate, options?: RequestInit): Promise<UserDeptPermOut> =>
+  customFetch<UserDeptPermOut>(`/api/permissions/user/${userId}/${department}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useSetUserPermission = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof setUserPermission>>, TError, { userId: number; department: string; data: UserDeptPermUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof setUserPermission>>, TError, { userId: number; department: string; data: UserDeptPermUpdate }, TContext> =>
+  useMutation({ mutationFn: ({ userId, department, data }) => setUserPermission(userId, department, data, options?.request), ...options?.mutation });
+
+// ─── Bulk Upload ────────────────────────────────────────────────────────────────
+
+export const bulkUpload = async (department: string, file: File, options?: RequestInit): Promise<BulkUploadResult> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return customFetch<BulkUploadResult>(`/api/bulk-upload/${department}`, { ...options, method: "POST", body: formData });
+};
+
+export const useBulkUpload = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof bulkUpload>>, TError, { department: string; file: File }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof bulkUpload>>, TError, { department: string; file: File }, TContext> =>
+  useMutation({ mutationFn: ({ department, file }) => bulkUpload(department, file, options?.request), ...options?.mutation });

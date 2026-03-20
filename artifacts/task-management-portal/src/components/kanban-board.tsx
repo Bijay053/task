@@ -8,13 +8,15 @@ import { cn } from "@/lib/utils";
 interface Application {
   id: number;
   application_status: string;
-  student?: { full_name: string };
-  university?: { name: string };
-  assigned_to?: { full_name: string };
-  course?: string;
-  intake?: string;
-  priority?: string;
-  channel?: string;
+  student?: { full_name: string } | null;
+  student_name?: string | null;
+  university?: { name: string } | null;
+  university_name?: string | null;
+  assigned_to?: { full_name: string } | null;
+  course?: string | null;
+  intake?: string | null;
+  priority?: string | null;
+  channel?: string | null;
 }
 
 interface KanbanBoardProps {
@@ -59,15 +61,15 @@ function KanbanCard({
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <p className="font-semibold text-sm text-foreground leading-tight line-clamp-2">
-          {app.student?.full_name || "Unknown Student"}
+          {app.student?.full_name || app.student_name || "Unknown Student"}
         </p>
         <PriorityDot priority={app.priority} />
       </div>
 
-      {app.university?.name && (
+      {(app.university?.name || app.university_name) && (
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
           <BookOpen className="w-3 h-3 shrink-0" />
-          <span className="truncate">{app.university.name}</span>
+          <span className="truncate">{app.university?.name || app.university_name}</span>
         </div>
       )}
 

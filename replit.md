@@ -30,17 +30,23 @@ A full-stack task management portal for study abroad consultancies, built to rep
 │       ├── users.py            # GET/POST /api/users, PUT /api/users/:id
 │       ├── students.py         # CRUD /api/students
 │       ├── universities.py     # CRUD /api/universities
-│       ├── applications.py     # Full CRUD + /my + /status + /assign + /logs
+│       ├── applications.py     # Full CRUD + /my + /status + /assign + /logs; agent-only filter
 │       ├── dashboard.py        # /summary, /status-count, /assignee-count, /university-count
-│       └── notifications.py    # /test-email, /test-chat
+│       ├── notifications.py    # /test-email, /test-chat
+│       ├── statuses.py         # Dynamic status CRUD + /reorder (admin/manager only)
+│       ├── reports.py          # GET /performance — per-staff workload report
+│       ├── permissions.py      # GET/PUT /user/{id}/{dept} — dept-level access flags
+│       └── bulk_upload.py      # POST /{department} — bulk xlsx import (openpyxl)
 ├── artifacts/
 │   ├── api-server/             # Routes /api/* to Python backend (port 8080)
 │   └── task-management-portal/ # React + Vite frontend (port 23380, preview at /)
 │       └── src/
 │           ├── App.tsx         # Router + setAuthTokenGetter setup
 │           ├── hooks/use-auth.tsx
-│           ├── pages/          # login, dashboard, applications, my-tasks, approved,
-│           │                   # students, universities, users, settings
+│           ├── pages/          # login, dashboard, applications, offer-applications,
+│           │                   # my-tasks, approved, students, universities,
+│           │                   # users, settings, reports
+│           ├── components/bulk-upload-button.tsx  # Shared Excel upload + result modal
 │           └── components/
 ├── lib/
 │   ├── api-spec/openapi.yaml   # Full OpenAPI 3.1 spec for all routes
@@ -58,27 +64,20 @@ A full-stack task management portal for study abroad consultancies, built to rep
 ## Key Business Rules
 
 1. **Assigned date preserved**: When task is first assigned, `assigned_date` is set. Only updates on reassignment to a different user.
-2. **Status normalization**: "gs on hold" → "GS onhold", "coe approved" → "CoE Approved" etc. handled in backend.
-3. **Role-based access**: `admin`/`manager` see all applications and Users page. `agent` primarily uses My Tasks.
-4. **Isolated auth**: Separate `task_users` table, separate JWT secret. Session cookies do NOT cross to other portals.
+2. **Dynamic statuses**: Statuses are stored in `task_app_statuses` table (not hardcoded). Admins manage them via Settings → GS/Offer Statuses tab. Each status has bg_color and text_color for badge rendering.
+3. **Role-based access**: `admin`/`manager` see all apps, Users, Settings, Reports. `team_leader` can assign apps. `agent` only sees own apps.
+4. **Agent visibility**: agents are filtered to only see their own applications in the list and get endpoints.
+5. **Optional student/university**: `student_id` is nullable on Application. `student_name` and `university_name` raw fields are used as fallback when no directory record is linked.
+6. **Department permissions**: `task_user_dept_permissions` table controls per-user, per-department can_view/can_edit/can_delete flags. Managed in Users → Department Permissions.
+7. **Bulk upload**: POST /api/bulk-upload/{gs|offer} accepts .xlsx; columns matched by partial name. Auto-creates students if not found in directory; stores raw names on applications.
+8. **Isolated auth**: Separate `task_users` table, separate JWT secret.
 
-## Application Statuses & Colors
+## Roles
 
-| Status | Color |
-|--------|-------|
-| GS Rejected | #F8D7DA |
-| GS approved | #D1E7DD |
-| GS document pending | #FFF3CD |
-| GS onhold | #E2E3E5 |
-| GS submitted | #CFE2FF |
-| GS additional document request | #FAD7F0 |
-| In Review | #E7D9FF |
-| Refund Requested | #FCE5CD |
-| Visa Refused | #F4CCCC |
-| Visa Granted | #D9EAD3 |
-| Visa Lodged | #D0E0E3 |
-| CoE Requested | #FFF2CC |
-| CoE Approved | #D9D2E9 |
+- `admin` — Full access to all features
+- `manager` — Same as admin (no destructive ops)
+- `team_leader` — Can assign applications, limited settings access
+- `agent` — Only sees own applications (My Tasks filtered)
 
 ## Running the Project
 

@@ -10,6 +10,7 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import GsApplications from "@/pages/applications";
 import OfferApplications from "@/pages/offer-applications";
+import Reports from "@/pages/reports";
 import MyTasks from "@/pages/my-tasks";
 import Approved from "@/pages/approved";
 import Students from "@/pages/students";
@@ -63,6 +64,9 @@ function Router() {
       </Route>
       <Route path="/universities">
         {() => <ProtectedRoute component={Universities} />}
+      </Route>
+      <Route path="/reports">
+        {() => <ProtectedRoute component={Reports} />}
       </Route>
       <Route path="/users">
         {() => <ProtectedRoute component={Users} />}

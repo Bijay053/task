@@ -90,12 +90,19 @@ class UniversityOut(BaseModel):
         from_attributes = True
 
 
+# ─── Application ───────────────────────────────────────────────────────────────
+
 class ApplicationCreate(BaseModel):
-    department: Optional[str] = "gs"           # 'gs' or 'offer'
-    student_id: int
+    department: Optional[str] = "gs"
+    # Directory links (optional — use raw name if not in directory)
+    student_id: Optional[int] = None
     university_id: Optional[int] = None
+    # Free-text fallback
+    student_name: Optional[str] = None
+    university_name: Optional[str] = None
+
     assigned_to_id: Optional[int] = None
-    application_status: Optional[str] = None   # defaults set per-department in router
+    application_status: Optional[str] = None
     intake: Optional[str] = None
     course: Optional[str] = None
     country: Optional[str] = None
@@ -115,6 +122,7 @@ class ApplicationCreate(BaseModel):
 
 class ApplicationUpdate(BaseModel):
     university_id: Optional[int] = None
+    university_name: Optional[str] = None
     assigned_to_id: Optional[int] = None
     application_status: Optional[str] = None
     intake: Optional[str] = None
@@ -145,7 +153,7 @@ class AssignUpdate(BaseModel):
 class ApplicationOut(BaseModel):
     id: int
     department: str
-    student_id: int
+    student_id: Optional[int]
     university_id: Optional[int]
     assigned_to_id: Optional[int]
     created_by_id: Optional[int]
@@ -155,6 +163,10 @@ class ApplicationOut(BaseModel):
     course: Optional[str]
     country: Optional[str]
     remarks: Optional[str]
+
+    # Raw fallback names
+    student_name: Optional[str]
+    university_name: Optional[str]
 
     # GS-specific
     priority: Optional[str]
@@ -191,6 +203,8 @@ class ActivityLogOut(BaseModel):
         from_attributes = True
 
 
+# ─── Dashboard ─────────────────────────────────────────────────────────────────
+
 class DashboardSummary(BaseModel):
     total: int
     pending: int
@@ -214,9 +228,111 @@ class UniversityCount(BaseModel):
     count: int
 
 
+# ─── App Statuses (dynamic) ────────────────────────────────────────────────────
+
+class AppStatusCreate(BaseModel):
+    department: str
+    name: str
+    text_color: Optional[str] = "#000000"
+    bg_color: Optional[str] = "#f1f5f9"
+
+
+class AppStatusUpdate(BaseModel):
+    name: Optional[str] = None
+    text_color: Optional[str] = None
+    bg_color: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class AppStatusReorder(BaseModel):
+    ordered_ids: List[int]   # status IDs in desired order
+
+
+class AppStatusOut(BaseModel):
+    id: int
+    department: str
+    name: str
+    text_color: str
+    bg_color: str
+    sort_order: int
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+# ─── Permissions ───────────────────────────────────────────────────────────────
+
+class UserDeptPermOut(BaseModel):
+    id: int
+    user_id: int
+    department: str
+    can_view: bool
+    can_edit: bool
+    can_delete: bool
+
+    class Config:
+        from_attributes = True
+
+
+class UserDeptPermUpdate(BaseModel):
+    can_view: bool = True
+    can_edit: bool = False
+    can_delete: bool = False
+
+
+# ─── Reports ───────────────────────────────────────────────────────────────────
+
+class StaffPerformance(BaseModel):
+    user_id: int
+    full_name: str
+    role: str
+    total_assigned: int
+    gs_count: int
+    offer_count: int
+    status_breakdown: dict
+
+
+# ─── Notifications ─────────────────────────────────────────────────────────────
+
 class NotificationTest(BaseModel):
     type: str
     target: str
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
+class HealthStatus(BaseModel):
+    status: str
+
+
+# ─── Bulk Upload ───────────────────────────────────────────────────────────────
+
+class BulkUploadResult(BaseModel):
+    created: int
+    skipped: int
+    errors: List[str]
+
+
+class ListApplicationsParams(BaseModel):
+    department: Optional[str] = None
+    assigned_to_id: Optional[int] = None
+    status: Optional[str] = None
+    search: Optional[str] = None
+
+
+class MyApplicationsParams(BaseModel):
+    department: Optional[str] = None
+
+
+class ListStudentsParams(BaseModel):
+    search: Optional[str] = None
+
+
+class ListUniversitiesParams(BaseModel):
+    search: Optional[str] = None
 
 
 Token.model_rebuild()

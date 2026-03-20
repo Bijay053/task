@@ -11,23 +11,6 @@ import backend.schemas as schemas
 router = APIRouter(prefix="/applications", tags=["applications"])
 
 
-def normalize_status(status: str, department: str = "gs") -> str:
-    if department == "gs":
-        mapping = {
-            "gs on hold": "GS onhold",
-            "coe approved": "CoE Approved",
-            "coe requested": "CoE Requested",
-            "gs approved": "GS approved",
-            "gs rejected": "GS Rejected",
-        }
-        return mapping.get(status.lower(), status)
-    return status  # Offer statuses used as-is
-
-
-def default_status(department: str) -> str:
-    return "In Review" if department == "gs" else "On Hold"
-
-
 def load_options():
     return (
         joinedload(models.Application.student),
@@ -37,9 +20,25 @@ def load_options():
     )
 
 
+def default_status(db: Session, department: str) -> str:
+    """Return first active status for department from DB, or hardcoded fallback."""
+    first = db.query(models.AppStatus).filter(
+        models.AppStatus.department == department,
+        models.AppStatus.is_active == True,
+    ).order_by(models.AppStatus.sort_order.asc()).first()
+    if first:
+        return first.name
+    return "In Review" if department == "gs" else "On Hold"
+
+
+def is_agent_only(user: models.User) -> bool:
+    """Returns True if user should only see their own applications."""
+    return user.role == "agent"
+
+
 @router.get("/", response_model=List[schemas.ApplicationOut])
 def list_applications(
-    department: Optional[str] = Query(None),       # 'gs' or 'offer'
+    department: Optional[str] = Query(None),
     assigned_to_id: Optional[int] = Query(None),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
@@ -47,6 +46,11 @@ def list_applications(
     current_user: models.User = Depends(get_current_user),
 ):
     q = db.query(models.Application).options(*load_options())
+
+    # Agents can only see their own assigned applications
+    if is_agent_only(current_user):
+        q = q.filter(models.Application.assigned_to_id == current_user.id)
+
     if department:
         q = q.filter(models.Application.department == department)
     if assigned_to_id is not None:
@@ -54,7 +58,10 @@ def list_applications(
     if status:
         q = q.filter(models.Application.application_status == status)
     if search:
-        q = q.join(models.Student).filter(models.Student.full_name.ilike(f"%{search}%"))
+        q = q.outerjoin(models.Student).filter(
+            models.Student.full_name.ilike(f"%{search}%") |
+            models.Application.student_name.ilike(f"%{search}%")
+        )
     return q.order_by(models.Application.created_at.desc()).all()
 
 
@@ -88,11 +95,8 @@ def create_application(
     if data.assigned_to_id:
         app_data["assigned_date"] = date.today()
 
-    # Set default status if not provided
     if not app_data.get("application_status"):
-        app_data["application_status"] = default_status(dept)
-    else:
-        app_data["application_status"] = normalize_status(app_data["application_status"], dept)
+        app_data["application_status"] = default_status(db, dept)
 
     app = models.Application(**app_data)
     db.add(app)
@@ -108,9 +112,13 @@ def get_application(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    app = db.query(models.Application).options(*load_options()).filter(models.Application.id == app_id).first()
+    app = db.query(models.Application).options(*load_options()).filter(
+        models.Application.id == app_id
+    ).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
+    if is_agent_only(current_user) and app.assigned_to_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
     return app
 
 
@@ -139,7 +147,6 @@ def update_application(
 
     if "application_status" in update_data:
         old_status = app.application_status
-        update_data["application_status"] = normalize_status(update_data["application_status"], app.department)
         db.add(models.ActivityLog(
             application_id=app.id,
             changed_by_id=current_user.id,
@@ -168,7 +175,7 @@ def update_status(
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
     old_status = app.application_status
-    app.application_status = normalize_status(data.application_status, app.department)
+    app.application_status = data.application_status
     db.add(models.ActivityLog(
         application_id=app.id,
         changed_by_id=current_user.id,
@@ -189,6 +196,9 @@ def assign_application(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    # Only admin, manager, team_leader can assign
+    if current_user.role not in ("admin", "manager", "team_leader"):
+        raise HTTPException(status_code=403, detail="Insufficient permissions to assign")
     app = db.query(models.Application).filter(models.Application.id == app_id).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -218,6 +228,9 @@ def delete_application(
     app = db.query(models.Application).filter(models.Application.id == app_id).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
+    # Agents cannot delete
+    if current_user.role == "agent":
+        raise HTTPException(status_code=403, detail="Agents cannot delete applications")
     db.delete(app)
     db.commit()
     return {"message": "Deleted"}

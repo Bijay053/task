@@ -1,15 +1,76 @@
 import { useState } from "react";
-import { useListApplications, useCreateApplication, useUpdateApplication, useListStudents, useListUniversities, useListUsers } from "@workspace/api-client-react";
+import {
+  useListApplications, useCreateApplication, useUpdateApplication,
+  useListStudents, useListUniversities, useListUsers, useListStatuses
+} from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Select, StatusBadge, Modal, Label, Textarea } from "@/components/ui-elements";
 import { KanbanBoard } from "@/components/kanban-board";
+import { BulkUploadButton } from "@/components/bulk-upload-button";
 import { Search, Plus, FileEdit, LayoutGrid, List } from "lucide-react";
-import { GS_STATUS_CHOICES, GS_STATUS_COLORS } from "@/lib/utils";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "table" | "kanban";
+
+function StudentField({ defaultStudentId, defaultStudentName }: { defaultStudentId?: number | null; defaultStudentName?: string | null }) {
+  const { data: students } = useListStudents();
+  const [mode, setMode] = useState<"directory" | "manual">(defaultStudentId ? "directory" : (defaultStudentName ? "manual" : "directory"));
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>Student *</Label>
+        <button type="button" onClick={() => setMode(m => m === "directory" ? "manual" : "directory")} className="text-xs text-primary hover:underline">
+          {mode === "directory" ? "Not in directory? Type name" : "Select from directory"}
+        </button>
+      </div>
+      {mode === "directory" ? (
+        <>
+          <Select name="student_id" defaultValue={defaultStudentId || ""}>
+            <option value="">Select Student...</option>
+            {students?.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+          </Select>
+          <input type="hidden" name="student_name" value="" />
+        </>
+      ) : (
+        <>
+          <Input name="student_name" defaultValue={defaultStudentName || ""} placeholder="Type student full name..." required />
+          <input type="hidden" name="student_id" value="" />
+        </>
+      )}
+    </div>
+  );
+}
+
+function UniversityField({ defaultUniversityId, defaultUniversityName }: { defaultUniversityId?: number | null; defaultUniversityName?: string | null }) {
+  const { data: universities } = useListUniversities();
+  const [mode, setMode] = useState<"directory" | "manual">(defaultUniversityName && !defaultUniversityId ? "manual" : "directory");
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>University</Label>
+        <button type="button" onClick={() => setMode(m => m === "directory" ? "manual" : "directory")} className="text-xs text-primary hover:underline">
+          {mode === "directory" ? "Not in directory? Type name" : "Select from directory"}
+        </button>
+      </div>
+      {mode === "directory" ? (
+        <>
+          <Select name="university_id" defaultValue={defaultUniversityId || ""}>
+            <option value="">Select University...</option>
+            {universities?.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </Select>
+          <input type="hidden" name="university_name" value="" />
+        </>
+      ) : (
+        <>
+          <Input name="university_name" defaultValue={defaultUniversityName || ""} placeholder="Type university name..." />
+          <input type="hidden" name="university_id" value="" />
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function GsApplications() {
   const queryClient = useQueryClient();
@@ -27,12 +88,15 @@ export default function GsApplications() {
     assigned_to_id: assigneeFilter ? Number(assigneeFilter) : undefined,
   });
 
-  const { data: students } = useListStudents();
-  const { data: universities } = useListUniversities();
+  const { data: statuses } = useListStatuses({ department: "gs" });
   const { data: users } = useListUsers();
 
   const createMut = useCreateApplication();
   const updateMut = useUpdateApplication();
+
+  const statusChoices = statuses?.map(s => s.name) || [];
+  const statusColors: Record<string, { bg: string; text: string }> = {};
+  statuses?.forEach(s => { statusColors[s.name] = { bg: s.bg_color, text: s.text_color }; });
 
   const handleOpenEdit = (app: any) => { setEditingApp(app); setIsModalOpen(true); };
   const handleOpenCreate = () => { setEditingApp(null); setIsModalOpen(true); };
@@ -40,18 +104,21 @@ export default function GsApplications() {
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const data = {
+    const studentId = fd.get("student_id") ? Number(fd.get("student_id")) : undefined;
+    const universityId = fd.get("university_id") ? Number(fd.get("university_id")) : undefined;
+    const data: any = {
       department: "gs",
-      student_id: Number(fd.get("student_id")),
-      university_id: fd.get("university_id") ? Number(fd.get("university_id")) : undefined,
+      student_id: studentId || null,
+      student_name: fd.get("student_name") as string || null,
+      university_id: universityId || null,
+      university_name: fd.get("university_name") as string || null,
       assigned_to_id: fd.get("assigned_to_id") ? Number(fd.get("assigned_to_id")) : undefined,
       application_status: fd.get("application_status") as string,
       intake: fd.get("intake") as string,
       course: fd.get("course") as string,
       country: fd.get("country") as string,
       priority: fd.get("priority") as string,
-      source: fd.get("source") as string,
-      submitted_date: fd.get("submitted_date") as string || undefined,
+      submitted_date: fd.get("submitted_date") as string || null,
       verification: fd.get("verification") as string,
       remarks: fd.get("remarks") as string,
     };
@@ -65,15 +132,20 @@ export default function GsApplications() {
     setIsModalOpen(false);
   };
 
+  const displayName = (app: any) =>
+    app.student?.full_name || app.student_name || "Unknown Student";
+  const displayUni = (app: any) =>
+    app.university?.name || app.university_name || "-";
+
   return (
     <Layout>
       <div className="h-full flex flex-col space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div>
             <h1 className="text-3xl font-display font-bold tracking-tight">GS Applications</h1>
-            <p className="text-muted-foreground mt-1">Global Study applications — visa & university tracking.</p>
+            <p className="text-muted-foreground mt-1">Global Study applications — visa &amp; university tracking.</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="flex rounded-xl border border-border overflow-hidden bg-muted/40">
               <button onClick={() => setViewMode("table")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
                 <List className="w-4 h-4" />Table
@@ -82,6 +154,7 @@ export default function GsApplications() {
                 <LayoutGrid className="w-4 h-4" />Board
               </button>
             </div>
+            <BulkUploadButton department="gs" />
             <Button size="lg" onClick={handleOpenCreate}><Plus className="w-5 h-5 mr-2" />New GS App</Button>
           </div>
         </div>
@@ -96,14 +169,14 @@ export default function GsApplications() {
               <div className="min-w-[180px]">
                 <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-card">
                   <option value="">All Statuses</option>
-                  {GS_STATUS_CHOICES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {statusChoices.map(s => <option key={s} value={s}>{s}</option>)}
                 </Select>
               </div>
             )}
             <div className="min-w-[180px]">
               <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="bg-card">
                 <option value="">All Assignees</option>
-                {users?.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                {users?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
               </Select>
             </div>
           </div>
@@ -133,12 +206,12 @@ export default function GsApplications() {
                   ) : applications?.length === 0 ? (
                     <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">No GS applications found.</td></tr>
                   ) : (
-                    applications?.map((app) => (
+                    applications?.map(app => (
                       <tr key={app.id} className="group cursor-pointer" onClick={() => handleOpenEdit(app)}>
                         <td className="text-center text-muted-foreground text-xs">{app.id}</td>
-                        <td className="font-semibold">{app.student?.full_name}</td>
+                        <td className="font-semibold">{displayName(app)}</td>
                         <td>
-                          <div className="font-medium text-primary">{app.university?.name || "-"}</div>
+                          <div className="font-medium text-primary">{displayUni(app)}</div>
                           <div className="text-xs text-muted-foreground">{app.course || "-"}</div>
                         </td>
                         <td>{app.intake || "-"}</td>
@@ -150,13 +223,15 @@ export default function GsApplications() {
                             </span>
                           ) : "-"}
                         </td>
-                        <td><StatusBadge status={app.application_status} department="gs" /></td>
+                        <td>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: statusColors[app.application_status]?.bg || "#f1f5f9", color: statusColors[app.application_status]?.text || "#475569" }}>
+                            {app.application_status}
+                          </span>
+                        </td>
                         <td>
                           {app.assigned_to ? (
                             <div className="flex items-center">
-                              <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-xs font-bold mr-2 border border-border">
-                                {app.assigned_to.full_name.charAt(0)}
-                              </div>
+                              <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-xs font-bold mr-2 border border-border">{app.assigned_to.full_name.charAt(0)}</div>
                               <span className="text-sm">{app.assigned_to.full_name}</span>
                             </div>
                           ) : <span className="text-muted-foreground text-sm italic">Unassigned</span>}
@@ -185,8 +260,8 @@ export default function GsApplications() {
             ) : (
               <KanbanBoard
                 applications={applications || []}
-                statusChoices={GS_STATUS_CHOICES}
-                statusColors={GS_STATUS_COLORS}
+                statusChoices={statusChoices}
+                statusColors={statusColors}
               />
             )}
           </div>
@@ -196,24 +271,12 @@ export default function GsApplications() {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingApp ? "Edit GS Application" : "New GS Application"} maxWidth="max-w-3xl">
         <form onSubmit={onSubmit} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <Label>Student *</Label>
-              <Select name="student_id" defaultValue={editingApp?.student_id || ""} required disabled={!!editingApp}>
-                <option value="">Select Student...</option>
-                {students?.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
-              </Select>
-            </div>
+            <StudentField key={editingApp?.id + "-s"} defaultStudentId={editingApp?.student_id} defaultStudentName={editingApp?.student_name} />
             <div className="space-y-2">
               <Label>Country</Label>
               <Input name="country" defaultValue={editingApp?.country || ""} placeholder="e.g. Australia" />
             </div>
-            <div className="space-y-2">
-              <Label>University</Label>
-              <Select name="university_id" defaultValue={editingApp?.university_id || ""}>
-                <option value="">Select University...</option>
-                {universities?.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </Select>
-            </div>
+            <UniversityField key={editingApp?.id + "-u"} defaultUniversityId={editingApp?.university_id} defaultUniversityName={editingApp?.university_name} />
             <div className="space-y-2">
               <Label>Course</Label>
               <Input name="course" defaultValue={editingApp?.course || ""} placeholder="e.g. Master of Data Science" />
@@ -237,15 +300,15 @@ export default function GsApplications() {
             </div>
             <div className="space-y-2">
               <Label>Application Status</Label>
-              <Select name="application_status" defaultValue={editingApp?.application_status || "In Review"}>
-                {GS_STATUS_CHOICES.map((s) => <option key={s} value={s}>{s}</option>)}
+              <Select name="application_status" defaultValue={editingApp?.application_status || statusChoices[0] || "In Review"}>
+                {statusChoices.map(s => <option key={s} value={s}>{s}</option>)}
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Agent (Assignee)</Label>
               <Select name="assigned_to_id" defaultValue={editingApp?.assigned_to_id || ""}>
                 <option value="">Unassigned</option>
-                {users?.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                {users?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
               </Select>
             </div>
             <div className="space-y-2">

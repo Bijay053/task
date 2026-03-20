@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, StatusBadge } from "@/components/ui-elements";
 import { KanbanBoard } from "@/components/kanban-board";
-import { useMyApplications } from "@workspace/api-client-react";
+import { useMyApplications, useListStatuses } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { LayoutGrid, List } from "lucide-react";
-import { cn, GS_STATUS_CHOICES, GS_STATUS_COLORS, OFFER_STATUS_CHOICES, OFFER_STATUS_COLORS } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type ViewMode = "table" | "kanban";
 type DeptTab = "gs" | "offer";
@@ -16,11 +16,15 @@ export default function MyTasks() {
 
   const { data: gsApps, isLoading: gsLoading } = useMyApplications({ department: "gs" });
   const { data: offerApps, isLoading: offerLoading } = useMyApplications({ department: "offer" });
+  const { data: gsStatuses } = useListStatuses({ department: "gs" });
+  const { data: offerStatuses } = useListStatuses({ department: "offer" });
 
   const applications = dept === "gs" ? gsApps : offerApps;
   const isLoading = dept === "gs" ? gsLoading : offerLoading;
-  const statusChoices = dept === "gs" ? GS_STATUS_CHOICES : OFFER_STATUS_CHOICES;
-  const statusColors = dept === "gs" ? GS_STATUS_COLORS : OFFER_STATUS_COLORS;
+  const rawStatuses = dept === "gs" ? gsStatuses : offerStatuses;
+  const statusChoices = rawStatuses?.map(s => s.name) || [];
+  const statusColors: Record<string, { bg: string; text: string }> = {};
+  rawStatuses?.forEach(s => { statusColors[s.name] = { bg: s.bg_color, text: s.text_color }; });
 
   return (
     <Layout>
@@ -92,9 +96,9 @@ export default function MyTasks() {
                     applications?.map((app) => (
                       <tr key={app.id} className="hover:bg-muted/30">
                         <td className="text-center text-muted-foreground text-xs">{app.id}</td>
-                        <td className="font-semibold">{app.student?.full_name}</td>
+                        <td className="font-semibold">{app.student?.full_name || (app as any).student_name || "-"}</td>
                         <td>
-                          <div className="font-medium text-primary">{app.university?.name || "-"}</div>
+                          <div className="font-medium text-primary">{app.university?.name || (app as any).university_name || "-"}</div>
                           <div className="text-xs text-muted-foreground">{app.course || "-"}</div>
                         </td>
                         <td>{app.intake || "-"}</td>
@@ -105,7 +109,11 @@ export default function MyTasks() {
                             ) : "-"}
                           </td>
                         )}
-                        <td><StatusBadge status={app.application_status} department={dept} /></td>
+                        <td>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: statusColors[app.application_status]?.bg || "#f1f5f9", color: statusColors[app.application_status]?.text || "#475569" }}>
+                            {app.application_status}
+                          </span>
+                        </td>
                         {dept === "gs" && (
                           <td>
                             <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${app.priority === "high" ? "bg-red-100 text-red-700" : app.priority === "low" ? "bg-slate-100 text-slate-600" : "bg-blue-100 text-blue-700"}`}>
