@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 
 import Login from "@/pages/login";
@@ -15,22 +16,8 @@ import Universities from "@/pages/universities";
 import Users from "@/pages/users";
 import Settings from "@/pages/settings";
 
-// Setup fetch interceptor to inject JWT token into all /api requests
-const originalFetch = window.fetch;
-window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-  const urlStr = input.toString();
-  if (urlStr.startsWith("/api/")) {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      init = init || {};
-      init.headers = {
-        ...init.headers,
-        Authorization: `Bearer ${token}`
-      };
-    }
-  }
-  return originalFetch(input, init);
-};
+// Register token getter so all API calls include the JWT Bearer token
+setAuthTokenGetter(() => localStorage.getItem("access_token"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
