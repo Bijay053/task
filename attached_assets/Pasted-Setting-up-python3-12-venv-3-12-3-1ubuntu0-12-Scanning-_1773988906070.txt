@@ -1,0 +1,198 @@
+Setting up python3.12-venv (3.12.3-1ubuntu0.12) ...
+Scanning processes...                                                                                                                                                                                              
+Scanning candidates...                                                                                                                                                                                             
+Scanning linux images...                                                                                                                                                                                           
+
+Pending kernel upgrade!
+Running kernel version:
+  6.14.0-1018-aws
+Diagnostics:
+  The currently running kernel version is not the expected kernel version 6.17.0-1009-aws.
+
+Restarting the system to load the new kernel will not be handled automatically, so you should consider rebooting.
+
+Restarting services...
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart docker.service
+ systemctl restart getty@tty1.service
+ systemctl restart networkd-dispatcher.service
+ systemctl restart serial-getty@ttyS0.service
+ systemctl restart systemd-logind.service
+ systemctl restart unattended-upgrades.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+Collecting uvicorn
+  Downloading uvicorn-0.42.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting fastapi
+  Downloading fastapi-0.135.1-py3-none-any.whl.metadata (30 kB)
+Collecting sqlalchemy
+  Downloading sqlalchemy-2.0.48-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (9.5 kB)
+Collecting psycopg2-binary
+  Downloading psycopg2_binary-2.9.11-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.9 kB)
+Collecting python-jose
+  Downloading python_jose-3.5.0-py2.py3-none-any.whl.metadata (5.5 kB)
+Collecting passlib
+  Downloading passlib-1.7.4-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting bcrypt
+  Downloading bcrypt-5.0.0-cp39-abi3-manylinux_2_34_x86_64.whl.metadata (10 kB)
+Collecting python-multipart
+  Downloading python_multipart-0.0.22-py3-none-any.whl.metadata (1.8 kB)
+Collecting openpyxl
+  Downloading openpyxl-3.1.5-py2.py3-none-any.whl.metadata (2.5 kB)
+Collecting httpx
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting cryptography
+  Downloading cryptography-46.0.5-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Collecting aiofiles
+  Downloading aiofiles-25.1.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting watchfiles
+  Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting pydantic[email]
+  Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 90.6/90.6 kB 7.3 MB/s eta 0:00:00
+Collecting click>=7.0 (from uvicorn)
+  Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting h11>=0.8 (from uvicorn)
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting starlette>=0.46.0 (from fastapi)
+  Downloading starlette-0.52.1-py3-none-any.whl.metadata (6.3 kB)
+Collecting typing-extensions>=4.8.0 (from fastapi)
+  Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting typing-inspection>=0.4.2 (from fastapi)
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi)
+  Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Collecting greenlet>=1 (from sqlalchemy)
+  Downloading greenlet-3.3.2-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (3.7 kB)
+Collecting annotated-types>=0.6.0 (from pydantic[email])
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.41.5 (from pydantic[email])
+  Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting email-validator>=2.0.0 (from pydantic[email])
+  Downloading email_validator-2.3.0-py3-none-any.whl.metadata (26 kB)
+Collecting ecdsa!=0.15 (from python-jose)
+  Downloading ecdsa-0.19.1-py2.py3-none-any.whl.metadata (29 kB)
+Collecting rsa!=4.1.1,!=4.4,<5.0,>=4.0 (from python-jose)
+  Downloading rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
+Collecting pyasn1>=0.5.0 (from python-jose)
+  Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+Collecting et-xmlfile (from openpyxl)
+  Downloading et_xmlfile-2.0.0-py3-none-any.whl.metadata (2.7 kB)
+Collecting anyio (from httpx)
+  Downloading anyio-4.12.1-py3-none-any.whl.metadata (4.3 kB)
+Collecting certifi (from httpx)
+  Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+Collecting httpcore==1.* (from httpx)
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna (from httpx)
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting cffi>=2.0.0 (from cryptography)
+  Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography)
+  Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Collecting six>=1.9.0 (from ecdsa!=0.15->python-jose)
+  Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting dnspython>=2.0.0 (from email-validator>=2.0.0->pydantic[email])
+  Downloading dnspython-2.8.0-py3-none-any.whl.metadata (5.7 kB)
+Downloading uvicorn-0.42.0-py3-none-any.whl (68 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 68.8/68.8 kB 6.4 MB/s eta 0:00:00
+Downloading fastapi-0.135.1-py3-none-any.whl (116 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 117.0/117.0 kB 11.3 MB/s eta 0:00:00
+Downloading sqlalchemy-2.0.48-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 90.5 MB/s eta 0:00:00
+Downloading psycopg2_binary-2.9.11-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (4.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.2/4.2 MB 102.8 MB/s eta 0:00:00
+Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 87.5 MB/s eta 0:00:00
+Downloading python_jose-3.5.0-py2.py3-none-any.whl (34 kB)
+Downloading passlib-1.7.4-py2.py3-none-any.whl (525 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 525.6/525.6 kB 42.0 MB/s eta 0:00:00
+Downloading bcrypt-5.0.0-cp39-abi3-manylinux_2_34_x86_64.whl (278 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 278.2/278.2 kB 23.4 MB/s eta 0:00:00
+Downloading python_multipart-0.0.22-py3-none-any.whl (24 kB)
+Downloading openpyxl-3.1.5-py2.py3-none-any.whl (250 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 250.9/250.9 kB 21.9 MB/s eta 0:00:00
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 73.5/73.5 kB 6.9 MB/s eta 0:00:00
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 78.8/78.8 kB 7.5 MB/s eta 0:00:00
+Downloading cryptography-46.0.5-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 95.7 MB/s eta 0:00:00
+Downloading aiofiles-25.1.0-py3-none-any.whl (14 kB)
+Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (456 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 456.8/456.8 kB 50.0 MB/s eta 0:00:00
+Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Downloading anyio-4.12.1-py3-none-any.whl (113 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 113.6/113.6 kB 12.5 MB/s eta 0:00:00
+Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 219.6/219.6 kB 21.0 MB/s eta 0:00:00
+Downloading click-8.3.1-py3-none-any.whl (108 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 108.3/108.3 kB 11.2 MB/s eta 0:00:00
+Downloading ecdsa-0.19.1-py2.py3-none-any.whl (150 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 150.6/150.6 kB 15.2 MB/s eta 0:00:00
+Downloading email_validator-2.3.0-py3-none-any.whl (35 kB)
+Downloading greenlet-3.3.2-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (613 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 613.9/613.9 kB 43.7 MB/s eta 0:00:00
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 71.0/71.0 kB 6.5 MB/s eta 0:00:00
+Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 84.0/84.0 kB 7.9 MB/s eta 0:00:00
+Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 463.6/463.6 kB 35.3 MB/s eta 0:00:00
+Downloading rsa-4.9.1-py3-none-any.whl (34 kB)
+Downloading starlette-0.52.1-py3-none-any.whl (74 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 74.3/74.3 kB 6.9 MB/s eta 0:00:00
+Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 44.6/44.6 kB 4.0 MB/s eta 0:00:00
+Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 153.7/153.7 kB 14.1 MB/s eta 0:00:00
+Downloading et_xmlfile-2.0.0-py3-none-any.whl (18 kB)
+Downloading dnspython-2.8.0-py3-none-any.whl (331 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 331.1/331.1 kB 24.7 MB/s eta 0:00:00
+Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 48.2/48.2 kB 4.1 MB/s eta 0:00:00
+Installing collected packages: passlib, typing-extensions, six, python-multipart, pycparser, pyasn1, psycopg2-binary, idna, h11, greenlet, et-xmlfile, dnspython, click, certifi, bcrypt, annotated-types, annotated-doc, aiofiles, uvicorn, typing-inspection, sqlalchemy, rsa, pydantic-core, openpyxl, httpcore, email-validator, ecdsa, cffi, anyio, watchfiles, starlette, python-jose, pydantic, httpx, cryptography, fastapi
+Successfully installed aiofiles-25.1.0 annotated-doc-0.0.4 annotated-types-0.7.0 anyio-4.12.1 bcrypt-5.0.0 certifi-2026.2.25 cffi-2.0.0 click-8.3.1 cryptography-46.0.5 dnspython-2.8.0 ecdsa-0.19.1 email-validator-2.3.0 et-xmlfile-2.0.0 fastapi-0.135.1 greenlet-3.3.2 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 idna-3.11 openpyxl-3.1.5 passlib-1.7.4 psycopg2-binary-2.9.11 pyasn1-0.6.3 pycparser-3.0 pydantic-2.12.5 pydantic-core-2.41.5 python-jose-3.5.0 python-multipart-0.0.22 rsa-4.9.1 six-1.17.0 sqlalchemy-2.0.48 starlette-0.52.1 typing-extensions-4.15.0 typing-inspection-0.4.2 uvicorn-0.42.0 watchfiles-1.1.1
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo sed -i 's|ExecStart=.*|ExecStart=/var/www/task-portal/venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8080|' /etc/systemd/system/task-portal-api.service
+sudo systemctl daemon-reload
+sudo systemctl start task-portal-api
+sleep 3
+sudo systemctl status task-portal-api
+sudo journalctl -u task-portal-api -n 20
+● task-portal-api.service - Task Portal API
+     Loaded: loaded (/etc/systemd/system/task-portal-api.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Fri 2026-03-20 06:42:41 UTC; 1s ago
+    Process: 3150336 ExecStart=/var/www/task-portal/venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 (code=exited, status=3)
+   Main PID: 3150336 (code=exited, status=3)
+        CPU: 1.452s
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:   File "/var/www/task-portal/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:     raise exc_value.with_traceback(exc_tb)
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:   File "/var/www/task-portal/venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:     self.dbapi_connection = connection = pool._invoke_creator(self)
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:   File "/var/www/task-portal/venv/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:     return dialect.connect(*cargs_tup, **cparams)
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:   File "/var/www/task-portal/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:     return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:   File "/var/www/task-portal/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:     conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]: sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication >
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]: (Background on this error at: https://sqlalche.me/e/20/e3q8)
+Mar 20 06:42:40 ip-172-31-41-234 python[3150336]: ERROR:    Application startup failed. Exiting.
+Mar 20 06:42:41 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=3/NOTIMPLEMENTED
+Mar 20 06:42:41 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:42:41 ip-172-31-41-234 systemd[1]: task-portal-api.service: Consumed 1.452s CPU time.
+lines 1-20/20 (END)
