@@ -51,9 +51,6 @@ def _base_template(title: str, preview_text: str, body_html: str) -> str:
                   <div style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">
                     {APP_NAME}
                   </div>
-                  <div style="font-size:12px;color:#93c5fd;margin-top:2px;">
-                    Study Abroad Consultancy Portal
-                  </div>
                 </td>
                 <td align="right">
                   <div style="width:40px;height:40px;background:rgba(255,255,255,0.15);
