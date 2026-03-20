@@ -29,6 +29,7 @@ import type {
   AppStatusReorder,
   AppStatusUpdate,
   AssignUpdate,
+  FollowerUpdate,
   AssigneeCount,
   BulkUploadResult,
   DashboardSummary,
@@ -2746,3 +2747,38 @@ export const useListStudentsSummary = <TData = Awaited<ReturnType<typeof listStu
   query.queryKey = queryKey;
   return query;
 };
+
+// ─── Followers ───────────────────────────────────────────────────────────────
+
+export const updateFollowers = async (
+  appId: number,
+  data: FollowerUpdate,
+  options?: RequestInit,
+): Promise<ApplicationOut> =>
+  customFetch<ApplicationOut>(`/api/applications/${appId}/followers`, {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(data),
+  });
+
+export const useUpdateFollowers = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateFollowers>>,
+      TError,
+      { appId: number; data: FollowerUpdate },
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateFollowers>>,
+  TError,
+  { appId: number; data: FollowerUpdate },
+  TContext
+> =>
+  useMutation({
+    mutationFn: ({ appId, data }) => updateFollowers(appId, data, options?.request),
+    ...options?.mutation,
+  });

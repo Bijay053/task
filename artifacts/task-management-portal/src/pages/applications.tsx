@@ -4,6 +4,7 @@ import {
   useListStudents, useListUniversities, useListUsers, useListStatuses, useListAgents,
   useGetDeptSettings
 } from "@workspace/api-client-react";
+import { Users } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Select, StatusBadge, Modal, Label, Textarea } from "@/components/ui-elements";
 import { KanbanBoard } from "@/components/kanban-board";
@@ -81,6 +82,7 @@ export default function GsApplications() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<any>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [selectedFollowers, setSelectedFollowers] = useState<number[]>([]);
 
   const { data: applications, isLoading } = useListApplications({
     department: "gs",
@@ -105,8 +107,16 @@ export default function GsApplications() {
   const tabStatusesSetting = gsSettings?.find(s => s.key === "gs_tab_statuses")?.value || "";
   const pinnedTabStatuses = tabStatusesSetting ? tabStatusesSetting.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
 
-  const handleOpenEdit = (app: any) => { setEditingApp(app); setIsModalOpen(true); };
-  const handleOpenCreate = () => { setEditingApp(null); setIsModalOpen(true); };
+  const handleOpenEdit = (app: any) => {
+    setEditingApp(app);
+    setSelectedFollowers(app.follower_ids || []);
+    setIsModalOpen(true);
+  };
+  const handleOpenCreate = () => {
+    setEditingApp(null);
+    setSelectedFollowers([]);
+    setIsModalOpen(true);
+  };
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -129,6 +139,7 @@ export default function GsApplications() {
       submitted_date: fd.get("submitted_date") as string || null,
       verification: fd.get("verification") as string,
       remarks: fd.get("remarks") as string,
+      follower_ids: selectedFollowers,
     };
     if (editingApp) {
       await updateMut.mutateAsync({ appId: editingApp.id, data });
@@ -234,15 +245,16 @@ export default function GsApplications() {
                     <th>Status</th>
                     <th>Ext. Agent</th>
                     <th>Assignee</th>
+                    <th>Followers</th>
                     <th>Priority</th>
                     <th className="min-w-[220px]">Remarks</th>
                   </tr>
                 </thead>
                 <tbody className="align-top">
                   {isLoading ? (
-                    <tr><td colSpan={12} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
+                    <tr><td colSpan={13} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
                   ) : applications?.length === 0 ? (
-                    <tr><td colSpan={12} className="text-center py-12 text-muted-foreground">No GS applications found.</td></tr>
+                    <tr><td colSpan={13} className="text-center py-12 text-muted-foreground">No GS applications found.</td></tr>
                   ) : (
                     applications?.map(app => (
                       <tr key={app.id} className="group cursor-pointer" onClick={() => handleOpenEdit(app)}>
@@ -278,6 +290,22 @@ export default function GsApplications() {
                               <span className="text-sm">{app.assigned_to.full_name.split(" ")[0]}</span>
                             </div>
                           ) : <span className="text-muted-foreground/40 text-xs">Unassigned</span>}
+                        </td>
+                        <td>
+                          {app.follower_users && app.follower_users.length > 0 ? (
+                            <div className="flex items-center -space-x-1.5" title={app.follower_users.map((u: any) => u.full_name).join(", ")}>
+                              {app.follower_users.slice(0, 4).map((u: any) => (
+                                <div key={u.id} className="w-6 h-6 rounded-full bg-violet-100 border-2 border-background flex items-center justify-center text-[10px] font-bold text-violet-700 shrink-0">
+                                  {u.full_name.charAt(0)}
+                                </div>
+                              ))}
+                              {app.follower_users.length > 4 && (
+                                <div className="w-6 h-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-bold text-muted-foreground shrink-0">
+                                  +{app.follower_users.length - 4}
+                                </div>
+                              )}
+                            </div>
+                          ) : <span className="text-muted-foreground/40 text-xs">—</span>}
                         </td>
                         <td>
                           <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase whitespace-nowrap ${app.priority === "high" ? "bg-red-100 text-red-700" : app.priority === "low" ? "bg-slate-100 text-slate-600" : "bg-blue-100 text-blue-700"}`}>
@@ -361,6 +389,37 @@ export default function GsApplications() {
                 <option value="">Unassigned</option>
                 {users?.map(u => <option key={u.id} value={u.id}>{u.full_name} ({u.role})</option>)}
               </Select>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />Followers <span className="text-muted-foreground font-normal text-xs">(also appear in their My Tasks)</span></Label>
+              {selectedFollowers.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {selectedFollowers.map(uid => {
+                    const u = users?.find(x => x.id === uid);
+                    return u ? (
+                      <span key={uid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-medium">
+                        {u.full_name.split(" ")[0]}
+                        <button type="button" onClick={() => setSelectedFollowers(f => f.filter(id => id !== uid))} className="ml-0.5 hover:text-violet-900">×</button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              )}
+              <div className="border border-border rounded-lg max-h-[130px] overflow-y-auto divide-y divide-border/50">
+                {users?.map(u => (
+                  <label key={u.id} className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-muted/50 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      className="rounded accent-violet-600"
+                      checked={selectedFollowers.includes(u.id)}
+                      onChange={e => setSelectedFollowers(f => e.target.checked ? [...f, u.id] : f.filter(id => id !== u.id))}
+                    />
+                    <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold border border-border shrink-0">{u.full_name.charAt(0)}</div>
+                    <span>{u.full_name}</span>
+                    <span className="text-muted-foreground text-xs ml-auto">{u.role}</span>
+                  </label>
+                ))}
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Priority</Label>

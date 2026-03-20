@@ -181,6 +181,9 @@ class ApplicationCreate(BaseModel):
     offer_applied_date: Optional[date] = None
     offer_received_date: Optional[date] = None
 
+    # Followers (staff who can view this task in their My Tasks)
+    follower_ids: Optional[List[int]] = []
+
 
 class ApplicationUpdate(BaseModel):
     university_id: Optional[int] = None
@@ -203,6 +206,13 @@ class ApplicationUpdate(BaseModel):
     channel: Optional[str] = None
     offer_applied_date: Optional[date] = None
     offer_received_date: Optional[date] = None
+
+    # Followers (None = don't change, [] = clear all, [...] = set to list)
+    follower_ids: Optional[List[int]] = None
+
+
+class FollowerUpdate(BaseModel):
+    follower_ids: List[int] = []
 
 
 class StatusUpdate(BaseModel):
@@ -250,6 +260,10 @@ class ApplicationOut(BaseModel):
     agent: Optional[AgentOut]
     assigned_to: Optional[UserOut]
     created_by: Optional[UserOut]
+
+    # Followers: IDs for quick lookup, full user objects for display
+    follower_ids: List[int] = []
+    follower_users: List[UserOut] = []
 
     class Config:
         from_attributes = True

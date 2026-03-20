@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Modal, Label, Select, Textarea } from "@/components/ui-elements";
 import { KanbanBoard } from "@/components/kanban-board";
-import { useMyApplications, useListStatuses, useUpdateApplication } from "@workspace/api-client-react";
+import { useMyApplications, useListStatuses, useUpdateApplication, useGetMe } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { LayoutGrid, List, Edit2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ export default function MyTasks() {
   const [dept, setDept] = useState<DeptTab>("gs");
   const [editingApp, setEditingApp] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: currentUser } = useGetMe();
 
   const { data: gsApps, isLoading: gsLoading } = useMyApplications({ department: "gs" });
   const { data: offerApps, isLoading: offerLoading } = useMyApplications({ department: "offer" });
@@ -62,7 +63,7 @@ export default function MyTasks() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div>
             <h1 className="text-3xl font-display font-bold tracking-tight">My Tasks</h1>
-            <p className="text-muted-foreground mt-1">Applications currently assigned to you.</p>
+            <p className="text-muted-foreground mt-1">Applications assigned to you or that you follow.</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex rounded-xl border border-border overflow-hidden bg-muted/40">
@@ -123,7 +124,14 @@ export default function MyTasks() {
                     applications?.map((app) => (
                       <tr key={app.id} className="hover:bg-muted/30 group cursor-pointer" onClick={() => openEdit(app)}>
                         <td className="text-center text-muted-foreground text-xs">{app.id}</td>
-                        <td className="font-semibold">{displayName(app)}</td>
+                        <td className="font-semibold">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {displayName(app)}
+                            {currentUser && app.assigned_to_id !== currentUser.id && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-100 text-violet-700 border border-violet-200 shrink-0">Following</span>
+                            )}
+                          </div>
+                        </td>
                         <td>
                           <div className="font-medium text-primary">{displayUni(app)}</div>
                           <div className="text-xs text-muted-foreground">{(app as any).course || "-"}</div>

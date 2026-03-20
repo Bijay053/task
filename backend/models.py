@@ -197,6 +197,15 @@ class Application(Base):
         "User", foreign_keys=[created_by_id], back_populates="created_applications"
     )
     activity_logs = relationship("ActivityLog", back_populates="application")
+    followers = relationship("ApplicationFollower", back_populates="application", cascade="all, delete-orphan")
+
+    @property
+    def follower_ids(self) -> list:
+        return [f.user_id for f in self.followers]
+
+    @property
+    def follower_users(self) -> list:
+        return [f.user for f in self.followers if f.user]
 
 
 class ActivityLog(Base):
@@ -245,3 +254,18 @@ class UserDeptPermission(Base):
     user = relationship("User", back_populates="dept_permissions")
 
     __table_args__ = (UniqueConstraint("user_id", "department", name="uq_user_dept_perm"),)
+
+
+class ApplicationFollower(Base):
+    """Staff members who follow (watch) an application — they can view it in My Tasks."""
+    __tablename__ = "task_application_followers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("task_applications.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("task_users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("application_id", "user_id", name="uq_app_follower"),)
+
+    application = relationship("Application", back_populates="followers")
+    user = relationship("User")

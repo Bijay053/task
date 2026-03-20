@@ -1,6 +1,7 @@
 from datetime import date
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from backend.database import get_db
@@ -19,7 +20,18 @@ def load_options():
         joinedload(models.Application.agent),
         joinedload(models.Application.assigned_to),
         joinedload(models.Application.created_by),
+        joinedload(models.Application.followers).joinedload(models.ApplicationFollower.user),
     )
+
+
+def _sync_followers(db: Session, app_id: int, follower_ids: List[int]):
+    """Replace follower list for an application."""
+    db.query(models.ApplicationFollower).filter(
+        models.ApplicationFollower.application_id == app_id
+    ).delete(synchronize_session=False)
+    for uid in follower_ids:
+        db.add(models.ApplicationFollower(application_id=app_id, user_id=uid))
+    db.flush()
 
 
 def default_status(db: Session, department: str) -> str:
@@ -92,10 +104,22 @@ def my_applications(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    """Return applications assigned to current user OR where they are a follower."""
     q = (
         db.query(models.Application)
         .options(*load_options())
-        .filter(models.Application.assigned_to_id == current_user.id)
+        .outerjoin(
+            models.ApplicationFollower,
+            (models.ApplicationFollower.application_id == models.Application.id) &
+            (models.ApplicationFollower.user_id == current_user.id),
+        )
+        .filter(
+            or_(
+                models.Application.assigned_to_id == current_user.id,
+                models.ApplicationFollower.user_id == current_user.id,
+            )
+        )
+        .distinct()
     )
     if department:
         q = q.filter(models.Application.department == department)
@@ -110,6 +134,7 @@ def create_application(
 ):
     dept = data.department or "gs"
     app_data = data.model_dump()
+    follower_ids = app_data.pop("follower_ids", []) or []
     app_data["department"] = dept
     app_data["created_by_id"] = current_user.id
 
@@ -121,9 +146,10 @@ def create_application(
 
     app = models.Application(**app_data)
     db.add(app)
+    db.flush()  # get app.id before adding followers
+    _sync_followers(db, app.id, follower_ids)
     db.commit()
-    db.refresh(app)
-    db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by"])
+    db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by", "followers"])
 
     # Notify the assignee if one was set at creation
     if app.assigned_to_id and app.assigned_to:
@@ -163,6 +189,7 @@ def update_application(
         raise HTTPException(status_code=404, detail="Application not found")
 
     update_data = data.model_dump(exclude_none=True)
+    follower_ids = update_data.pop("follower_ids", None)
 
     new_assignee_id = update_data.get("assigned_to_id")
     assignee_changed = new_assignee_id is not None and new_assignee_id != app.assigned_to_id
@@ -190,9 +217,11 @@ def update_application(
     for key, val in update_data.items():
         setattr(app, key, val)
 
+    if follower_ids is not None:
+        _sync_followers(db, app.id, follower_ids)
+
     db.commit()
-    db.refresh(app)
-    db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by"])
+    db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by", "followers"])
 
     # Notify the new assignee if assignment changed
     if assignee_changed and app.assigned_to:
@@ -201,6 +230,23 @@ def update_application(
         except Exception:
             pass
 
+    return app
+
+
+@router.patch("/{app_id}/followers", response_model=schemas.ApplicationOut)
+def update_followers(
+    app_id: int,
+    data: schemas.FollowerUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Set the exact follower list for an application."""
+    app = db.query(models.Application).filter(models.Application.id == app_id).first()
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    _sync_followers(db, app.id, data.follower_ids)
+    db.commit()
+    db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by", "followers"])
     return app
 
 
@@ -224,8 +270,7 @@ def update_status(
         new_value=app.application_status,
     ))
     db.commit()
-    db.refresh(app)
-    db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by"])
+    db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by", "followers"])
     return app
 
 
@@ -255,8 +300,7 @@ def assign_application(
             new_value=str(data.assigned_to_id),
         ))
     db.commit()
-    db.refresh(app)
-    db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by"])
+    db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by", "followers"])
 
     # Notify the new assignee
     if assignee_changed and app.assigned_to:

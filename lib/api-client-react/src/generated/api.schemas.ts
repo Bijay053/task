@@ -93,6 +93,8 @@ export interface ApplicationOut {
   university?: UniversityOut | null;
   assigned_to?: UserOut | null;
   created_by?: UserOut | null;
+  follower_ids: number[];
+  follower_users: UserOut[];
 }
 
 export interface ApplicationCreate {
@@ -115,6 +117,7 @@ export interface ApplicationCreate {
   channel?: string | null;
   offer_applied_date?: string | null;
   offer_received_date?: string | null;
+  follower_ids?: number[];
 }
 
 export interface ApplicationUpdate {
@@ -134,8 +137,10 @@ export interface ApplicationUpdate {
   channel?: string | null;
   offer_applied_date?: string | null;
   offer_received_date?: string | null;
+  follower_ids?: number[] | null;
 }
 
+export interface FollowerUpdate { follower_ids: number[]; }
 export interface StatusUpdate { application_status: string; }
 export interface AssignUpdate { assigned_to_id?: number | null; }
 
