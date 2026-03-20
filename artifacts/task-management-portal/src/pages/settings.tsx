@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Label, Modal, Select, StatusBadge } from "@/components/ui-elements";
-import { BellRing, ShieldAlert, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown, Layers, Webhook, Save, Users, Pin, Check } from "lucide-react";
+import { BellRing, ShieldAlert, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown, Layers, Webhook, Save, Pin, Check } from "lucide-react";
 import {
   useTestEmail, useTestChat, useListStatuses, useCreateStatus,
   useUpdateStatus, useDeleteStatus, useReorderStatuses,
   useGetDeptSettings, useSetDeptSetting,
-  useListUsers, useUpdateUser
 } from "@workspace/api-client-react";
 import type { AppStatusOut } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
-type SettingsTab = "notifications" | "gs-statuses" | "offer-statuses" | "webhooks" | "user-roles";
+type SettingsTab = "notifications" | "gs-statuses" | "offer-statuses" | "webhooks";
 
 function DeptWebhooksPanel({ department, label }: { department: string; label: string }) {
   const { data: settings } = useGetDeptSettings(department);
@@ -338,22 +337,11 @@ export default function Settings() {
     }
   };
 
-  const { data: allUsers } = useListUsers();
-  const updateUserMut = useUpdateUser();
-
-  const roleColors: Record<string, string> = {
-    admin: "bg-purple-100 text-purple-700",
-    manager: "bg-indigo-100 text-indigo-700",
-    team_leader: "bg-emerald-100 text-emerald-700",
-    agent: "bg-slate-100 text-slate-600",
-  };
-
   const tabs = [
     { id: "notifications" as SettingsTab, label: "Notifications" },
     { id: "gs-statuses" as SettingsTab, label: "GS Statuses" },
     { id: "offer-statuses" as SettingsTab, label: "Offer Statuses" },
     { id: "webhooks" as SettingsTab, label: "Dept Webhooks" },
-    { id: "user-roles" as SettingsTab, label: "User Roles" },
   ];
 
   return (
@@ -380,40 +368,28 @@ export default function Settings() {
         </div>
 
         {activeTab === "notifications" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card className="p-6">
-              <div className="flex items-center mb-6">
-                <BellRing className="w-5 h-5 text-primary mr-2" />
-                <h3 className="font-display font-semibold text-lg">Test Integrations</h3>
+          <Card className="p-6 max-w-lg">
+            <div className="flex items-center mb-6">
+              <BellRing className="w-5 h-5 text-primary mr-2" />
+              <h3 className="font-display font-semibold text-lg">Test Integrations</h3>
+            </div>
+            <form onSubmit={handleTestEmail} className="space-y-4 mb-8">
+              <h4 className="text-sm font-semibold text-slate-700">Email SMTP</h4>
+              <div className="flex gap-2">
+                <Input name="target" placeholder="admin@example.com" type="email" required className="flex-1" />
+                <Button type="submit" isLoading={testEmail.isPending} variant="secondary">Send Test</Button>
               </div>
-              <form onSubmit={handleTestEmail} className="space-y-4 mb-8">
-                <h4 className="text-sm font-semibold text-slate-700">Email SMTP</h4>
-                <div className="flex gap-2">
-                  <Input name="target" placeholder="admin@example.com" type="email" required className="flex-1" />
-                  <Button type="submit" isLoading={testEmail.isPending} variant="secondary">Send Test</Button>
-                </div>
-                <p className="text-xs text-muted-foreground">Backend must have SMTP_HOST, SMTP_USER env vars configured.</p>
-              </form>
-              <div className="w-full h-px bg-border my-6" />
-              <form onSubmit={handleTestChat} className="space-y-4">
-                <h4 className="text-sm font-semibold text-slate-700">Google Chat Webhook</h4>
-                <div className="flex gap-2">
-                  <Input name="target" placeholder="https://chat.googleapis.com/v1/spaces/..." required className="flex-1" />
-                  <Button type="submit" isLoading={testChat.isPending} variant="secondary">Send Test</Button>
-                </div>
-              </form>
-            </Card>
-            <Card className="p-6">
-              <div className="flex items-center mb-4">
-                <Layers className="w-5 h-5 text-primary mr-2" />
-                <h3 className="font-display font-semibold text-lg">Status Quick Reference</h3>
+              <p className="text-xs text-muted-foreground">Backend must have SMTP_HOST, SMTP_USER env vars configured.</p>
+            </form>
+            <div className="w-full h-px bg-border my-6" />
+            <form onSubmit={handleTestChat} className="space-y-4">
+              <h4 className="text-sm font-semibold text-slate-700">Google Chat Webhook</h4>
+              <div className="flex gap-2">
+                <Input name="target" placeholder="https://chat.googleapis.com/v1/spaces/..." required className="flex-1" />
+                <Button type="submit" isLoading={testChat.isPending} variant="secondary">Send Test</Button>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">Go to the GS Statuses or Offer Statuses tabs to manage your statuses.</p>
-              <div className="p-4 rounded-xl bg-muted/50 text-sm text-muted-foreground">
-                Statuses are now fully dynamic — admins can add, rename, recolor, reorder, and delete them from the department tabs above.
-              </div>
-            </Card>
-          </div>
+            </form>
+          </Card>
         )}
 
         {activeTab === "gs-statuses" && (
@@ -447,70 +423,6 @@ export default function Settings() {
           </div>
         )}
 
-        {activeTab === "user-roles" && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
-              <div>
-                <h2 className="text-lg font-display font-semibold">User Role Management</h2>
-                <p className="text-sm text-muted-foreground">Quickly change role assignments for all portal users.</p>
-              </div>
-            </div>
-            <Card className="overflow-hidden">
-              <table className="spreadsheet-table w-full">
-                <thead>
-                  <tr>
-                    <th>Staff Member</th>
-                    <th>Email</th>
-                    <th>Current Role</th>
-                    <th>Change Role</th>
-                    <th>Account</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allUsers?.map(u => (
-                    <tr key={u.id}>
-                      <td className="font-semibold">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">
-                            {u.full_name.charAt(0)}
-                          </div>
-                          {u.full_name}
-                        </div>
-                      </td>
-                      <td className="text-muted-foreground text-sm">{u.email}</td>
-                      <td>
-                        <span className={cn("px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider", roleColors[u.role] || "bg-slate-100 text-slate-600")}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td>
-                        <Select
-                          value={u.role}
-                          onChange={async (e) => {
-                            await updateUserMut.mutateAsync({ userId: u.id, data: { role: e.target.value } });
-                            queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                          }}
-                          className="text-xs h-8 min-w-[140px]"
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="manager">Manager</option>
-                          <option value="team_leader">Team Leader</option>
-                          <option value="agent">Agent</option>
-                        </Select>
-                      </td>
-                      <td>
-                        <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", u.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
-                          {u.is_active ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
-          </div>
-        )}
       </div>
     </Layout>
   );

@@ -1,0 +1,91 @@
+20. Board Must Scroll as One Full Page Like Jira
+
+I do not want each card section or each row to move separately.
+
+I want the entire board area to scroll left and right together as one single horizontal layout, exactly like Jira.
+
+Required Scroll Behavior
+
+All status columns should remain inside one common horizontal board container.
+
+When scrolling sideways, the whole board must move together at once.
+
+Individual card rows or inner sections should not create separate horizontal movement.
+
+Only the main board container should control the horizontal scroll.
+
+Vertical Scroll Behavior
+
+Each status column may still have its own vertical scroll for cards inside that column.
+
+But horizontal scrolling must be controlled only by the main board wrapper, not by each card area separately.
+
+21. Bottom Horizontal Scrollbar Must Be Clearly Visible
+
+The side/bottom horizontal scrollbar is still missing or not clearly visible.
+
+I need a proper visible horizontal scrollbar/button area at the bottom, similar to Jira.
+
+It should be easy to drag left and right.
+
+Scrollbar Requirements
+
+Show a clear bottom horizontal scrollbar for the full board.
+
+It should stay visible and usable when many columns exist.
+
+Scrollbar should not be hidden, too thin, or difficult to drag.
+
+The board should feel smooth and practical for daily use.
+
+Developer clarification
+
+Current issue:
+
+It looks like separate content sections are moving independently.
+
+That is not correct.
+
+Expected result:
+
+One main board wrapper
+
+One main horizontal scroll
+
+Full columns move together
+
+Bottom scrollbar visible like Jira
+
+Technical expectation for developer
+
+Use a single parent container for all columns with overflow-x: auto
+
+Keep columns in one row using something like:
+
+display: flex
+
+flex-wrap: nowrap
+
+Prevent nested horizontal scroll inside cards/rows
+
+Only allow:
+
+main board = horizontal scroll
+
+each column = vertical scroll for cards
+
+Add this to acceptance criteria
+
+Whole board scrolls horizontally as one unit.
+
+Columns do not move independently.
+
+Nested horizontal scrolling is removed.
+
+Bottom horizontal scrollbar is always visible and usable.
+
+Behavior should match Jira-style board UX as closely as possible.
+
+You can send this short note to the developer:
+
+Please make the board scroll exactly like Jira. The full board should move left-right together in one main container. I do not want each card area or row to move separately. Also, please add a clearly visible bottom horizontal scrollbar for the whole board.
