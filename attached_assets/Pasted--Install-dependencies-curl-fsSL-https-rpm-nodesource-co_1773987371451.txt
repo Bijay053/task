@@ -1,0 +1,73 @@
+# Install dependencies
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo yum install -y nodejs git python3 python3-pip nginx
+sudo npm install -g pnpm
+
+# Clone your repo
+cd /var/www
+sudo git clone https://github.com/Bijay053/task.git task-portal
+sudo chown -R ec2-user:ec2-user task-portal
+cd task-portal
+
+# Create environment file (fill in your DB password and a random secret)
+sudo tee /etc/task-portal.env > /dev/null <<EOF
+DATABASE_URL=postgresql://taskuser:YOUR_DB_PASSWORD@localhost:5432/task_portal
+SESSION_SECRET=REPLACE_WITH_LONG_RANDOM_STRING
+EOF
+
+# Install and build
+pnpm install --frozen-lockfile
+BASE_PATH=/ PORT=3000 pnpm --filter @workspace/task-management-portal run build
+pip3 install -r backend/requirements.txt
+
+# Create systemd service
+sudo tee /etc/systemd/system/task-portal-api.service > /dev/null <<EOF
+[Unit]
+Description=Task Portal API
+After=network.target
+
+[Service]
+User=ec2-user
+WorkingDirectory=/var/www/task-portal
+EnvironmentFile=/etc/task-portal.env
+ExecStart=/usr/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8080
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable task-portal-api
+sudo systemctl start task-portal-api
+
+# Configure Nginx
+sudo tee /etc/nginx/conf.d/task.studyinfocentre.com.conf > /dev/null <<'EOF'
+server {
+    listen 80;
+    server_name task.studyinfocentre.com;
+
+    root /var/www/task-portal/artifacts/task-management-portal/dist/public;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 120s;
+        client_max_body_size 20M;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+EOF
+
+sudo nginx -t && sudo systemctl reload nginx
+
+# SSL
+sudo yum install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d task.studyinfocentre.com
