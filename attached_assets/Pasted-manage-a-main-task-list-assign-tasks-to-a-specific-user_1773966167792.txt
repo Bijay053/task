@@ -1,0 +1,732 @@
+manage a main task list
+
+assign tasks to a specific user
+
+keep main and user task view in sync
+
+preserve assigned date
+
+control application status dropdown + colors
+
+send email + Google Chat notification
+
+create dashboard data
+
+allow manual force sync
+
+In React + Python, we should not copy the sheet logic exactly. We should convert it into a proper database-based task management system.
+
+Recommended stack
+Frontend
+
+React
+
+Vite or Next.js
+
+Material UI or Ant Design
+
+React Query for API calls
+
+React Router
+
+AG Grid or MUI DataGrid for spreadsheet-style table view
+
+Backend
+
+FastAPI if you want fast, modern API
+
+Django + Django REST Framework if you want strong admin panel and permissions
+
+For your type of CRM/task system, I recommend:
+
+Frontend: React + Vite + MUI
+
+Backend: Django + DRF
+
+Database: PostgreSQL
+
+Background jobs: Celery + Redis
+
+Notifications: SMTP for email, Google Chat webhook for chat
+
+Hosting: AWS EC2 / ECS / Lightsail
+
+How your Google Sheet logic maps to real software
+Current Google Sheet logic
+
+Main sheet = master task data
+
+Each user sheet = filtered task list for assignee
+
+Note MAIN_ROW:x = row mapping
+
+Dropdown validation = status control
+
+Conditional color = status color
+
+Install trigger = automation
+
+Manual sync = repair data
+
+React + Python version
+
+Tasks table = main sheet
+
+User task page = user sheet
+
+Task ID = replaces MAIN_ROW:x
+
+Status master table = dropdown options
+
+Frontend badge color = replaces sheet conditional formatting
+
+Signals / hooks / jobs = replaces Apps Script trigger
+
+Sync API/service = replaces manual sync
+
+So instead of duplicate data in many sheets, you store data once and show different filtered views.
+
+That is much safer.
+
+Best system design
+Main modules
+1. Users
+
+id
+
+full_name
+
+email
+
+role
+
+is_active
+
+2. Students
+
+id
+
+student_name
+
+passport_no
+
+dob
+
+phone
+
+email
+
+3. Universities
+
+id
+
+name
+
+country
+
+4. Tasks / Applications
+
+Main table for everything:
+
+id
+
+student_id
+
+university_id
+
+assigned_to_user_id
+
+application_status
+
+assigned_date
+
+created_at
+
+updated_at
+
+created_by
+
+remarks
+
+intake
+
+country
+
+course
+
+priority
+
+source
+
+5. Status master
+
+id
+
+name
+
+color
+
+sort_order
+
+is_active
+
+6. Task activity log
+
+id
+
+task_id
+
+changed_by
+
+field_name
+
+old_value
+
+new_value
+
+changed_at
+
+7. Notifications
+
+id
+
+task_id
+
+user_id
+
+type (email/chat)
+
+sent_at
+
+status
+
+error_message
+
+Your application statuses
+
+These can stay exactly like your script:
+
+GS Rejected
+GS approved
+GS document pending
+GS onhold
+GS submitted
+GS additional document request
+In Review
+Refund Requested
+Visa Refused
+Visa Granted
+Visa Lodged
+CoE Requested
+CoE Approved
+
+Store them in database or config file.
+
+Also store color codes:
+
+{
+  "GS Rejected": "#F8D7DA",
+  "GS approved": "#D1E7DD",
+  "GS document pending": "#FFF3CD",
+  "GS onhold": "#E2E3E5",
+  "GS submitted": "#CFE2FF",
+  "GS additional document request": "#FAD7F0",
+  "In Review": "#E7D9FF",
+  "Refund Requested": "#FCE5CD",
+  "Visa Refused": "#F4CCCC",
+  "Visa Granted": "#D9EAD3",
+  "Visa Lodged": "#D0E0E3",
+  "CoE Requested": "#FFF2CC",
+  "CoE Approved": "#D9D2E9"
+}
+
+Frontend can display these as colored badges.
+
+Main pages in React
+1. Login page
+
+email/password
+
+role-based access
+
+2. Main Applications page
+
+Like your Main sheet:
+
+table view
+
+search
+
+filters
+
+assign user
+
+edit status
+
+bulk actions
+
+Columns can include:
+
+Serial
+
+Student Name
+
+University
+
+Country
+
+Intake
+
+Assigned To
+
+Assigned Date
+
+Application Status
+
+Updated At
+
+3. My Tasks page
+
+Like user sheet:
+
+only logged-in user’s assigned tasks
+
+same columns
+
+quick update status
+
+remarks update
+
+4. Dashboard page
+
+Like your current dashboard:
+
+total tasks
+
+by status
+
+by assignee
+
+by university
+
+by date range
+
+pending vs approved vs refused
+
+5. Approved Students page
+
+Like GS approve student
+
+filtered list where status = GS approved / CoE Approved / Visa Granted
+
+6. Settings page
+
+manage status list
+
+manage colors
+
+notification settings
+
+Google Chat webhook
+
+email SMTP settings
+
+Backend API design
+Authentication
+POST /api/auth/login
+POST /api/auth/logout
+POST /api/auth/refresh
+GET  /api/auth/me
+Users
+GET    /api/users
+GET    /api/users/:id
+POST   /api/users
+PUT    /api/users/:id
+Students
+GET    /api/students
+POST   /api/students
+PUT    /api/students/:id
+Universities
+GET    /api/universities
+POST   /api/universities
+Applications / Tasks
+GET    /api/applications
+POST   /api/applications
+GET    /api/applications/:id
+PUT    /api/applications/:id
+PATCH  /api/applications/:id/status
+PATCH  /api/applications/:id/assign
+DELETE /api/applications/:id
+Dashboard
+GET /api/dashboard/summary
+GET /api/dashboard/status-count
+GET /api/dashboard/assignee-count
+GET /api/dashboard/university-count
+Notifications
+POST /api/notifications/test-email
+POST /api/notifications/test-chat
+Audit logs
+GET /api/applications/:id/logs
+Important business logic
+1. Assigned date must not change
+
+Exactly like your script.
+
+Rule:
+
+when task is assigned first time → save assigned_date
+
+if task updated later but assignee same → keep old date
+
+if assignee changes to another user → set new assigned date for new user assignment
+
+2. Notifications only on new assignment
+
+When:
+
+task assigned to user first time
+
+or reassigned to different user
+
+Send:
+
+email
+
+Google Chat webhook
+
+3. No duplicate user sheets
+
+In web app, user sheet is just a filtered view
+So no extra copying is needed.
+
+4. Manual sync becomes repair/rebuild action
+
+In database system, no sheet sync needed.
+But you can keep an admin button:
+
+“Rebuild dashboard cache”
+
+“Resend failed notifications”
+
+“Normalize statuses”
+
+5. Status normalization
+
+Your current script normalizes:
+
+gs on hold → GS onhold
+
+coe approved → CoE Approved
+
+In backend, do this in serializer/service before save.
+
+Suggested database model example
+Django model idea
+from django.db import models
+from django.contrib.auth.models import User
+
+class University(models.Model):
+    name = models.CharField(max_length=255)
+    country = models.CharField(max_length=100, blank=True, null=True)
+
+class Student(models.Model):
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+
+class Application(models.Model):
+    STATUS_CHOICES = [
+        ("GS Rejected", "GS Rejected"),
+        ("GS approved", "GS approved"),
+        ("GS document pending", "GS document pending"),
+        ("GS onhold", "GS onhold"),
+        ("GS submitted", "GS submitted"),
+        ("GS additional document request", "GS additional document request"),
+        ("In Review", "In Review"),
+        ("Refund Requested", "Refund Requested"),
+        ("Visa Refused", "Visa Refused"),
+        ("Visa Granted", "Visa Granted"),
+        ("Visa Lodged", "Visa Lodged"),
+        ("CoE Requested", "CoE Requested"),
+        ("CoE Approved", "CoE Approved"),
+    ]
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    university = models.ForeignKey(University, on_delete=models.SET_NULL, null=True, blank=True)
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    assigned_date = models.DateField(null=True, blank=True)
+    application_status = models.CharField(max_length=100, choices=STATUS_CHOICES, blank=True)
+    intake = models.CharField(max_length=100, blank=True, null=True)
+    course = models.CharField(max_length=255, blank=True, null=True)
+    remarks = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_applications")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+React UI logic example
+Status badge component
+const STATUS_COLORS = {
+  "GS Rejected": "#F8D7DA",
+  "GS approved": "#D1E7DD",
+  "GS document pending": "#FFF3CD",
+  "GS onhold": "#E2E3E5",
+  "GS submitted": "#CFE2FF",
+  "GS additional document request": "#FAD7F0",
+  "In Review": "#E7D9FF",
+  "Refund Requested": "#FCE5CD",
+  "Visa Refused": "#F4CCCC",
+  "Visa Granted": "#D9EAD3",
+  "Visa Lodged": "#D0E0E3",
+  "CoE Requested": "#FFF2CC",
+  "CoE Approved": "#D9D2E9"
+};
+
+export default function StatusBadge({ status }) {
+  return (
+    <span
+      style={{
+        background: STATUS_COLORS[status] || "#eee",
+        padding: "6px 10px",
+        borderRadius: "8px",
+        fontSize: "12px",
+        fontWeight: 600
+      }}
+    >
+      {status}
+    </span>
+  );
+}
+Notification logic
+Email
+
+Use:
+
+SMTP
+
+Amazon SES
+
+Gmail SMTP
+
+Microsoft 365 SMTP
+
+Google Chat
+
+Use same webhook logic from your script:
+
+backend POST request to webhook URL
+
+Python example:
+
+import requests
+
+def send_google_chat_message(webhook_url, text):
+    requests.post(webhook_url, json={"text": text}, timeout=10)
+Dashboard logic
+
+Instead of rebuilding sheet data every 5 minutes, backend can give live dashboard:
+
+Cards
+
+Total Applications
+
+GS approved
+
+In Review
+
+Refund Requested
+
+Visa Granted
+
+Visa Refused
+
+Charts
+
+status-wise count
+
+assignee-wise count
+
+university-wise count
+
+daily assignment trend
+
+application trend by date range
+
+This is far better than Google Sheets dashboard.
+
+Permissions
+
+You said you want this like a real system, so add permissions:
+
+Admin
+
+create/edit/delete tasks
+
+assign users
+
+manage settings
+
+view all tasks
+
+export reports
+
+Team user
+
+view own assigned tasks
+
+update allowed fields
+
+update status
+
+add remarks
+
+Manager
+
+view own team tasks
+
+assign/reassign
+
+view reports
+
+Better than sheet sync
+
+Your current Apps Script duplicates records into separate user sheets.
+
+In real app, do this instead:
+
+one database record only
+
+assignee filter for user page
+
+activity log for every change
+
+no row mismatch risk
+
+no timeout issue
+
+no trigger issue
+
+no broken notes
+
+This is the correct professional way.
+
+Development phases
+Phase 1
+
+Core system
+
+login
+
+users
+
+applications table
+
+assign tasks
+
+my tasks
+
+status dropdown
+
+status colors
+
+email/chat notification
+
+Phase 2
+
+Reports and dashboard
+
+filters
+
+export Excel/CSV
+
+dashboard charts
+
+date filters
+
+status reports
+
+Phase 3
+
+Advanced
+
+audit logs
+
+bulk assign
+
+reminders
+
+comments
+
+file upload
+
+role permissions
+
+SLA tracking
+
+My recommendation for you
+
+Because this is a CRM-style business system, the best choice is:
+
+React frontend + Django REST backend + PostgreSQL
+
+Why:
+
+Django admin is useful for your team
+
+permissions are easier
+
+reporting is easier
+
+stable for long-term CRM
+
+Python is strong for business logic
+
+If speed is the main goal, use:
+React + FastAPI + PostgreSQL
+
+Final architecture
+Frontend
+
+React
+
+Vite
+
+MUI DataGrid
+
+Axios
+
+React Query
+
+Backend
+
+Django + DRF
+
+PostgreSQL
+
+Celery + Redis
+
+SMTP + Google Chat webhook
+
+Infrastructure
+
+AWS EC2
+
+Nginx
+
+Gunicorn
+
+SSL
+
+S3 for uploads
+
+Very important change from sheet version
+
+Do not create separate database tables per user.
+
+Do this:
+
+one applications table
+
+assigned_to field
+
+filtered UI for each user
+
+That is the clean version of your current sheet system.

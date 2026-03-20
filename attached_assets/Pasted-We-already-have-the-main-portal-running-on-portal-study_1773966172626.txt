@@ -1,0 +1,111 @@
+We already have the main portal running on:
+
+portal.studyinfocentre.com
+
+Now we need a new task system on:
+
+task.studyinfocentre.com
+
+Requirement
+
+The new task system must:
+
+run on a different subdomain
+
+have separate login credentials
+
+users who can log into task.studyinfocentre.com must not automatically log into portal.studyinfocentre.com
+
+users from portal.studyinfocentre.com must not be able to use the same login session on task.studyinfocentre.com
+
+still use the same AWS EC2/server infrastructure
+
+Technical direction
+
+Please set this up as a separate application or isolated module with its own authentication system.
+
+Important authentication rule
+
+Do not share login sessions between both subdomains.
+
+Please make sure:
+
+session cookies for task.studyinfocentre.com are restricted only to that subdomain
+
+session cookies for portal.studyinfocentre.com are restricted only to that subdomain
+
+do not use a shared cookie domain like .studyinfocentre.com, because that can make login work across both subdomains
+
+use separate auth/session handling for each system
+
+Recommended setup
+
+Use the same EC2 and AWS setup, but configure as:
+
+portal.studyinfocentre.com → existing portal app
+
+task.studyinfocentre.com → new task app
+
+This can be done by:
+
+separate app service/process
+
+separate environment variables
+
+separate auth configuration
+
+separate user table or separate database for task users
+
+separate password reset and session handling
+
+DNS / hosting
+
+Point task.studyinfocentre.com to the same server/load balancer as the current system, then configure the web server/reverse proxy to route traffic correctly.
+
+Replit-specific instruction
+
+If building on Replit:
+
+Create a separate Replit app/project for the task system.
+
+Deploy that app separately.
+
+Connect custom domain/subdomain task.studyinfocentre.com in Replit deployment settings. Replit supports custom domains and subdomains for deployments.
+
+Add all secrets using Replit Secrets instead of hardcoding credentials. Replit encrypts these and exposes them as environment variables.
+
+Keep task-system auth isolated from the portal system:
+
+separate database or separate auth tables
+
+separate JWT/session secret
+
+cookie domain must be only task.studyinfocentre.com
+
+Map:
+
+portal.studyinfocentre.com → current app
+
+task.studyinfocentre.com → new Replit deployment or isolated backend route
+
+Security note
+
+Even if both systems use the same main database server, access control must be separated so task users cannot access portal data unless explicitly allowed.
+
+Short developer brief
+
+Please create a new system on task.studyinfocentre.com using the same AWS/hosting infrastructure, but keep authentication fully separate from portal.studyinfocentre.com. Login credentials, cookies, sessions, and access permissions for the task system must not work on the portal system.
+
+Extra recommendation
+
+Best practice is to use:
+
+separate app
+
+separate auth secret
+
+separate cookie settings
+
+separate user table/database
+
+That is the safest setup.
