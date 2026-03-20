@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 
 type ViewMode = "table" | "kanban";
 
-function StudentField({ defaultStudentId, defaultStudentName }: { defaultStudentId?: number | null; defaultStudentName?: string | null }) {
+function StudentField({ defaultStudentId, defaultStudentName, onSelect }: { defaultStudentId?: number | null; defaultStudentName?: string | null; onSelect?: (id: number | null) => void }) {
   const { data: students } = useListStudents();
   const [mode, setMode] = useState<"directory" | "manual">(defaultStudentId ? "directory" : "manual");
   return (
@@ -31,7 +31,7 @@ function StudentField({ defaultStudentId, defaultStudentName }: { defaultStudent
       </div>
       {mode === "directory" ? (
         <>
-          <Select name="student_id" defaultValue={defaultStudentId || ""}>
+          <Select name="student_id" defaultValue={defaultStudentId || ""} onChange={e => onSelect?.(e.target.value ? Number(e.target.value) : null)}>
             <option value="">Select Student...</option>
             {students?.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
           </Select>
@@ -39,7 +39,7 @@ function StudentField({ defaultStudentId, defaultStudentName }: { defaultStudent
         </>
       ) : (
         <>
-          <Input name="student_name" defaultValue={defaultStudentName || ""} placeholder="Type student full name..." required />
+          <Input name="student_name" defaultValue={defaultStudentName || ""} placeholder="Type student full name..." required onChange={() => onSelect?.(null)} />
           <input type="hidden" name="student_id" value="" />
         </>
       )}
@@ -109,6 +109,35 @@ export default function GsApplications() {
   const { data: gsSettings } = useGetDeptSettings("gs");
 
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [offerAutofillApps, setOfferAutofillApps] = useState<any[]>([]);
+  const [autofill, setAutofill] = useState<{ universityId?: number; universityName?: string; course?: string; intake?: string } | null>(null);
+  const [autofillKey, setAutofillKey] = useState(0);
+
+  const handleStudentSelect = async (studentId: number | null) => {
+    setAutofill(null);
+    setOfferAutofillApps([]);
+    if (!studentId) return;
+    const token = localStorage.getItem("access_token");
+    try {
+      const res = await fetch(`/api/applications?department=offer&student_id=${studentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOfferAutofillApps(data);
+      }
+    } catch {}
+  };
+
+  const applyAutofill = (offerApp: any) => {
+    setAutofill({
+      universityId: offerApp.university_id,
+      universityName: offerApp.university_name,
+      course: offerApp.course || "",
+      intake: offerApp.intake || "",
+    });
+    setAutofillKey(k => k + 1);
+  };
 
   const createMut = useCreateApplication();
   const updateMut = useUpdateApplication();
@@ -127,6 +156,8 @@ export default function GsApplications() {
     setSelectedFollowers(app.follower_ids || []);
     setDeleteConfirm(false);
     setFormError("");
+    setOfferAutofillApps([]);
+    setAutofill(null);
     setIsModalOpen(true);
   };
   const handleOpenCreate = () => {
@@ -134,6 +165,8 @@ export default function GsApplications() {
     setSelectedFollowers([]);
     setDeleteConfirm(false);
     setFormError("");
+    setOfferAutofillApps([]);
+    setAutofill(null);
     setIsModalOpen(true);
   };
 
@@ -398,19 +431,43 @@ export default function GsApplications() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <StudentField key={editingApp?.id + "-s"} defaultStudentId={editingApp?.student_id} defaultStudentName={editingApp?.student_name} />
+            <StudentField key={editingApp?.id + "-s"} defaultStudentId={editingApp?.student_id} defaultStudentName={editingApp?.student_name} onSelect={!editingApp ? handleStudentSelect : undefined} />
             <div className="space-y-2">
               <Label>Country</Label>
               <Input name="country" defaultValue={editingApp?.country || ""} placeholder="e.g. Australia" />
             </div>
-            <UniversityField key={editingApp?.id + "-u"} defaultUniversityId={editingApp?.university_id} defaultUniversityName={editingApp?.university_name} />
+
+            {!editingApp && offerAutofillApps.length > 0 && (
+              <div className="md:col-span-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                <p className="text-xs font-semibold text-green-800 mb-2">
+                  ✦ Offer application(s) found for this student — click to auto-fill university, course &amp; intake:
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {offerAutofillApps.map((o: any) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => applyAutofill(o)}
+                      className="text-left text-xs rounded-lg border border-green-300 bg-white hover:bg-green-100 px-3 py-2 transition-colors"
+                    >
+                      <span className="font-semibold text-green-900">{o.university_name || "Unknown University"}</span>
+                      {o.course && <span className="text-green-700"> · {o.course}</span>}
+                      {o.intake && <span className="text-green-600"> · {o.intake}</span>}
+                      {(o as any).app_id && <span className="ml-2 font-mono text-green-500 text-[10px]">{(o as any).app_id}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <UniversityField key={`${editingApp?.id ?? "new"}-u-${autofillKey}`} defaultUniversityId={autofill?.universityId ?? editingApp?.university_id} defaultUniversityName={autofill?.universityName ?? editingApp?.university_name} />
             <div className="space-y-2">
               <Label>Course</Label>
-              <Input name="course" defaultValue={editingApp?.course || ""} placeholder="e.g. Master of Data Science" />
+              <Input key={`${editingApp?.id ?? "new"}-course-${autofillKey}`} name="course" defaultValue={autofill?.course ?? editingApp?.course ?? ""} placeholder="e.g. Master of Data Science" />
             </div>
             <div className="space-y-2">
               <Label>Intake</Label>
-              <Input name="intake" defaultValue={editingApp?.intake || ""} placeholder="e.g. Feb 2025" />
+              <Input key={`${editingApp?.id ?? "new"}-intake-${autofillKey}`} name="intake" defaultValue={autofill?.intake ?? editingApp?.intake ?? ""} placeholder="e.g. Feb 2025" />
             </div>
             <div className="space-y-2">
               <Label>Submitted Date</Label>

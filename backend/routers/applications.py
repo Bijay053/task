@@ -124,6 +124,7 @@ def list_applications(
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     agent_id: Optional[int] = Query(None),
+    student_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -146,6 +147,8 @@ def list_applications(
         q = q.filter(models.Application.assigned_to_id == assigned_to_id)
     if agent_id is not None:
         q = q.filter(models.Application.agent_id == agent_id)
+    if student_id is not None:
+        q = q.filter(models.Application.student_id == student_id)
     if status:
         q = q.filter(models.Application.application_status == status)
     if search:
