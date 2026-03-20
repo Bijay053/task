@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useUpdateApplication } from "@workspace/api-client-react";
 import { GS_STATUS_COLORS, GS_STATUS_CHOICES } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
-import { GripVertical, User, BookOpen, Calendar, UserCheck } from "lucide-react";
+import { GripVertical, User, BookOpen, Calendar, UserCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Application {
@@ -61,85 +61,84 @@ function KanbanCard({
     }
   };
 
+  const studentName =
+    app.student?.full_name || app.student_name || "Unknown Student";
+  const uniName =
+    app.university?.name || app.university_name || null;
+
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, app.id)}
       onClick={handleClick}
       className={cn(
-        "bg-card rounded-xl border border-border shadow-sm p-3.5 select-none transition-all",
-        onCardClick
-          ? "cursor-pointer hover:shadow-md hover:border-primary/40 hover:bg-primary/[0.02]"
-          : "cursor-grab active:cursor-grabbing hover:shadow-md hover:border-primary/30",
-        isDragging && "opacity-40 scale-95"
+        "bg-card border border-border rounded-xl p-3 shadow-sm select-none transition-all",
+        "hover:shadow-md hover:border-primary/30 cursor-grab active:cursor-grabbing",
+        isDragging && "opacity-40 scale-95 ring-2 ring-primary/40",
+        onCardClick && "cursor-pointer"
       )}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
-        <p className="font-semibold text-sm text-foreground leading-tight line-clamp-2">
-          {app.student?.full_name || app.student_name || "Unknown Student"}
-        </p>
-        <PriorityDot priority={app.priority} />
+        <span
+          className="text-[10px] font-bold px-2 py-0.5 rounded-full truncate max-w-[160px]"
+          style={{ backgroundColor: color.bg + "33", color: color.text }}
+        >
+          {app.application_status}
+        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          <PriorityDot priority={app.priority ?? undefined} />
+          <GripVertical className="w-3.5 h-3.5 text-muted-foreground/30" />
+        </div>
       </div>
 
-      {(app.university?.name || app.university_name) && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-          <BookOpen className="w-3 h-3 shrink-0" />
-          <span className="truncate">{app.university?.name || app.university_name}</span>
+      <div className="space-y-1.5">
+        <div className="flex items-start gap-1.5">
+          <User className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
+          <span className="text-sm font-semibold leading-tight line-clamp-1">{studentName}</span>
         </div>
-      )}
 
-      {app.course && (
-        <p className="text-xs text-muted-foreground truncate mb-1 pl-4">{app.course}</p>
-      )}
-
-      {app.intake && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-          <Calendar className="w-3 h-3 shrink-0" />
-          <span>{app.intake}</span>
-        </div>
-      )}
-
-      {app.channel && (
-        <div className="mb-1">
-          <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium text-xs">
-            {app.channel}
-          </span>
-        </div>
-      )}
-
-      {app.agent?.name && (
-        <div className="flex items-center gap-1.5 text-xs text-sky-600 mb-1">
-          <UserCheck className="w-3 h-3 shrink-0" />
-          <span className="truncate">{app.agent.name}</span>
-        </div>
-      )}
-
-      {app.remarks && (
-        <p className="text-xs text-muted-foreground italic truncate mb-1 border-t border-border/40 pt-1 mt-1">
-          {app.remarks.length > 60 ? app.remarks.slice(0, 60) + "…" : app.remarks}
-        </p>
-      )}
-
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/60">
-        {app.assigned_to ? (
-          <div className="flex items-center gap-1.5">
-            <div
-              className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border shrink-0"
-              style={{ backgroundColor: color.bg, color: color.text, borderColor: color.bg }}
-            >
-              {app.assigned_to.full_name.charAt(0)}
-            </div>
-            <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-              {app.assigned_to.full_name.split(" ")[0]}
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground/50 italic">
-            <User className="w-3 h-3" />
-            Unassigned
+        {uniName && (
+          <div className="flex items-start gap-1.5">
+            <BookOpen className="w-3.5 h-3.5 text-muted-foreground/60 mt-0.5 shrink-0" />
+            <span className="text-xs text-muted-foreground leading-tight line-clamp-2">{uniName}</span>
           </div>
         )}
-        <GripVertical className="w-3.5 h-3.5 text-muted-foreground/30" />
+
+        {app.course && (
+          <div className="text-xs text-muted-foreground/70 line-clamp-1 pl-5">{app.course}</div>
+        )}
+
+        <div className="flex items-center gap-3 pt-1">
+          {app.intake && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground/60">
+              <Calendar className="w-3 h-3" />
+              {app.intake}
+            </div>
+          )}
+          {(app.agent?.name || app.channel) && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground/60 truncate">
+              <UserCheck className="w-3 h-3 shrink-0" />
+              <span className="truncate">{app.agent?.name || app.channel}</span>
+            </div>
+          )}
+        </div>
+
+        {app.assigned_to?.full_name && (
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+              {app.assigned_to.full_name.charAt(0)}
+            </div>
+            <span className="text-xs text-muted-foreground truncate">{app.assigned_to.full_name}</span>
+          </div>
+        )}
+        {!app.assigned_to?.full_name && (
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <User className="w-3 h-3 text-muted-foreground/40" />
+            </div>
+            <span className="text-xs text-muted-foreground/40 italic">Unassigned</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -153,7 +152,6 @@ function KanbanColumn({
   onDragStart,
   onDrop,
   onCardClick,
-  stickyTop,
 }: {
   status: string;
   cards: Application[];
@@ -162,22 +160,16 @@ function KanbanColumn({
   onDragStart: (e: React.DragEvent, id: number) => void;
   onDrop: (status: string) => void;
   onCardClick?: (app: Application) => void;
-  stickyTop: number;
 }) {
   const [isOver, setIsOver] = useState(false);
   const color = colorMap[status] || { bg: "#f1f5f9", text: "#64748b" };
 
   return (
-    <div className="flex flex-col w-[290px] min-w-[290px] max-w-[290px] shrink-0">
-      {/* Sticky header */}
+    <div className="flex flex-col w-[290px] min-w-[290px] max-w-[290px] shrink-0 h-full">
+      {/* Column header */}
       <div
-        className="flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide z-10"
-        style={{
-          backgroundColor: color.bg,
-          color: color.text,
-          position: "sticky",
-          top: stickyTop,
-        }}
+        className="flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide shrink-0"
+        style={{ backgroundColor: color.bg, color: color.text }}
       >
         <span className="truncate">{status}</span>
         <span
@@ -188,10 +180,10 @@ function KanbanColumn({
         </span>
       </div>
 
-      {/* Card list — no height clipping, shows all cards */}
+      {/* Card list — scrolls internally */}
       <div
         className={cn(
-          "rounded-b-xl p-2 space-y-2 transition-colors min-h-[80px]",
+          "rounded-b-xl p-2 space-y-2 transition-colors flex-1 overflow-y-auto",
           isOver ? "bg-primary/5 ring-2 ring-primary/30 ring-inset" : "bg-muted/40"
         )}
         onDragOver={(e) => { e.preventDefault(); setIsOver(true); }}
@@ -233,7 +225,29 @@ export function KanbanBoard({
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const dragAppRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [stickyTop] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateArrows = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateArrows();
+    el.addEventListener("scroll", updateArrows, { passive: true });
+    const ro = new ResizeObserver(updateArrows);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", updateArrows); ro.disconnect(); };
+  }, [updateArrows, statusChoices.length]);
+
+  const scrollBy = (amount: number) => {
+    scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
+  };
 
   const handleDragStart = (e: React.DragEvent, appId: number) => {
     e.dataTransfer.effectAllowed = "move";
@@ -252,15 +266,12 @@ export function KanbanBoard({
     if (!appId) return;
     const app = applications.find((a) => a.id === appId);
     if (!app || app.application_status === newStatus) return;
-
     await updateMut.mutateAsync({ appId, data: { application_status: newStatus } });
-
     ["/api/applications", "/api/dashboard", ...queryInvalidateKeys].forEach((key) =>
       queryClient.invalidateQueries({ queryKey: [key] })
     );
   };
 
-  // Shift+scroll or horizontal scroll → scroll columns left/right
   const handleWheel = useCallback((e: WheelEvent) => {
     const el = scrollRef.current;
     if (!el) return;
@@ -283,26 +294,50 @@ export function KanbanBoard({
   }, {});
 
   return (
-    <div
-      ref={scrollRef}
-      className="flex gap-3 pb-6 select-none kanban-scroll"
-      style={{ overflowX: "auto", overflowY: "visible" }}
-      onDragEnd={handleDragEnd}
-    >
-      {statusChoices.map((status) => (
-        <KanbanColumn
-          key={status}
-          status={status}
-          cards={columnMap[status] || []}
-          colorMap={statusColors}
-          draggingId={draggingId}
-          onDragStart={handleDragStart}
-          onDrop={handleDrop}
-          onCardClick={onCardClick}
-          stickyTop={stickyTop}
-        />
-      ))}
-      <div className="shrink-0 w-2" aria-hidden />
+    <div className="relative h-full flex flex-col">
+      {/* Left arrow */}
+      {canScrollLeft && (
+        <button
+          onClick={() => scrollBy(-320)}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-foreground hover:bg-primary hover:text-white hover:border-primary transition-all -ml-1"
+          aria-label="Scroll left"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* Right arrow */}
+      {canScrollRight && (
+        <button
+          onClick={() => scrollBy(320)}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-foreground hover:bg-primary hover:text-white hover:border-primary transition-all -mr-1"
+          aria-label="Scroll right"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* Board scroll container */}
+      <div
+        ref={scrollRef}
+        className="flex gap-3 pb-2 flex-1 min-h-0 kanban-scroll"
+        style={{ overflowX: "auto", overflowY: "hidden" }}
+        onDragEnd={handleDragEnd}
+      >
+        {statusChoices.map((status) => (
+          <KanbanColumn
+            key={status}
+            status={status}
+            cards={columnMap[status] || []}
+            colorMap={statusColors}
+            draggingId={draggingId}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+            onCardClick={onCardClick}
+          />
+        ))}
+        <div className="shrink-0 w-2" aria-hidden />
+      </div>
     </div>
   );
 }
