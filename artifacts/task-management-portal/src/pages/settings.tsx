@@ -240,6 +240,7 @@ function StatusManager({ department }: { department: "gs" | "offer" }) {
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const testEmail = useTestEmail();
   const testChat = useTestChat();
   const [activeTab, setActiveTab] = useState<SettingsTab>("notifications");

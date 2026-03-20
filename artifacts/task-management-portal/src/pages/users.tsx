@@ -1,23 +1,16 @@
 import { useState } from "react";
 import {
   useListUsers, useCreateUser, useUpdateUser,
-  useGetUserPermissions, useSetUserPermission, useUpdateAvailability
+  useGetUserPermissions, useSetUserPermission
 } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Modal, Label, Select } from "@/components/ui-elements";
-import { Plus, Edit2, ShieldAlert, Shield, Check, X, Calendar, Wifi, WifiOff } from "lucide-react";
+import { Plus, Edit2, ShieldAlert, Shield, Check, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
-const AVAILABILITY_OPTIONS = [
-  { value: "available", label: "Available", className: "bg-green-100 text-green-700" },
-  { value: "on_leave", label: "On Leave", className: "bg-yellow-100 text-yellow-700" },
-  { value: "off_duty", label: "Off Duty", className: "bg-red-100 text-red-700" },
-];
-const availabilityStyle = (v: string) => AVAILABILITY_OPTIONS.find(o => o.value === v)?.className || "bg-slate-100 text-slate-600";
-
-type UsersTab = "team" | "leave" | "permissions";
+type UsersTab = "team" | "permissions";
 
 const DEPARTMENTS = ["gs", "offer"];
 
@@ -28,47 +21,57 @@ function PermissionsPanel({ userId, userName }: { userId: number; userName: stri
 
   const getPerm = (dept: string) => perms?.find(p => p.department === dept);
 
-  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_delete") => {
-    const p = getPerm(dept) || { can_view: true, can_edit: true, can_delete: false };
+  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_delete" | "can_upload") => {
+    const p = getPerm(dept) || { can_view: true, can_edit: true, can_delete: false, can_upload: false };
     await setPermMut.mutateAsync({
       userId,
       department: dept,
-      data: { can_view: p.can_view, can_edit: p.can_edit, can_delete: p.can_delete, [field]: !(p as any)[field] }
+      data: { can_view: p.can_view, can_edit: p.can_edit, can_delete: p.can_delete, can_upload: p.can_upload ?? false, [field]: !(p as any)[field] }
     });
     queryClient.invalidateQueries({ queryKey: [`/api/permissions/user/${userId}`] });
   };
 
   if (isLoading) return <div className="py-4 text-center text-muted-foreground">Loading permissions...</div>;
 
+  const permFields: { key: "can_view" | "can_edit" | "can_delete" | "can_upload"; label: string }[] = [
+    { key: "can_view", label: "View" },
+    { key: "can_edit", label: "Edit" },
+    { key: "can_upload", label: "Upload" },
+    { key: "can_delete", label: "Delete" },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="text-sm font-semibold text-muted-foreground mb-2">Permissions for: {userName}</div>
       <div className="grid grid-cols-1 gap-3">
         {DEPARTMENTS.map(dept => {
-          const p = getPerm(dept) || { can_view: true, can_edit: true, can_delete: false };
+          const p = getPerm(dept) || { can_view: true, can_edit: true, can_delete: false, can_upload: false };
           const label = dept === "gs" ? "GS Department" : "Offer Department";
           return (
             <div key={dept} className="flex items-center gap-4 p-4 rounded-xl border border-border bg-muted/20">
-              <div className="w-28 font-semibold text-sm">{label}</div>
-              {(["can_view", "can_edit", "can_delete"] as const).map(field => (
-                <label key={field} className="flex items-center gap-1.5 cursor-pointer">
+              <div className="w-36 font-semibold text-sm">{label}</div>
+              {permFields.map(({ key, label: permLabel }) => (
+                <label key={key} className="flex items-center gap-1.5 cursor-pointer">
                   <button
                     type="button"
-                    onClick={() => toggle(dept, field)}
+                    onClick={() => toggle(dept, key)}
                     className={cn(
                       "w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-colors",
-                      (p as any)[field] ? "border-primary bg-primary text-white" : "border-border bg-card text-muted-foreground"
+                      (p as any)[key] ? "border-primary bg-primary text-white" : "border-border bg-card text-muted-foreground"
                     )}
                   >
-                    {(p as any)[field] ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                    {(p as any)[key] ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                   </button>
-                  <span className="text-xs text-muted-foreground capitalize">{field.replace("can_", "")}</span>
+                  <span className="text-xs text-muted-foreground">{permLabel}</span>
                 </label>
               ))}
             </div>
           );
         })}
       </div>
+      <p className="text-xs text-muted-foreground mt-4">
+        <strong>View</strong> — access the section. <strong>Edit</strong> — create & modify records. <strong>Upload</strong> — bulk upload files. <strong>Delete</strong> — remove records permanently.
+      </p>
     </div>
   );
 }
@@ -84,8 +87,6 @@ export default function Users() {
 
   const createMut = useCreateUser();
   const updateMut = useUpdateUser();
-  const availMut = useUpdateAvailability();
-  const canToggleAvailability = user?.role === "admin" || user?.role === "manager" || user?.role === "team_leader";
 
   const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
 
@@ -138,16 +139,17 @@ export default function Users() {
             <h1 className="text-3xl font-display font-bold tracking-tight">Team Directory</h1>
             <p className="text-muted-foreground mt-1">Manage portal access, roles, and department permissions.</p>
           </div>
-          <Button onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
-            <Plus className="w-5 h-5 mr-2" />Add Team Member
-          </Button>
+          {activeTab === "team" && (
+            <Button onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
+              <Plus className="w-5 h-5 mr-2" />Add Team Member
+            </Button>
+          )}
         </div>
 
         <div className="flex gap-1 border-b border-border shrink-0">
           {[
             { id: "team" as UsersTab, label: "Team Members" },
-            { id: "leave" as UsersTab, label: "Leave & Availability" },
-            { id: "permissions" as UsersTab, label: "Department Permissions" },
+            { id: "permissions" as UsersTab, label: "Role & Permissions" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -208,68 +210,6 @@ export default function Users() {
                             <Edit2 className="w-4 h-4 mr-1" />Edit
                           </Button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
-
-        {activeTab === "leave" && (
-          <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="table-container flex-1 h-full border-0 rounded-none">
-              <table className="spreadsheet-table w-full h-full">
-                <thead>
-                  <tr>
-                    <th>Staff Member</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Update Availability</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    <tr><td colSpan={4} className="text-center py-8">Loading...</td></tr>
-                  ) : users?.map(u => (
-                    <tr key={u.id}>
-                      <td className="font-semibold text-foreground">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold shrink-0">
-                            {u.full_name.charAt(0)}
-                          </div>
-                          <div>
-                            <div>{u.full_name}</div>
-                            <div className="text-xs text-muted-foreground">{u.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={cn("px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider", roleColors[u.role] || "bg-slate-100 text-slate-600")}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={cn("px-2.5 py-1 rounded-full text-xs font-semibold", availabilityStyle(u.availability_status || "available"))}>
-                          {AVAILABILITY_OPTIONS.find(o => o.value === u.availability_status)?.label || "Available"}
-                        </span>
-                      </td>
-                      <td>
-                        {canToggleAvailability ? (
-                          <Select
-                            value={u.availability_status || "available"}
-                            onChange={async (e) => {
-                              await availMut.mutateAsync({ userId: u.id, data: { availability_status: e.target.value } });
-                              queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                            }}
-                            className="text-xs h-8 min-w-[130px]"
-                          >
-                            {AVAILABILITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </Select>
-                        ) : (
-                          <span className="text-muted-foreground text-xs italic">No permission to change</span>
-                        )}
                       </td>
                     </tr>
                   ))}

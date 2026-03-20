@@ -1,9 +1,14 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui-elements";
-import { useGetPerformanceReport } from "@workspace/api-client-react";
+import {
+  useGetPerformanceReport, useGetStaffTiming, useGetStageAnalysis
+} from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
-import { BarChart3, ShieldAlert, Users, FileText, TrendingUp, Award } from "lucide-react";
+import {
+  BarChart3, ShieldAlert, Users, FileText, TrendingUp, Award,
+  Clock, AlertTriangle, CheckCircle2, Timer, Layers
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
@@ -13,14 +18,44 @@ const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
   agent:       { label: "Agent", cls: "bg-slate-100 text-slate-700" },
 };
 
+type ReportTab = "workload" | "timing" | "stages";
+
+function fmtDays(days: number | null | undefined): string {
+  if (days == null) return "—";
+  if (days < 1) return `${Math.round(days * 24)}h`;
+  return `${days.toFixed(1)}d`;
+}
+
+function DaysBar({ days, max, color = "bg-primary" }: { days: number | null; max: number; color?: string }) {
+  if (days == null) return <span className="text-muted-foreground/40 text-xs">No data</span>;
+  const pct = Math.min(100, Math.round((days / Math.max(1, max)) * 100));
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 bg-muted rounded-full h-2.5 overflow-hidden min-w-[80px]">
+        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs text-muted-foreground shrink-0 w-10 text-right">{fmtDays(days)}</span>
+    </div>
+  );
+}
+
 export default function Reports() {
   const { user } = useAuth();
   const isManager = user?.role === "admin" || user?.role === "manager";
   const [deptFilter, setDeptFilter] = useState<"" | "gs" | "offer">("");
+  const [reportTab, setReportTab] = useState<ReportTab>("workload");
+  const [stagesDept, setStagesDept] = useState<"gs" | "offer">("gs");
 
-  const { data: performance, isLoading } = useGetPerformanceReport(
+  const { data: performance, isLoading: perfLoading } = useGetPerformanceReport(
     deptFilter ? { department: deptFilter } : undefined,
     { query: { enabled: isManager } }
+  );
+  const { data: staffTiming, isLoading: timingLoading } = useGetStaffTiming(
+    { query: { enabled: isManager && reportTab === "timing" } }
+  );
+  const { data: stageData, isLoading: stageLoading } = useGetStageAnalysis(
+    stagesDept,
+    { query: { enabled: isManager && reportTab === "stages" } }
   );
 
   if (!isManager) {
@@ -36,6 +71,8 @@ export default function Reports() {
   }
 
   const maxAssigned = Math.max(1, ...(performance?.map(p => p.total_assigned) || [0]));
+  const maxHandling = Math.max(1, ...(staffTiming?.map(p => p.avg_handling_days ?? 0) || [0]));
+  const maxStageDays = Math.max(1, ...(stageData?.map(s => s.avg_days ?? 0) || [0]));
 
   return (
     <Layout>
@@ -43,143 +80,322 @@ export default function Reports() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div>
             <h1 className="text-3xl font-display font-bold tracking-tight">Performance Reports</h1>
-            <p className="text-muted-foreground mt-1">Track workload, assignments, and progress for each staff member.</p>
+            <p className="text-muted-foreground mt-1">Workload analytics, handling time, and stage bottleneck analysis.</p>
           </div>
-          <div className="flex gap-2 bg-muted/40 border border-border rounded-xl overflow-hidden p-1">
-            {(["", "gs", "offer"] as const).map((d) => (
-              <button
-                key={d}
-                onClick={() => setDeptFilter(d)}
-                className={cn(
-                  "px-4 py-1.5 text-sm font-medium rounded-lg transition-colors",
-                  deptFilter === d ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {d === "" ? "All Departments" : d === "gs" ? "GS Dept" : "Offer Dept"}
-              </button>
-            ))}
-          </div>
+          {reportTab === "workload" && (
+            <div className="flex gap-2 bg-muted/40 border border-border rounded-xl overflow-hidden p-1">
+              {(["", "gs", "offer"] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDeptFilter(d)}
+                  className={cn(
+                    "px-4 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                    deptFilter === d ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {d === "" ? "All Departments" : d === "gs" ? "GS Dept" : "Offer Dept"}
+                </button>
+              ))}
+            </div>
+          )}
+          {reportTab === "stages" && (
+            <div className="flex gap-2 bg-muted/40 border border-border rounded-xl overflow-hidden p-1">
+              {(["gs", "offer"] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setStagesDept(d)}
+                  className={cn(
+                    "px-4 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                    stagesDept === d ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {d === "gs" ? "GS Dept" : "Offer Dept"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Summary Cards */}
-        {performance && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-            <Card className="p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Users className="w-6 h-6 text-primary" />
+        {/* Report Type Tabs */}
+        <div className="flex gap-1 border-b border-border shrink-0">
+          {[
+            { id: "workload" as ReportTab, label: "Workload Overview", icon: BarChart3 },
+            { id: "timing" as ReportTab, label: "Staff Handling Time", icon: Clock },
+            { id: "stages" as ReportTab, label: "Stage Analysis", icon: Layers },
+          ].map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setReportTab(tab.id)}
+                className={cn(
+                  "px-5 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-2",
+                  reportTab === tab.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="w-4 h-4" />{tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Workload Overview ── */}
+        {reportTab === "workload" && (
+          <>
+            {performance && (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Users className="w-6 h-6 text-primary" /></div>
+                  <div><div className="text-2xl font-bold">{performance.length}</div><div className="text-sm text-muted-foreground">Staff Members</div></div>
+                </Card>
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><FileText className="w-6 h-6 text-blue-600" /></div>
+                  <div><div className="text-2xl font-bold">{performance.reduce((sum, p) => sum + p.total_assigned, 0)}</div><div className="text-sm text-muted-foreground">Total Applications</div></div>
+                </Card>
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><TrendingUp className="w-6 h-6 text-green-600" /></div>
+                  <div><div className="text-2xl font-bold">{performance.reduce((sum, p) => sum + p.gs_count, 0)}</div><div className="text-sm text-muted-foreground">GS Applications</div></div>
+                </Card>
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center shrink-0"><Award className="w-6 h-6 text-violet-600" /></div>
+                  <div><div className="text-2xl font-bold">{performance.reduce((sum, p) => sum + p.offer_count, 0)}</div><div className="text-sm text-muted-foreground">Offer Applications</div></div>
+                </Card>
               </div>
-              <div>
-                <div className="text-2xl font-bold">{performance.length}</div>
-                <div className="text-sm text-muted-foreground">Staff Members</div>
+            )}
+            <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
+              <div className="table-container flex-1 h-full border-0 rounded-none">
+                <table className="spreadsheet-table w-full">
+                  <thead>
+                    <tr>
+                      <th>Staff Member</th>
+                      <th>Role</th>
+                      <th className="text-center">Total</th>
+                      <th className="text-center">GS</th>
+                      <th className="text-center">Offer</th>
+                      <th style={{ minWidth: "200px" }}>Workload</th>
+                      <th>Status Breakdown</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {perfLoading ? (
+                      <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Loading report...</td></tr>
+                    ) : performance?.length === 0 ? (
+                      <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
+                    ) : (
+                      performance?.map((p) => {
+                        const pct = Math.round((p.total_assigned / maxAssigned) * 100);
+                        const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
+                        return (
+                          <tr key={p.user_id} className="align-top">
+                            <td>
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">{p.full_name.charAt(0)}</div>
+                                <span className="font-semibold">{p.full_name}</span>
+                              </div>
+                            </td>
+                            <td><span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", roleBadge.cls)}>{roleBadge.label}</span></td>
+                            <td className="text-center font-bold text-lg">{p.total_assigned}</td>
+                            <td className="text-center text-blue-700 font-semibold">{p.gs_count}</td>
+                            <td className="text-center text-violet-700 font-semibold">{p.offer_count}</td>
+                            <td>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
+                                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs text-muted-foreground w-8 shrink-0">{pct}%</span>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="flex flex-wrap gap-1">
+                                {Object.entries(p.status_breakdown).slice(0, 4).map(([status, count]) => (
+                                  <span key={status} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-muted text-muted-foreground" title={status}>
+                                    <span className="truncate max-w-[80px]">{status}</span>
+                                    <span className="font-bold text-foreground">{count}</span>
+                                  </span>
+                                ))}
+                                {Object.keys(p.status_breakdown).length > 4 && (
+                                  <span className="text-xs text-muted-foreground">+{Object.keys(p.status_breakdown).length - 4} more</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
             </Card>
-            <Card className="p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                <FileText className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{performance.reduce((sum, p) => sum + p.total_assigned, 0)}</div>
-                <div className="text-sm text-muted-foreground">Total Applications</div>
-              </div>
-            </Card>
-            <Card className="p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{performance.reduce((sum, p) => sum + p.gs_count, 0)}</div>
-                <div className="text-sm text-muted-foreground">GS Applications</div>
-              </div>
-            </Card>
-            <Card className="p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                <Award className="w-6 h-6 text-violet-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{performance.reduce((sum, p) => sum + p.offer_count, 0)}</div>
-                <div className="text-sm text-muted-foreground">Offer Applications</div>
-              </div>
-            </Card>
-          </div>
+          </>
         )}
 
-        <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <div className="table-container flex-1 h-full border-0 rounded-none">
-            <table className="spreadsheet-table w-full">
-              <thead>
-                <tr>
-                  <th>Staff Member</th>
-                  <th>Role</th>
-                  <th className="text-center">Total</th>
-                  <th className="text-center">GS</th>
-                  <th className="text-center">Offer</th>
-                  <th style={{ minWidth: "200px" }}>Workload Bar</th>
-                  <th>Status Breakdown</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Loading report...</td></tr>
-                ) : performance?.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
-                ) : (
-                  performance?.map((p) => {
-                    const pct = Math.round((p.total_assigned / maxAssigned) * 100);
-                    const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
-                    return (
-                      <tr key={p.user_id} className="align-top">
-                        <td>
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
-                              {p.full_name.charAt(0)}
-                            </div>
-                            <span className="font-semibold">{p.full_name}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", roleBadge.cls)}>
-                            {roleBadge.label}
-                          </span>
-                        </td>
-                        <td className="text-center font-bold text-lg">{p.total_assigned}</td>
-                        <td className="text-center text-blue-700 font-semibold">{p.gs_count}</td>
-                        <td className="text-center text-violet-700 font-semibold">{p.offer_count}</td>
-                        <td>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
-                              <div
-                                className="h-full bg-primary rounded-full transition-all"
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                            <span className="text-xs text-muted-foreground w-8 shrink-0">{pct}%</span>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="flex flex-wrap gap-1">
-                            {Object.entries(p.status_breakdown).slice(0, 4).map(([status, count]) => (
-                              <span
-                                key={status}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-muted text-muted-foreground"
-                                title={status}
-                              >
-                                <span className="truncate max-w-[80px]">{status}</span>
-                                <span className="font-bold text-foreground">{count}</span>
+        {/* ── Staff Handling Time ── */}
+        {reportTab === "timing" && (
+          <>
+            {staffTiming && (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><Users className="w-6 h-6 text-blue-600" /></div>
+                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s, p) => s + p.total_gs, 0)}</div><div className="text-sm text-muted-foreground">Total GS Apps</div></div>
+                </Card>
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
+                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s, p) => s + p.completed_gs, 0)}</div><div className="text-sm text-muted-foreground">Completed</div></div>
+                </Card>
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0"><Timer className="w-6 h-6 text-amber-600" /></div>
+                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s, p) => s + p.pending_gs, 0)}</div><div className="text-sm text-muted-foreground">Pending</div></div>
+                </Card>
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Clock className="w-6 h-6 text-primary" /></div>
+                  <div>
+                    <div className="text-2xl font-bold">
+                      {fmtDays(staffTiming.filter(p => p.avg_handling_days).reduce((s, p, _, arr) => s + (p.avg_handling_days ?? 0) / arr.filter(x => x.avg_handling_days).length, 0) || null)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Avg Handling Time</div>
+                  </div>
+                </Card>
+              </div>
+            )}
+            <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
+              <div className="table-container flex-1 h-full border-0 rounded-none">
+                <table className="spreadsheet-table w-full">
+                  <thead>
+                    <tr>
+                      <th>Staff Member</th>
+                      <th>Role</th>
+                      <th className="text-center">GS Total</th>
+                      <th className="text-center">Pending</th>
+                      <th className="text-center">Completed</th>
+                      <th style={{ minWidth: "200px" }}>Avg Handling Time</th>
+                      <th style={{ minWidth: "180px" }}>Avg Completion</th>
+                      <th style={{ minWidth: "180px" }}>Avg First Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {timingLoading ? (
+                      <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">Loading timing data...</td></tr>
+                    ) : staffTiming?.length === 0 ? (
+                      <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
+                    ) : (
+                      staffTiming?.map((p) => {
+                        const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
+                        return (
+                          <tr key={p.user_id} className="align-middle">
+                            <td>
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">{p.full_name.charAt(0)}</div>
+                                <span className="font-semibold">{p.full_name}</span>
+                              </div>
+                            </td>
+                            <td><span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", roleBadge.cls)}>{roleBadge.label}</span></td>
+                            <td className="text-center font-bold">{p.total_gs}</td>
+                            <td className="text-center">
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{p.pending_gs}</span>
+                            </td>
+                            <td className="text-center">
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{p.completed_gs}</span>
+                            </td>
+                            <td><DaysBar days={p.avg_handling_days} max={maxHandling} /></td>
+                            <td><DaysBar days={p.avg_completion_days} max={maxHandling} color="bg-violet-500" /></td>
+                            <td><DaysBar days={p.avg_first_action_days} max={maxHandling} color="bg-amber-500" /></td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
+        )}
+
+        {/* ── Stage Analysis ── */}
+        {reportTab === "stages" && (
+          <>
+            {stageData && stageData.length > 0 && (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><Layers className="w-6 h-6 text-blue-600" /></div>
+                  <div><div className="text-2xl font-bold">{stageData.length}</div><div className="text-sm text-muted-foreground">Total Stages</div></div>
+                </Card>
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0"><AlertTriangle className="w-6 h-6 text-amber-600" /></div>
+                  <div>
+                    <div className="text-2xl font-bold">{fmtDays(Math.max(...stageData.map(s => s.avg_days ?? 0)))}</div>
+                    <div className="text-sm text-muted-foreground">Longest Avg Stage</div>
+                  </div>
+                </Card>
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
+                  <div>
+                    <div className="text-2xl font-bold">{stageData.reduce((s, x) => s + x.currently_in_stage, 0)}</div>
+                    <div className="text-sm text-muted-foreground">Apps in Stages</div>
+                  </div>
+                </Card>
+                <Card className="p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><Timer className="w-6 h-6 text-red-500" /></div>
+                  <div>
+                    <div className="text-sm font-bold truncate">{[...stageData].sort((a, b) => (b.avg_days ?? 0) - (a.avg_days ?? 0))[0]?.status ?? "—"}</div>
+                    <div className="text-sm text-muted-foreground">Biggest Bottleneck</div>
+                  </div>
+                </Card>
+              </div>
+            )}
+            <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
+              <div className="table-container flex-1 h-full border-0 rounded-none">
+                <table className="spreadsheet-table w-full">
+                  <thead>
+                    <tr>
+                      <th>Stage / Status</th>
+                      <th className="text-center">Currently Here</th>
+                      <th className="text-center">Transitions</th>
+                      <th style={{ minWidth: "220px" }}>Avg Time in Stage</th>
+                      <th className="text-center">Min</th>
+                      <th className="text-center">Max</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stageLoading ? (
+                      <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Loading stage data...</td></tr>
+                    ) : stageData?.length === 0 ? (
+                      <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No stage data. Status changes will populate this as applications move through stages.</td></tr>
+                    ) : (
+                      [...(stageData || [])].sort((a, b) => (b.avg_days ?? 0) - (a.avg_days ?? 0)).map((stage) => {
+                        const isBottleneck = (stage.avg_days ?? 0) >= maxStageDays * 0.75;
+                        return (
+                          <tr key={stage.status} className="align-middle">
+                            <td>
+                              <div className="flex items-center gap-2">
+                                {isBottleneck && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                                <span className="font-semibold">{stage.status}</span>
+                              </div>
+                            </td>
+                            <td className="text-center">
+                              <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-semibold", stage.currently_in_stage > 0 ? "bg-blue-100 text-blue-700" : "bg-muted text-muted-foreground")}>
+                                {stage.currently_in_stage}
                               </span>
-                            ))}
-                            {Object.keys(p.status_breakdown).length > 4 && (
-                              <span className="text-xs text-muted-foreground">+{Object.keys(p.status_breakdown).length - 4} more</span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                            </td>
+                            <td className="text-center text-muted-foreground">{stage.total_transitions}</td>
+                            <td>
+                              <DaysBar
+                                days={stage.avg_days}
+                                max={maxStageDays}
+                                color={isBottleneck ? "bg-red-400" : "bg-primary"}
+                              />
+                            </td>
+                            <td className="text-center text-sm text-muted-foreground">{fmtDays(stage.min_days)}</td>
+                            <td className="text-center text-sm text-muted-foreground">{fmtDays(stage.max_days)}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
+        )}
       </div>
     </Layout>
   );

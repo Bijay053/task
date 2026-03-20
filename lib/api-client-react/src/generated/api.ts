@@ -46,6 +46,9 @@ import type {
   MessageResponse,
   NotificationTest,
   StaffPerformance,
+  StaffTimingReport,
+  StageReport,
+  AppTimeline,
   StatusCount,
   StatusUpdate,
   StudentCreate,
@@ -2652,6 +2655,52 @@ export const setDeptSetting = async (department: string, key: string, data: Dept
   customFetch<DeptSettingOut>(`/api/dept-settings/${department}/${key}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
 export const useSetDeptSetting = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof setDeptSetting>>, TError, { department: string; key: string; data: DeptSettingUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof setDeptSetting>>, TError, { department: string; key: string; data: DeptSettingUpdate }, TContext> =>
   useMutation({ mutationFn: ({ department, key, data }) => setDeptSetting(department, key, data, options?.request), ...options?.mutation });
+
+// ─── Time-based Reports ───────────────────────────────────────────────────────
+
+export const getStaffTiming = async (options?: RequestInit): Promise<StaffTimingReport[]> =>
+  customFetch<StaffTimingReport[]>(`/api/reports/staff-timing`, { ...options, method: "GET" });
+export const getGetStaffTimingQueryKey = () => [`/api/reports/staff-timing`] as const;
+export function useGetStaffTiming<TData = Awaited<ReturnType<typeof getStaffTiming>>, TError = ErrorType<unknown>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getStaffTiming>>, TError, TData>; request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryKey = getGetStaffTimingQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStaffTiming>>> = ({ signal }) => getStaffTiming({ signal, ...options?.request });
+  const queryOptions = { queryKey, queryFn, ...options?.query };
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+}
+
+export const getStageAnalysis = async (department: string, options?: RequestInit): Promise<StageReport[]> =>
+  customFetch<StageReport[]>(`/api/reports/stage-analysis?department=${encodeURIComponent(department)}`, { ...options, method: "GET" });
+export const getGetStageAnalysisQueryKey = (department: string) => [`/api/reports/stage-analysis`, department] as const;
+export function useGetStageAnalysis<TData = Awaited<ReturnType<typeof getStageAnalysis>>, TError = ErrorType<unknown>>(department: string, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getStageAnalysis>>, TError, TData>; request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryKey = getGetStageAnalysisQueryKey(department);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStageAnalysis>>> = ({ signal }) => getStageAnalysis(department, { signal, ...options?.request });
+  const queryOptions = { queryKey, queryFn, ...options?.query };
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+}
+
+export const getAppTimeline = async (appId: number, options?: RequestInit): Promise<AppTimeline> =>
+  customFetch<AppTimeline>(`/api/reports/app-timeline/${appId}`, { ...options, method: "GET" });
+export const getGetAppTimelineQueryKey = (appId: number) => [`/api/reports/app-timeline/${appId}`] as const;
+export function useGetAppTimeline<TData = Awaited<ReturnType<typeof getAppTimeline>>, TError = ErrorType<unknown>>(appId: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getAppTimeline>>, TError, TData>; request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryKey = getGetAppTimelineQueryKey(appId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAppTimeline>>> = ({ signal }) => getAppTimeline(appId, { signal, ...options?.request });
+  const queryOptions = { queryKey, queryFn, enabled: !!appId, ...options?.query };
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+}
+
+export const bulkUploadAgents = async (file: File, options?: RequestInit): Promise<BulkUploadResult> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return customFetch<BulkUploadResult>(`/api/agents/bulk-upload`, { ...options, method: "POST", body: formData });
+};
+export const useBulkUploadAgents = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof bulkUploadAgents>>, TError, { file: File }, TContext>; request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof bulkUploadAgents>>, TError, { file: File }, TContext> =>
+  useMutation({ mutationFn: ({ file }) => bulkUploadAgents(file, options?.request), ...options?.mutation });
 
 export interface StudentSummary {
   id: number;

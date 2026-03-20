@@ -166,8 +166,8 @@ export interface AppStatusUpdate { name?: string; text_color?: string; bg_color?
 export interface AppStatusReorder { ordered_ids: number[]; }
 
 /** Department permissions */
-export interface UserDeptPermOut { id: number; user_id: number; department: string; can_view: boolean; can_edit: boolean; can_delete: boolean; }
-export interface UserDeptPermUpdate { can_view: boolean; can_edit: boolean; can_delete: boolean; }
+export interface UserDeptPermOut { id: number; user_id: number; department: string; can_view: boolean; can_edit: boolean; can_delete: boolean; can_upload: boolean; }
+export interface UserDeptPermUpdate { can_view: boolean; can_edit: boolean; can_delete: boolean; can_upload: boolean; }
 
 /** Performance reports */
 export interface StaffPerformance {
@@ -178,6 +178,46 @@ export interface StaffPerformance {
 
 /** Bulk upload */
 export interface BulkUploadResult { created: number; skipped: number; errors: string[]; }
+
+/** Time-based performance reports */
+export interface StaffTimingReport {
+  user_id: number;
+  full_name: string;
+  role: string;
+  total_gs: number;
+  pending_gs: number;
+  completed_gs: number;
+  avg_handling_days: number | null;
+  avg_completion_days: number | null;
+  avg_first_action_days: number | null;
+  avg_stage_days: Record<string, number> | null;
+}
+
+export interface StageReport {
+  status: string;
+  department: string;
+  total_transitions: number;
+  avg_days: number | null;
+  min_days: number | null;
+  max_days: number | null;
+  currently_in_stage: number;
+}
+
+export interface AppTimeline {
+  application_id: number;
+  student_name: string;
+  current_status: string;
+  created_at: string;
+  total_days: number;
+  assigned_to: string | null;
+  stages: Array<{
+    status: string | null;
+    entered_at: string;
+    exited_at: string | null;
+    duration_days: number;
+    changed_by: string | null;
+  }>;
+}
 
 export type ListStudentsParams = { search?: string };
 export type ListUniversitiesParams = { search?: string };

@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import BaseModel, EmailStr
 
 
@@ -335,6 +335,7 @@ class UserDeptPermOut(BaseModel):
     can_view: bool
     can_edit: bool
     can_delete: bool
+    can_upload: bool
 
     class Config:
         from_attributes = True
@@ -344,6 +345,7 @@ class UserDeptPermUpdate(BaseModel):
     can_view: bool = True
     can_edit: bool = False
     can_delete: bool = False
+    can_upload: bool = False
 
 
 # ─── Reports ───────────────────────────────────────────────────────────────────
@@ -356,6 +358,39 @@ class StaffPerformance(BaseModel):
     gs_count: int
     offer_count: int
     status_breakdown: dict
+
+
+class StaffTimingReport(BaseModel):
+    user_id: int
+    full_name: str
+    role: str
+    total_gs: int
+    pending_gs: int
+    completed_gs: int
+    avg_handling_days: Optional[float]       # avg days from assigned_date to last action
+    avg_completion_days: Optional[float]     # avg days from creation to last status change for completed
+    avg_first_action_days: Optional[float]   # avg days before first update (status change)
+    avg_stage_days: Optional[Dict[str, float]]  # avg days per stage for this user's GS apps
+
+
+class StageReport(BaseModel):
+    status: str
+    department: str
+    total_transitions: int
+    avg_days: Optional[float]
+    min_days: Optional[float]
+    max_days: Optional[float]
+    currently_in_stage: int
+
+
+class AppTimeline(BaseModel):
+    application_id: int
+    student_name: str
+    current_status: str
+    created_at: datetime
+    total_days: float
+    assigned_to: Optional[str]
+    stages: List[Dict]  # [{status, entered_at, exited_at, duration_days, changed_by}]
 
 
 # ─── Notifications ─────────────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ import Universities from "@/pages/universities";
 import Users from "@/pages/users";
 import Settings from "@/pages/settings";
 import Agents from "@/pages/agents";
+import Leave from "@/pages/leave";
 
 setAuthTokenGetter(() => localStorage.getItem("access_token"));
 
@@ -77,6 +78,9 @@ function Router() {
       </Route>
       <Route path="/agents">
         {() => <ProtectedRoute component={Agents} />}
+      </Route>
+      <Route path="/leave">
+        {() => <ProtectedRoute component={Leave} />}
       </Route>
       <Route component={NotFound} />
     </Switch>

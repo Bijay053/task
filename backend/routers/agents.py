@@ -3,7 +3,7 @@ External agents (sub-agents / agencies / partners) — NOT internal staff.
 These are the external entities students belong to.
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -74,6 +74,113 @@ def delete_agent(
     db.delete(agent)
     db.commit()
     return {"message": "Agent deleted"}
+
+
+# ─── Bulk Upload ───────────────────────────────────────────────────────────────
+
+@router.post("/bulk-upload", response_model=schemas.BulkUploadResult)
+async def bulk_upload_agents(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Upload agents from Excel (.xlsx). Required columns: Agent Name.
+    Optional columns: Company, Email, Phone, Country, Manager Name.
+    Manager Name maps to an existing user with role manager/admin.
+    """
+    if current_user.role not in ("admin", "manager"):
+        raise HTTPException(status_code=403, detail="Admin or manager required")
+
+    import openpyxl
+    import io
+
+    contents = await file.read()
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(contents))
+        ws = wb.active
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid Excel file. Please upload a .xlsx file.")
+
+    # Read header row
+    headers = [str(cell.value or "").strip().lower() for cell in next(ws.iter_rows(min_row=1, max_row=1))]
+
+    def col(row, name):
+        aliases = {
+            "agent name": ["agent name", "name", "agent"],
+            "company": ["company", "company / agency", "company/agency", "agency"],
+            "email": ["email"],
+            "phone": ["phone", "telephone", "mobile"],
+            "country": ["country"],
+            "manager name": ["manager name", "manager", "assigned manager"],
+        }
+        for alias in aliases.get(name, []):
+            if alias in headers:
+                idx = headers.index(alias)
+                cell = row[idx]
+                return str(cell.value or "").strip() if cell.value is not None else ""
+        return ""
+
+    # Build manager name lookup
+    managers = db.query(models.User).filter(
+        models.User.role.in_(["admin", "manager"]),
+        models.User.is_active == True,
+    ).all()
+    manager_map = {m.full_name.lower(): m for m in managers}
+
+    created = 0
+    skipped = 0
+    errors = []
+
+    rows = list(ws.iter_rows(min_row=2))
+    for i, row in enumerate(rows, start=2):
+        name = col(row, "agent name")
+        if not name:
+            skipped += 1
+            continue
+
+        # Check for duplicate name
+        existing = db.query(models.Agent).filter(
+            models.Agent.name.ilike(name)
+        ).first()
+        if existing:
+            errors.append(f"Row {i}: Agent '{name}' already exists — skipped.")
+            skipped += 1
+            continue
+
+        company = col(row, "company") or None
+        email = col(row, "email") or None
+        phone = col(row, "phone") or None
+        country = col(row, "country") or None
+        manager_name = col(row, "manager name")
+
+        agent = models.Agent(
+            name=name,
+            company_name=company,
+            email=email,
+            phone=phone,
+            country=country,
+            is_active=True,
+        )
+        db.add(agent)
+        db.flush()  # get agent.id
+
+        # Assign to manager if provided
+        if manager_name:
+            manager = manager_map.get(manager_name.lower())
+            if manager:
+                existing_mapping = db.query(models.ManagerAgentMapping).filter_by(
+                    manager_id=manager.id, agent_id=agent.id
+                ).first()
+                if not existing_mapping:
+                    db.add(models.ManagerAgentMapping(manager_id=manager.id, agent_id=agent.id))
+            else:
+                errors.append(f"Row {i}: Manager '{manager_name}' not found — agent created without manager.")
+
+        created += 1
+
+    db.commit()
+    return schemas.BulkUploadResult(created=created, skipped=skipped, errors=errors)
 
 
 # ─── Manager-Agent Mappings ────────────────────────────────────────────────────

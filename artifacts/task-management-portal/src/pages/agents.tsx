@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   useListAgents, useCreateAgent, useUpdateAgent,
-  useListUsers, useGetManagerAgents, useAssignAgentToManager, useUnassignAgentFromManager
+  useListUsers, useGetManagerAgents, useAssignAgentToManager, useUnassignAgentFromManager,
+  useBulkUploadAgents
 } from "@workspace/api-client-react";
 import type { AgentOut } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Label, Modal, Select, Textarea } from "@/components/ui-elements";
-import { Plus, Edit2, Users, Globe, X, Check, ShieldAlert } from "lucide-react";
+import { Plus, Edit2, Users, Globe, X, Check, ShieldAlert, Upload, Download } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -79,9 +80,13 @@ export default function Agents() {
   const [editingAgent, setEditingAgent] = useState<AgentOut | null>(null);
   const [activeTab, setActiveTab] = useState<AgentTab>("directory");
   const [selectedManagerId, setSelectedManagerId] = useState<number | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createMut = useCreateAgent();
   const updateMut = useUpdateAgent();
+  const bulkUploadMut = useBulkUploadAgents();
 
   const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
 
@@ -107,6 +112,32 @@ export default function Agents() {
     setIsModalOpen(false);
   };
 
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const result = await bulkUploadMut.mutateAsync({ file });
+      setBulkResult(result);
+      setIsBulkModalOpen(true);
+      queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
+    } catch (err) {
+      setBulkResult({ created: 0, skipped: 0, errors: ["Upload failed. Please check your file format."] });
+      setIsBulkModalOpen(true);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const downloadTemplate = () => {
+    const csvContent = "Agent Name,Company,Email,Phone,Country,Manager Name\nJohn Smith,ABC Agency,john@abc.com,+61400000000,Bangladesh,Alice Manager\n";
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "agents_upload_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (!isAdminOrManager) {
     return (
       <Layout>
@@ -130,9 +161,18 @@ export default function Agents() {
             <p className="text-muted-foreground mt-1">Manage sub-agents, partners, and their manager assignments.</p>
           </div>
           {activeTab === "directory" && (
-            <Button onClick={() => { setEditingAgent(null); setIsModalOpen(true); }}>
-              <Plus className="w-5 h-5 mr-2" />Add Agent
-            </Button>
+            <div className="flex gap-2">
+              <input ref={fileInputRef} type="file" accept=".xlsx,.csv" className="hidden" onChange={handleBulkUpload} />
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} isLoading={bulkUploadMut.isPending}>
+                <Upload className="w-4 h-4 mr-2" />Bulk Upload
+              </Button>
+              <Button variant="outline" onClick={downloadTemplate}>
+                <Download className="w-4 h-4 mr-2" />Template
+              </Button>
+              <Button onClick={() => { setEditingAgent(null); setIsModalOpen(true); }}>
+                <Plus className="w-5 h-5 mr-2" />Add Agent
+              </Button>
+            </div>
           )}
         </div>
 
@@ -154,27 +194,39 @@ export default function Agents() {
                   <tr>
                     <th>#</th>
                     <th>Agent Name</th>
+                    <th>Company / Agency</th>
+                    <th>Email</th>
+                    <th>Phone</th>
                     <th>Country</th>
+                    <th>Status</th>
                     <th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
-                    <tr><td colSpan={4} className="text-center py-10 text-muted-foreground">Loading...</td></tr>
+                    <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">Loading...</td></tr>
                   ) : agents?.length === 0 ? (
-                    <tr><td colSpan={4} className="text-center py-10 text-muted-foreground">No agents yet. Add one above.</td></tr>
+                    <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">No agents yet. Add one above.</td></tr>
                   ) : agents?.map(agent => (
                     <tr key={agent.id} className="cursor-pointer group" onClick={() => { setEditingAgent(agent); setIsModalOpen(true); }}>
                       <td className="text-muted-foreground text-xs">{agent.id}</td>
                       <td>
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm shrink-0">
                             {agent.name.charAt(0)}
                           </div>
                           <span className="font-semibold">{agent.name}</span>
                         </div>
                       </td>
-                      <td>{agent.country ? <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{agent.country}</span> : <span className="text-muted-foreground/40">—</span>}</td>
+                      <td>{agent.company_name || <span className="text-muted-foreground/40">—</span>}</td>
+                      <td className="text-muted-foreground text-sm">{agent.email || <span className="text-muted-foreground/40">—</span>}</td>
+                      <td className="text-muted-foreground text-sm">{agent.phone || <span className="text-muted-foreground/40">—</span>}</td>
+                      <td>{agent.country ? <span className="flex items-center gap-1"><Globe className="w-3 h-3 shrink-0" />{agent.country}</span> : <span className="text-muted-foreground/40">—</span>}</td>
+                      <td>
+                        <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", agent.is_active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500")}>
+                          {agent.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
                       <td className="text-right">
                         <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 cursor-pointer"
                           onClick={(e) => { e.stopPropagation(); setEditingAgent(agent); setIsModalOpen(true); }}>
@@ -221,6 +273,7 @@ export default function Agents() {
         )}
       </div>
 
+      {/* Add/Edit Agent Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingAgent ? "Edit Agent" : "New External Agent"} maxWidth="max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -265,6 +318,42 @@ export default function Agents() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Bulk Upload Result Modal */}
+      <Modal isOpen={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} title="Bulk Upload Result">
+        {bulkResult && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-center">
+                <div className="text-2xl font-bold text-green-700">{bulkResult.created}</div>
+                <div className="text-sm text-green-600">Created</div>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                <div className="text-2xl font-bold text-slate-600">{bulkResult.skipped}</div>
+                <div className="text-sm text-slate-500">Skipped</div>
+              </div>
+              <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-center">
+                <div className="text-2xl font-bold text-red-600">{bulkResult.errors.length}</div>
+                <div className="text-sm text-red-500">Warnings</div>
+              </div>
+            </div>
+            {bulkResult.errors.length > 0 && (
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                <p className="text-sm font-semibold text-muted-foreground">Notes:</p>
+                {bulkResult.errors.map((err, i) => (
+                  <div key={i} className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{err}</div>
+                ))}
+              </div>
+            )}
+            <div className="pt-2 text-xs text-muted-foreground">
+              Upload columns: <strong>Agent Name</strong> (required), Company, Email, Phone, Country, Manager Name.
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => setIsBulkModalOpen(false)}>Done</Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </Layout>
   );

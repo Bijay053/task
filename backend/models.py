@@ -240,6 +240,7 @@ class UserDeptPermission(Base):
     can_view = Column(Boolean, default=True)
     can_edit = Column(Boolean, default=False)
     can_delete = Column(Boolean, default=False)
+    can_upload = Column(Boolean, default=False)
 
     user = relationship("User", back_populates="dept_permissions")
 

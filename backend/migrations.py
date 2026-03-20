@@ -129,3 +129,6 @@ def run_migrations():
             conn.commit()
         except Exception:
             conn.rollback()
+
+        # can_upload permission column
+        _add_column(conn, "task_user_dept_permissions", "can_upload", "BOOLEAN DEFAULT FALSE")

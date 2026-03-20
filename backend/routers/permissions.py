@@ -14,8 +14,8 @@ router = APIRouter(prefix="/permissions", tags=["permissions"])
 
 
 def require_admin(current_user: models.User = Depends(get_current_user)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required")
+    if current_user.role not in ("admin", "manager"):
+        raise HTTPException(status_code=403, detail="Admin or manager role required")
     return current_user
 
 
@@ -51,6 +51,7 @@ def set_user_permission(
     perm.can_view = data.can_view
     perm.can_edit = data.can_edit
     perm.can_delete = data.can_delete
+    perm.can_upload = data.can_upload
     db.commit()
     db.refresh(perm)
     return perm

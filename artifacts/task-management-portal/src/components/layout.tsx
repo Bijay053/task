@@ -15,7 +15,8 @@ import {
   FileCheck2,
   Globe,
   BarChart3,
-  UserCheck
+  UserCheck,
+  Calendar
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,7 @@ export function Layout({ children }: { children: ReactNode }) {
         { href: "/students", label: "Students Directory", icon: GraduationCap, roles: ["admin", "manager", "agent"] },
         { href: "/universities", label: "Universities", icon: Building2, roles: ["admin", "manager", "agent"] },
         { href: "/users", label: "Team Directory", icon: Users, roles: ["admin", "manager"] },
+        { href: "/leave", label: "Leave & Availability", icon: Calendar, roles: ["admin", "manager"] },
         { href: "/settings", label: "Settings", icon: Settings, roles: ["admin", "manager"] },
       ],
     },
