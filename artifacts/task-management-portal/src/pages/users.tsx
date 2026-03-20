@@ -14,9 +14,14 @@ import { cn } from "@/lib/utils";
 
 type UsersTab = "team" | "permissions";
 
-const DEPARTMENTS: { key: string; label: string }[] = [
-  { key: "gs", label: "GS Department" },
-  { key: "offer", label: "Offer Department" },
+const DEPARTMENTS: { key: string; label: string; group?: string }[] = [
+  { key: "gs",           label: "GS Applications",      group: "Departments" },
+  { key: "offer",        label: "Offer Applications",    group: "Departments" },
+  { key: "reports",      label: "Performance Reports",   group: "Modules" },
+  { key: "agents",       label: "External Agents",       group: "Modules" },
+  { key: "users",        label: "Team Directory",        group: "Modules" },
+  { key: "leave",        label: "Leave & Availability",  group: "Modules" },
+  { key: "settings",     label: "System Settings",       group: "Modules" },
 ];
 
 const PERM_COLS: { key: "can_view" | "can_edit" | "can_upload" | "can_delete"; label: string }[] = [
@@ -72,6 +77,9 @@ function PermMatrix({
     });
   };
 
+  // Build rows with group header rows interspersed
+  const groups = Array.from(new Set(DEPARTMENTS.map(d => d.group)));
+
   return (
     <div className="rounded-xl border border-border overflow-hidden">
       <table className="w-full text-sm">
@@ -99,21 +107,31 @@ function PermMatrix({
               <td colSpan={5} className="text-center py-10 text-muted-foreground">Loading permissions...</td>
             </tr>
           ) : (
-            DEPARTMENTS.map((dept, i) => {
-              const p = getPerm(dept.key);
-              return (
-                <tr key={dept.key} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
-                  <td className="px-5 py-4 font-semibold text-slate-700">{dept.label}</td>
-                  {PERM_COLS.map(col => (
-                    <td key={col.key} className="px-4 py-4 text-center">
-                      <MatrixCheckbox
-                        checked={!!p[col.key]}
-                        onChange={() => onToggle(dept.key, col.key)}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              );
+            groups.map(group => {
+              const groupDepts = DEPARTMENTS.filter(d => d.group === group);
+              return [
+                <tr key={`group-${group}`}>
+                  <td colSpan={5} className="bg-slate-100 px-5 py-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{group}</span>
+                  </td>
+                </tr>,
+                ...groupDepts.map((dept, i) => {
+                  const p = getPerm(dept.key);
+                  return (
+                    <tr key={dept.key} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
+                      <td className="px-5 py-3.5 font-semibold text-slate-700">{dept.label}</td>
+                      {PERM_COLS.map(col => (
+                        <td key={col.key} className="px-4 py-3.5 text-center">
+                          <MatrixCheckbox
+                            checked={!!p[col.key]}
+                            onChange={() => onToggle(dept.key, col.key)}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                }),
+              ];
             })
           )}
         </tbody>
