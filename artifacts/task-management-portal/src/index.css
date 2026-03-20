@@ -81,7 +81,8 @@
     @apply w-full text-sm text-left border-collapse;
   }
   .spreadsheet-table th {
-    @apply px-4 py-3 font-semibold text-muted-foreground bg-muted/50 border-b border-r border-border whitespace-nowrap sticky top-0 z-10;
+    @apply px-4 py-3 font-semibold text-muted-foreground bg-muted border-b-2 border-r border-border whitespace-nowrap sticky top-0 z-20;
+    box-shadow: 0 1px 0 hsl(var(--border));
   }
   .spreadsheet-table td {
     @apply px-4 py-2 border-b border-r border-border whitespace-nowrap;
