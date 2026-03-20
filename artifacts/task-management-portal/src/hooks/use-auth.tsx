@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 import { useLocation } from "wouter";
 import { useGetMe, useLogin, useLogout } from "@workspace/api-client-react";
 import type { UserOut, LoginRequest } from "@workspace/api-client-react/src/generated/api.schemas";
@@ -15,14 +15,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [_, setLocation] = useLocation();
-  const token = localStorage.getItem("access_token");
-  
-  const { data: user, isLoading, refetch } = useGetMe({
+  const [, setLocation] = useLocation();
+
+  // useState so token changes trigger re-renders (re-enables the useGetMe query)
+  const [hasToken, setHasToken] = useState(() => !!localStorage.getItem("access_token"));
+
+  const { data: user, isLoading } = useGetMe({
     query: {
-      enabled: !!token,
+      enabled: hasToken,
       retry: false,
-    }
+    },
   });
 
   const loginMutation = useLogin();
@@ -32,34 +34,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await loginMutation.mutateAsync({ data });
     if (result.access_token) {
       localStorage.setItem("access_token", result.access_token);
-      await refetch();
+      // Enable the useGetMe query, then navigate — ProtectedRoute shows Loading
+      // while the /me fetch completes, then renders the page.
+      setHasToken(true);
       setLocation("/");
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      if (token) await logoutMutation.mutateAsync();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      localStorage.removeItem("access_token");
-      window.location.href = "/login";
-    }
+  const handleLogout = () => {
+    try { logoutMutation.mutate(); } catch {}
+    localStorage.removeItem("access_token");
+    setHasToken(false);
+    window.location.href = "/login";
   };
 
-  const isAuthenticated = !!user;
+  const isAuthenticated = !!user && hasToken;
   const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
 
   return (
-    <AuthContext.Provider value={{
-      user: user || null,
-      isLoading,
-      login: handleLogin,
-      logout: handleLogout,
-      isAuthenticated,
-      isAdminOrManager
-    }}>
+    <AuthContext.Provider
+      value={{
+        user: user ?? null,
+        isLoading: hasToken && isLoading,
+        login: handleLogin,
+        logout: handleLogout,
+        isAuthenticated,
+        isAdminOrManager,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
