@@ -200,7 +200,7 @@ export default function OfferApplications() {
                     <th>Ext. Agent</th>
                     <th>Assignee</th>
                     <th>Priority</th>
-                    <th>Remarks</th>
+                    <th className="min-w-[220px]">Remarks</th>
                   </tr>
                 </thead>
                 <tbody className="align-top">
@@ -246,10 +246,10 @@ export default function OfferApplications() {
                             {app.priority || "normal"}
                           </span>
                         </td>
-                        <td className="max-w-[180px]">
-                          <span className="text-xs text-muted-foreground" title={app.remarks || ""}>
-                            {app.remarks ? (app.remarks.length > 50 ? app.remarks.slice(0, 50) + "…" : app.remarks) : <span className="opacity-30">—</span>}
-                          </span>
+                        <td className="min-w-[220px] max-w-[360px]">
+                          {app.remarks
+                            ? <span className="text-xs text-muted-foreground whitespace-normal break-words line-clamp-3 leading-relaxed" title={app.remarks}>{app.remarks}</span>
+                            : <span className="opacity-30">—</span>}
                         </td>
                       </tr>
                     ))
