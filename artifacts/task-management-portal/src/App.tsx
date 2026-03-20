@@ -7,6 +7,7 @@ import { setAuthTokenGetter } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 
 import Login from "@/pages/login";
+import ResetPassword from "@/pages/reset-password";
 import Dashboard from "@/pages/dashboard";
 import GsApplications from "@/pages/applications";
 import OfferApplications from "@/pages/offer-applications";
@@ -46,6 +47,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/">
         {() => <ProtectedRoute component={Dashboard} />}
       </Route>

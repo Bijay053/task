@@ -304,7 +304,6 @@ def forgot_password(
     db.commit()
 
     if is_email_configured():
-        from backend.email_service import SMTP_FROM
         import os
         app_url = os.environ.get("APP_URL", "")
         reset_url = f"{app_url}/reset-password?token={token}"
@@ -312,7 +311,7 @@ def forgot_password(
         _log(db, user, "forgot_password", f"Reset email sent (delivered={sent})", request)
     else:
         # Log the token so an admin can share it manually if needed
-        _log(db, user, "forgot_password", f"SMTP not configured. Reset token: {token}", request)
+        _log(db, user, "forgot_password", f"Email not configured. Reset token: {token}", request)
 
     return {"message": "If that email is registered, a reset link has been sent."}
 
