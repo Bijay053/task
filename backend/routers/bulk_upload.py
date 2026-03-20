@@ -2,8 +2,11 @@
 Bulk upload via XLSX for GS and Offer applications.
 Expected columns:
 
-GS:   Student Name | Country | University | Course | Intake | Status | Agent Email | Submitted Date | Verification | Remarks
-Offer: Student Name | University | Course | Intake | Channel | Status | Agent Email | Offer Applied Date | Offer Received Date | Remarks
+GS:   Student Name | Country | University | Course | Intake | Status | Agent Name | Agent Email | Submitted Date | Verification | Remarks
+Offer: Student Name | University | Course | Intake | Channel | Status | Agent Name | Agent Email | Offer Applied Date | Offer Received Date | Remarks
+
+Agent Name / Agent Email → auto-creates External Agent record if not already in the system.
+Assigned To Email → optional internal staff assignment.
 """
 import io
 from datetime import date
@@ -15,6 +18,7 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.auth import get_current_user
 import backend.models as models
+from backend.routers.notifications import send_assignment_notification
 
 router = APIRouter(prefix="/bulk-upload", tags=["bulk-upload"])
 
@@ -66,6 +70,60 @@ def _find_user_by_email(db: Session, email: str) -> Optional[models.User]:
     ).first()
 
 
+def _find_or_create_agent(
+    db: Session,
+    name: Optional[str] = None,
+    email: Optional[str] = None,
+) -> Optional[models.Agent]:
+    """
+    Find an external Agent by name (preferred) or email.
+    Creates a new Agent record if not found.
+    Also updates email on an existing record if it was missing.
+    Returns None if neither name nor email provided.
+    """
+    name = name.strip() if name else None
+    email = email.strip() if email else None
+
+    if not name and not email:
+        return None
+
+    agent: Optional[models.Agent] = None
+
+    # Try name lookup first (most reliable for deduplication)
+    if name:
+        agent = db.query(models.Agent).filter(
+            models.Agent.name.ilike(name)
+        ).first()
+
+    # Fall back to email lookup
+    if not agent and email:
+        agent = db.query(models.Agent).filter(
+            models.Agent.email.ilike(email)
+        ).first()
+
+    if agent:
+        # Patch missing fields without overwriting existing data
+        changed = False
+        if email and not agent.email:
+            agent.email = email
+            changed = True
+        if name and not agent.name:
+            agent.name = name
+            changed = True
+        if changed:
+            db.flush()
+    else:
+        # Create new external agent
+        agent = models.Agent(
+            name=name or email,
+            email=email,
+        )
+        db.add(agent)
+        db.flush()
+
+    return agent
+
+
 def _get_statuses(db: Session, department: str):
     statuses = db.query(models.AppStatus).filter(
         models.AppStatus.department == department,
@@ -111,12 +169,17 @@ async def bulk_upload(
                 return i
         return -1
 
+    def _has_col(name: str) -> bool:
+        return col(name) >= 0
+
     status_map = _get_statuses(db, department)
     default_status = "In Review" if department == "gs" else "On Hold"
 
     created = 0
     skipped = 0
     errors = []
+    # Track assignments to notify after commit
+    assignments: list[tuple[models.Application, models.User]] = []
 
     for row_idx, row in enumerate(rows[1:], start=2):
         def cell(name):
@@ -140,8 +203,26 @@ async def bulk_upload(
             raw_status = cell("status") or default_status
             status = status_map.get(raw_status.lower(), raw_status)
 
-            agent_email = cell("agent")
-            agent = _find_user_by_email(db, agent_email) if agent_email else None
+            # ── External Agent: auto-create if not found ───────────────────
+            # Look for "Agent Name" column first, then "Agent Email"
+            agent_name_val = cell("agent name") or cell("external agent")
+            agent_email_val = cell("agent email")
+            # If no dedicated "agent name" col, fall back to checking generic "agent" col
+            # but ONLY if there is no "agent email" col that already matched above
+            if not agent_name_val and not agent_email_val:
+                agent_name_val = cell("agent")  # generic fallback
+
+            ext_agent = _find_or_create_agent(db, agent_name_val, agent_email_val)
+
+            # ── Internal staff assignee (optional) ─────────────────────────
+            # Looks for "Assigned To Email" / "Handler Email" / "Staff Email" columns
+            handler_email = (
+                cell("assigned to email")
+                or cell("handler email")
+                or cell("staff email")
+                or cell("assignee email")
+            )
+            assignee = _find_user_by_email(db, handler_email) if handler_email else None
 
             app_data: dict = {
                 "department": department,
@@ -154,7 +235,9 @@ async def bulk_upload(
                 "country": cell("country"),
                 "remarks": cell("remark") or cell("note"),
                 "application_status": status,
-                "assigned_to_id": agent.id if agent else None,
+                "agent_id": ext_agent.id if ext_agent else None,
+                "assigned_to_id": assignee.id if assignee else None,
+                "assigned_date": date.today() if assignee else None,
                 "created_by_id": current_user.id,
             }
 
@@ -169,6 +252,10 @@ async def bulk_upload(
 
             app = models.Application(**app_data)
             db.add(app)
+
+            if assignee:
+                assignments.append((app, assignee))
+
             created += 1
 
         except Exception as e:
@@ -180,5 +267,15 @@ async def bulk_upload(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"DB commit failed: {e}")
+
+    # Send assignment notifications after successful commit
+    for app, assignee in assignments:
+        try:
+            db.refresh(app, attribute_names=["student", "university", "assigned_to"])
+            send_assignment_notification(
+                db, app, assignee, current_user.full_name
+            )
+        except Exception:
+            pass  # Notification failure must never block the upload response
 
     return {"created": created, "skipped": skipped, "errors": errors[:20]}

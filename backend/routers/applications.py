@@ -7,6 +7,7 @@ from backend.database import get_db
 from backend.auth import get_current_user
 import backend.models as models
 import backend.schemas as schemas
+from backend.routers.notifications import send_assignment_notification
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -30,6 +31,10 @@ def default_status(db: Session, department: str) -> str:
     if first:
         return first.name
     return "In Review" if department == "gs" else "On Hold"
+
+
+def is_agent_only(user: models.User) -> bool:
+    return user.role == "agent"
 
 
 def get_manager_agent_ids(db: Session, manager_id: int) -> Optional[list]:
@@ -119,6 +124,14 @@ def create_application(
     db.commit()
     db.refresh(app)
     db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by"])
+
+    # Notify the assignee if one was set at creation
+    if app.assigned_to_id and app.assigned_to:
+        try:
+            send_assignment_notification(db, app, app.assigned_to, current_user.full_name)
+        except Exception:
+            pass
+
     return app
 
 
@@ -151,14 +164,17 @@ def update_application(
 
     update_data = data.model_dump(exclude_none=True)
 
-    if "assigned_to_id" in update_data and update_data["assigned_to_id"] != app.assigned_to_id:
+    new_assignee_id = update_data.get("assigned_to_id")
+    assignee_changed = new_assignee_id is not None and new_assignee_id != app.assigned_to_id
+
+    if assignee_changed:
         app.assigned_date = date.today()
         db.add(models.ActivityLog(
             application_id=app.id,
             changed_by_id=current_user.id,
             field_name="assigned_to_id",
             old_value=str(app.assigned_to_id),
-            new_value=str(update_data["assigned_to_id"]),
+            new_value=str(new_assignee_id),
         ))
 
     if "application_status" in update_data:
@@ -177,6 +193,14 @@ def update_application(
     db.commit()
     db.refresh(app)
     db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by"])
+
+    # Notify the new assignee if assignment changed
+    if assignee_changed and app.assigned_to:
+        try:
+            send_assignment_notification(db, app, app.assigned_to, current_user.full_name)
+        except Exception:
+            pass
+
     return app
 
 
@@ -219,7 +243,8 @@ def assign_application(
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
     old_assignee = app.assigned_to_id
-    if data.assigned_to_id != old_assignee:
+    assignee_changed = data.assigned_to_id != old_assignee
+    if assignee_changed:
         app.assigned_to_id = data.assigned_to_id
         app.assigned_date = date.today()
         db.add(models.ActivityLog(
@@ -232,6 +257,14 @@ def assign_application(
     db.commit()
     db.refresh(app)
     db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by"])
+
+    # Notify the new assignee
+    if assignee_changed and app.assigned_to:
+        try:
+            send_assignment_notification(db, app, app.assigned_to, current_user.full_name)
+        except Exception:
+            pass
+
     return app
 
 
