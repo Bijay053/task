@@ -86,6 +86,8 @@ export default function Agents() {
 
   const createMut = useCreateAgent();
   const updateMut = useUpdateAgent();
+  const assignMut = useAssignAgentToManager();
+  const unassignMut = useUnassignAgentFromManager();
   const bulkUploadMut = useBulkUploadAgents();
 
   const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
