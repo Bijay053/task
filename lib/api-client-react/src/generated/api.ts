@@ -398,7 +398,7 @@ export function useGetMe<
  * @summary List users
  */
 export const getListUsersUrl = () => {
-  return `/api/users`;
+  return `/api/users/`;
 };
 
 export const listUsers = async (options?: RequestInit): Promise<UserOut[]> => {
@@ -647,8 +647,8 @@ export const getListStudentsUrl = (params?: ListStudentsParams) => {
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/students?${stringifiedParams}`
-    : `/api/students`;
+    ? `/api/students/?${stringifiedParams}`
+    : `/api/students/`;
 };
 
 export const listStudents = async (
@@ -914,8 +914,8 @@ export const getListUniversitiesUrl = (params?: ListUniversitiesParams) => {
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/universities?${stringifiedParams}`
-    : `/api/universities`;
+    ? `/api/universities/?${stringifiedParams}`
+    : `/api/universities/`;
 };
 
 export const listUniversities = async (
@@ -1184,8 +1184,8 @@ export const getListApplicationsUrl = (params?: ListApplicationsParams) => {
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/applications?${stringifiedParams}`
-    : `/api/applications`;
+    ? `/api/applications/?${stringifiedParams}`
+    : `/api/applications/`;
 };
 
 export const listApplications = async (
