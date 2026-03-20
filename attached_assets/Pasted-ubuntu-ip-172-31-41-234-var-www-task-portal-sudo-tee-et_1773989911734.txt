@@ -1,0 +1,35 @@
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo tee /etc/task-portal.env > /dev/null <<EOF
+DATABASE_URL=postgresql:///task_portal?host=/var/run/postgresql&port=5433
+SESSION_SECRET=$(openssl rand -hex 32)
+EOF
+
+sudo systemctl restart task-portal-api
+sleep 3
+sudo systemctl status task-portal-api
+sudo journalctl -u task-portal-api -n 10 --no-pager
+● task-portal-api.service - Task Portal API
+     Loaded: loaded (/etc/systemd/system/task-portal-api.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-03-20 06:59:21 UTC; 3s ago
+   Main PID: 3159089 (python)
+      Tasks: 1 (limit: 1017)
+     Memory: 65.2M (peak: 65.3M)
+        CPU: 1.323s
+     CGroup: /system.slice/task-portal-api.service
+             └─3159089 /var/www/task-portal/venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8080
+
+Mar 20 06:59:21 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:59:22 ip-172-31-41-234 python[3159089]: INFO:     Started server process [3159089]
+Mar 20 06:59:22 ip-172-31-41-234 python[3159089]: INFO:     Waiting for application startup.
+Mar 20 06:59:23 ip-172-31-41-234 python[3159089]: INFO:     Application startup complete.
+Mar 20 06:59:23 ip-172-31-41-234 python[3159089]: INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
+Mar 20 06:59:21 ip-172-31-41-234 python[3159077]: ERROR:    Application startup failed. Exiting.
+Mar 20 06:59:21 ip-172-31-41-234 systemd[1]: Stopping task-portal-api.service - Task Portal API...
+Mar 20 06:59:21 ip-172-31-41-234 systemd[1]: task-portal-api.service: Deactivated successfully.
+Mar 20 06:59:21 ip-172-31-41-234 systemd[1]: Stopped task-portal-api.service - Task Portal API.
+Mar 20 06:59:21 ip-172-31-41-234 systemd[1]: task-portal-api.service: Consumed 1.324s CPU time.
+Mar 20 06:59:21 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:59:22 ip-172-31-41-234 python[3159089]: INFO:     Started server process [3159089]
+Mar 20 06:59:22 ip-172-31-41-234 python[3159089]: INFO:     Waiting for application startup.
+Mar 20 06:59:23 ip-172-31-41-234 python[3159089]: INFO:     Application startup complete.
+Mar 20 06:59:23 ip-172-31-41-234 python[3159089]: INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ 
