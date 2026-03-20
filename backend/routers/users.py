@@ -1,9 +1,12 @@
+import os
+from datetime import datetime, timedelta
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.auth import get_current_user, require_admin, get_password_hash
+from backend.email_service import send_welcome_email
 import backend.models as models
 import backend.schemas as schemas
 
@@ -27,10 +30,13 @@ def create_user(data: schemas.UserCreate, db: Session = Depends(get_db), current
         full_name=data.full_name,
         hashed_password=get_password_hash(data.password),
         role=data.role,
+        password_changed_at=datetime(2000, 1, 1),
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+    app_url = os.environ.get("APP_URL", "")
+    send_welcome_email(to=data.email, full_name=data.full_name, password=data.password, app_url=app_url)
     return user
 
 

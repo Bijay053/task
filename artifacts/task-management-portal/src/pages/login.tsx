@@ -2,11 +2,57 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useForgotPassword, useResetPassword, useVerifyOtp } from "@workspace/api-client-react";
 import { Button, Input, Label, Card } from "@/components/ui-elements";
-import { Files, Lock, Mail, ArrowLeft, KeyRound, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Files, Lock, Mail, ArrowLeft, KeyRound, ShieldCheck, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
 type Step = "credentials" | "otp" | "forgot" | "reset" | "forgot_done" | "password_expired";
+
+function PasswordInput({
+  value,
+  onChange,
+  placeholder,
+  className,
+  required,
+  minLength,
+  autoFocus,
+  icon: Icon = Lock,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+  required?: boolean;
+  minLength?: number;
+  autoFocus?: boolean;
+  icon?: React.ElementType;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+      <Input
+        type={show ? "text" : "password"}
+        required={required}
+        minLength={minLength}
+        autoFocus={autoFocus}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className={cn("pl-10 pr-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary", className)}
+        placeholder={placeholder || "••••••••"}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow(s => !s)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+        aria-label={show ? "Hide password" : "Show password"}
+      >
+        {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+    </div>
+  );
+}
 
 export default function Login() {
   const { login } = useAuth();
@@ -32,7 +78,6 @@ export default function Login() {
   const resetMut     = useResetPassword();
   const verifyOtpMut = useVerifyOtp();
 
-  // Auto-jump to reset step when token in URL
   useState(() => {
     if (resetToken) setStep("reset");
   });
@@ -49,7 +94,6 @@ export default function Login() {
       } else if (result?.password_expired) {
         setStep("password_expired");
       }
-      // Otherwise useAuth has already navigated to "/"
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
     } finally {
@@ -176,7 +220,6 @@ export default function Login() {
         </div>
 
         <Card className="p-8 glass-panel border-white/10 bg-white/5">
-          {/* Error / info banner */}
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium flex items-center">
               <div className="w-1.5 h-1.5 rounded-full bg-destructive mr-2" />
@@ -203,12 +246,7 @@ export default function Login() {
               </div>
               <div className="space-y-2">
                 <Label className="text-slate-200">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <Input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                    className="pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary"
-                    placeholder="••••••••" />
-                </div>
+                <PasswordInput value={password} onChange={setPassword} placeholder="••••••••" required />
               </div>
               <div className="flex justify-end">
                 <button type="button" onClick={() => { setError(""); setStep("forgot"); }}
@@ -291,22 +329,14 @@ export default function Login() {
             <form onSubmit={handleReset} className="space-y-5">
               <div className="space-y-2">
                 <Label className="text-slate-200">New Password</Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <Input type="password" required minLength={6} value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                    className="pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary"
-                    placeholder="••••••••" />
-                </div>
+                <PasswordInput value={newPassword} onChange={setNewPassword} icon={KeyRound} required minLength={6} />
               </div>
               <div className="space-y-2">
                 <Label className="text-slate-200">Confirm Password</Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <Input type="password" required minLength={6} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                    className={cn("pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary",
-                      confirmPassword && confirmPassword !== newPassword && "border-destructive")}
-                    placeholder="••••••••" />
-                </div>
+                <PasswordInput
+                  value={confirmPassword} onChange={setConfirmPassword} icon={KeyRound} required minLength={6}
+                  className={confirmPassword && confirmPassword !== newPassword ? "border-destructive" : ""}
+                />
               </div>
               <Button type="submit" className="w-full text-lg h-12" isLoading={isLoading || resetMut.isPending}>
                 Set New Password
@@ -319,35 +349,23 @@ export default function Login() {
             <form onSubmit={handleExpiredPasswordChange} className="space-y-5">
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>Your password is over 90 days old and must be changed before you can continue. Please choose a strong new password.</span>
+                <span>Your password must be changed before you can continue. Please choose a strong new password.</span>
               </div>
               <div className="space-y-2">
                 <Label className="text-slate-200">Current Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <Input type="password" required value={expiredCurrentPassword} onChange={e => setExpiredCurrentPassword(e.target.value)}
-                    className="pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary"
-                    placeholder="Your current password" />
-                </div>
+                <PasswordInput value={expiredCurrentPassword} onChange={setExpiredCurrentPassword} placeholder="Your current password" required />
               </div>
               <div className="space-y-2">
                 <Label className="text-slate-200">New Password</Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <Input type="password" required value={expiredNewPassword} onChange={e => setExpiredNewPassword(e.target.value)}
-                    className="pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary"
-                    placeholder="Min 8 chars, upper, lower, number, symbol" />
-                </div>
+                <PasswordInput value={expiredNewPassword} onChange={setExpiredNewPassword} icon={KeyRound}
+                  placeholder="Min 8 chars, upper, lower, number, symbol" required />
               </div>
               <div className="space-y-2">
                 <Label className="text-slate-200">Confirm New Password</Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <Input type="password" required value={expiredConfirmPassword} onChange={e => setExpiredConfirmPassword(e.target.value)}
-                    className={cn("pl-10 bg-white/10 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-primary",
-                      expiredConfirmPassword && expiredConfirmPassword !== expiredNewPassword && "border-destructive")}
-                    placeholder="••••••••" />
-                </div>
+                <PasswordInput
+                  value={expiredConfirmPassword} onChange={setExpiredConfirmPassword} icon={KeyRound} required
+                  className={expiredConfirmPassword && expiredConfirmPassword !== expiredNewPassword ? "border-destructive" : ""}
+                />
               </div>
               <Button type="submit" className="w-full text-lg h-12" isLoading={isLoading}>
                 Update Password & Sign In
