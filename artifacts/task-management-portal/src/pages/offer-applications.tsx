@@ -149,7 +149,7 @@ export default function OfferApplications() {
 
   return (
     <Layout>
-      <div className="h-full flex flex-col space-y-4">
+      <div className="min-h-full flex flex-col space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div>
             <h1 className="text-3xl font-display font-bold tracking-tight">Offer Applications</h1>
@@ -286,9 +286,9 @@ export default function OfferApplications() {
             </div>
           </Card>
         ) : (
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="w-full">
             {isLoading ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">Loading board...</div>
+              <div className="flex items-center justify-center py-20 text-muted-foreground">Loading board...</div>
             ) : (
               <KanbanBoard
                 applications={applications || []}

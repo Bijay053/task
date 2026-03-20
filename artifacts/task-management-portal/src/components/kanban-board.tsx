@@ -68,7 +68,9 @@ function KanbanCard({
       onClick={handleClick}
       className={cn(
         "bg-card rounded-xl border border-border shadow-sm p-3.5 select-none transition-all",
-        onCardClick ? "cursor-pointer hover:shadow-md hover:border-primary/40 hover:bg-primary/[0.02]" : "cursor-grab active:cursor-grabbing hover:shadow-md hover:border-primary/30",
+        onCardClick
+          ? "cursor-pointer hover:shadow-md hover:border-primary/40 hover:bg-primary/[0.02]"
+          : "cursor-grab active:cursor-grabbing hover:shadow-md hover:border-primary/30",
         isDragging && "opacity-40 scale-95"
       )}
     >
@@ -99,7 +101,9 @@ function KanbanCard({
 
       {app.channel && (
         <div className="mb-1">
-          <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium text-xs">{app.channel}</span>
+          <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium text-xs">
+            {app.channel}
+          </span>
         </div>
       )}
 
@@ -149,6 +153,7 @@ function KanbanColumn({
   onDragStart,
   onDrop,
   onCardClick,
+  stickyTop,
 }: {
   status: string;
   cards: Application[];
@@ -157,15 +162,22 @@ function KanbanColumn({
   onDragStart: (e: React.DragEvent, id: number) => void;
   onDrop: (status: string) => void;
   onCardClick?: (app: Application) => void;
+  stickyTop: number;
 }) {
   const [isOver, setIsOver] = useState(false);
   const color = colorMap[status] || { bg: "#f1f5f9", text: "#64748b" };
 
   return (
-    <div className="flex flex-col w-[290px] min-w-[290px] max-w-[290px] shrink-0 h-full overflow-x-hidden">
+    <div className="flex flex-col w-[290px] min-w-[290px] max-w-[290px] shrink-0">
+      {/* Sticky header */}
       <div
-        className="flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide shrink-0"
-        style={{ backgroundColor: color.bg, color: color.text }}
+        className="flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide z-10"
+        style={{
+          backgroundColor: color.bg,
+          color: color.text,
+          position: "sticky",
+          top: stickyTop,
+        }}
       >
         <span className="truncate">{status}</span>
         <span
@@ -175,9 +187,11 @@ function KanbanColumn({
           {cards.length}
         </span>
       </div>
+
+      {/* Card list — no height clipping, shows all cards */}
       <div
         className={cn(
-          "flex-1 rounded-b-xl p-2 space-y-2 overflow-y-auto overflow-x-hidden transition-colors min-h-[120px]",
+          "rounded-b-xl p-2 space-y-2 transition-colors min-h-[80px]",
           isOver ? "bg-primary/5 ring-2 ring-primary/30 ring-inset" : "bg-muted/40"
         )}
         onDragOver={(e) => { e.preventDefault(); setIsOver(true); }}
@@ -185,7 +199,7 @@ function KanbanColumn({
         onDrop={(e) => { e.preventDefault(); setIsOver(false); onDrop(status); }}
       >
         {cards.length === 0 && (
-          <div className="h-full flex items-center justify-center text-xs text-muted-foreground/40 italic select-none pt-6">
+          <div className="flex items-center justify-center text-xs text-muted-foreground/40 italic select-none py-6">
             {isOver ? "Drop here" : "No applications"}
           </div>
         )}
@@ -219,6 +233,7 @@ export function KanbanBoard({
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const dragAppRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [stickyTop] = useState(0);
 
   const handleDragStart = (e: React.DragEvent, appId: number) => {
     e.dataTransfer.effectAllowed = "move";
@@ -245,6 +260,7 @@ export function KanbanBoard({
     );
   };
 
+  // Shift+scroll or horizontal scroll → scroll columns left/right
   const handleWheel = useCallback((e: WheelEvent) => {
     const el = scrollRef.current;
     if (!el) return;
@@ -269,8 +285,8 @@ export function KanbanBoard({
   return (
     <div
       ref={scrollRef}
-      className="flex gap-3 h-full pb-3 select-none kanban-scroll"
-      style={{ overflowX: "auto", overflowY: "hidden" }}
+      className="flex gap-3 pb-6 select-none kanban-scroll"
+      style={{ overflowX: "auto", overflowY: "visible" }}
       onDragEnd={handleDragEnd}
     >
       {statusChoices.map((status) => (
@@ -283,6 +299,7 @@ export function KanbanBoard({
           onDragStart={handleDragStart}
           onDrop={handleDrop}
           onCardClick={onCardClick}
+          stickyTop={stickyTop}
         />
       ))}
       <div className="shrink-0 w-2" aria-hidden />
