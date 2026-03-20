@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import {
-  useListUsers, useCreateUser, useUpdateUser,
+  useListUsers, useCreateUser, useUpdateUser, useDeleteUser,
   useGetRolePermissions, useSetRolePermission,
   useListRoles, useCreateRole, useUpdateRole, useDeleteRole,
 } from "@workspace/api-client-react";
@@ -381,7 +381,21 @@ export default function Users() {
 
   const createMut = useCreateUser();
   const updateMut = useUpdateUser();
+  const deleteUserMut = useDeleteUser();
+  const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<number | null>(null);
   const { toast } = useToast();
+
+  const handleDeleteUser = async (userId: number) => {
+    try {
+      await deleteUserMut.mutateAsync({ userId });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setDeleteConfirmUserId(null);
+      toast({ title: "Team member deleted" });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Cannot delete", description: e.message || "Could not delete user" });
+      setDeleteConfirmUserId(null);
+    }
+  };
 
   const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
   const isAdmin = user?.role === "admin";
@@ -499,9 +513,28 @@ export default function Users() {
                         </span>
                       </td>
                       <td className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => { setEditingItem(u); setIsModalOpen(true); }}>
-                          <Edit2 className="w-4 h-4 mr-1" />Edit
-                        </Button>
+                        {deleteConfirmUserId === u.id ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-xs text-destructive font-medium">Delete {u.full_name.split(" ")[0]}?</span>
+                            <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(u.id)} disabled={deleteUserMut.isPending}>
+                              <Check className="w-3.5 h-3.5 mr-1" />Yes
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setDeleteConfirmUserId(null)}>
+                              <X className="w-3.5 h-3.5 mr-1" />No
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => { setEditingItem(u); setIsModalOpen(true); }}>
+                              <Edit2 className="w-4 h-4 mr-1" />Edit
+                            </Button>
+                            {isAdmin && user?.id !== u.id && (
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteConfirmUserId(u.id)}>
+                                <Trash2 className="w-4 h-4 mr-1" />Delete
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}

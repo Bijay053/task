@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  useListApplications, useCreateApplication, useUpdateApplication,
+  useListApplications, useCreateApplication, useUpdateApplication, useDeleteApplication,
   useListStudents, useListUniversities, useListUsers, useListStatuses, useListAgents
 } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
@@ -8,7 +8,7 @@ import { Card, Button, Input, Select, Modal, Label, Textarea } from "@/component
 import { KanbanBoard } from "@/components/kanban-board";
 import { TableScrollWrapper } from "@/components/table-scroll-wrapper";
 import { BulkUploadButton } from "@/components/bulk-upload-button";
-import { Search, Plus, FileEdit, LayoutGrid, List, Users } from "lucide-react";
+import { Search, Plus, FileEdit, LayoutGrid, List, Users, Trash2 } from "lucide-react";
 import { OFFER_CHANNEL_CHOICES } from "@/lib/utils";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -105,8 +105,11 @@ export default function OfferApplications() {
   const { data: users } = useListUsers();
   const { data: agents } = useListAgents();
 
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
   const createMut = useCreateApplication();
   const updateMut = useUpdateApplication();
+  const deleteMut = useDeleteApplication();
 
   const statusChoices = statuses?.map(s => s.name) || [];
   const statusColors: Record<string, { bg: string; text: string }> = {};
@@ -115,12 +118,30 @@ export default function OfferApplications() {
   const handleOpenEdit = (app: any) => {
     setEditingApp(app);
     setSelectedFollowers(app.follower_ids || []);
+    setDeleteConfirm(false);
     setIsModalOpen(true);
   };
   const handleOpenCreate = () => {
     setEditingApp(null);
     setSelectedFollowers([]);
+    setDeleteConfirm(false);
     setIsModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!editingApp) return;
+    try {
+      await deleteMut.mutateAsync({ appId: editingApp.id });
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      setIsModalOpen(false);
+      setDeleteConfirm(false);
+      toast({ title: "Application deleted" });
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || err?.message || "Could not delete.";
+      toast({ variant: "destructive", title: "Delete failed", description: detail });
+      setDeleteConfirm(false);
+    }
   };
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -415,9 +436,26 @@ export default function OfferApplications() {
             <Label>Remarks</Label>
             <Textarea name="remarks" defaultValue={editingApp?.remarks || ""} placeholder="Internal notes..." />
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" isLoading={createMut.isPending || updateMut.isPending}>Save</Button>
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div>
+              {editingApp && (
+                deleteConfirm ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-destructive font-medium">Delete this application?</span>
+                    <Button type="button" variant="destructive" size="sm" onClick={handleDelete} isLoading={deleteMut.isPending}>Yes, delete</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setDeleteConfirm(false)}>Cancel</Button>
+                  </div>
+                ) : (
+                  <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm(true)}>
+                    <Trash2 className="w-4 h-4 mr-1.5" />Delete
+                  </Button>
+                )
+              )}
+            </div>
+            <div className="flex gap-3">
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+              <Button type="submit" isLoading={createMut.isPending || updateMut.isPending}>Save</Button>
+            </div>
           </div>
         </form>
       </Modal>

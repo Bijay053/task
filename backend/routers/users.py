@@ -68,6 +68,18 @@ def update_user(user_id: int, data: schemas.UserUpdate, db: Session = Depends(ge
     return user
 
 
+@router.delete("/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account")
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return {"message": "User deleted"}
+
+
 @router.put("/{user_id}/availability", response_model=schemas.UserOut)
 def update_availability(
     user_id: int,
