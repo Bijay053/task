@@ -1,13 +1,11 @@
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import httpx
 
 from backend.database import get_db
 from backend.auth import get_current_user, require_admin
+from backend.email_service import is_email_configured, send_email
 import backend.models as models
 import backend.schemas as schemas
 
@@ -113,28 +111,25 @@ def test_email(
     data: schemas.NotificationTest,
     current_user: models.User = Depends(require_admin),
 ):
-    smtp_host = os.environ.get("SMTP_HOST", "")
-    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-    smtp_user = os.environ.get("SMTP_USER", "")
-    smtp_pass = os.environ.get("SMTP_PASS", "")
-
-    if not smtp_host or not smtp_user:
+    if not is_email_configured():
         raise HTTPException(
             status_code=400,
-            detail="SMTP not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS environment variables.",
+            detail=(
+                "Email not configured. Set AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY + SES_FROM_EMAIL "
+                "for AWS SES, or SMTP_HOST + SMTP_USER + SMTP_PASS for SMTP."
+            ),
         )
-
     try:
-        msg = MIMEText("This is a test email from the Task Management Portal.")
-        msg["Subject"] = "Test Email - Task Portal"
-        msg["From"] = smtp_user
-        msg["To"] = data.target
-
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(smtp_user, [data.target], msg.as_string())
-
+        send_email(
+            to=data.target,
+            subject="Test Email – Admission Task Management",
+            html_body=(
+                "<div style='font-family:sans-serif;padding:24px'>"
+                "<h2 style='color:#1d4ed8'>Admission Task Management</h2>"
+                "<p>This is a test email. Your email integration is working correctly.</p>"
+                "</div>"
+            ),
+        )
         return {"success": True, "message": f"Email sent to {data.target}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")

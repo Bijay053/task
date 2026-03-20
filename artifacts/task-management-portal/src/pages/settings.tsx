@@ -374,12 +374,14 @@ export default function Settings() {
               <h3 className="font-display font-semibold text-lg">Test Integrations</h3>
             </div>
             <form onSubmit={handleTestEmail} className="space-y-4 mb-8">
-              <h4 className="text-sm font-semibold text-slate-700">Email SMTP</h4>
+              <h4 className="text-sm font-semibold text-slate-700">Email (AWS SES)</h4>
               <div className="flex gap-2">
                 <Input name="target" placeholder="admin@example.com" type="email" required className="flex-1" />
                 <Button type="submit" isLoading={testEmail.isPending} variant="secondary">Send Test</Button>
               </div>
-              <p className="text-xs text-muted-foreground">Backend must have SMTP_HOST, SMTP_USER env vars configured.</p>
+              <p className="text-xs text-muted-foreground">
+                Requires <code className="bg-slate-100 px-1 rounded">AWS_ACCESS_KEY_ID</code>, <code className="bg-slate-100 px-1 rounded">AWS_SECRET_ACCESS_KEY</code>, <code className="bg-slate-100 px-1 rounded">AWS_REGION</code>, and <code className="bg-slate-100 px-1 rounded">SES_FROM_EMAIL</code> in <code className="bg-slate-100 px-1 rounded">/etc/task-portal.env</code>.
+              </p>
             </form>
             <div className="w-full h-px bg-border my-6" />
             <form onSubmit={handleTestChat} className="space-y-4">
