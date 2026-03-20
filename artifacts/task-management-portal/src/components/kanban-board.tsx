@@ -165,19 +165,47 @@ function KanbanCardColumn({
   onCardClick?: (app: Application) => void;
 }) {
   const [isOver, setIsOver] = useState(false);
+  const dragCounter = useRef(0);
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current += 1;
+    setIsOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) setIsOver(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current = 0;
+    setIsOver(false);
+    onDrop(status);
+  };
 
   return (
     <div
       className={cn(
-        "w-[290px] min-w-[290px] max-w-[290px] shrink-0 rounded-b-xl p-2 space-y-2 transition-colors",
+        "w-[290px] min-w-[290px] max-w-[290px] shrink-0 rounded-b-xl p-2 space-y-2 transition-colors relative",
         isOver ? "bg-primary/5 ring-2 ring-primary/30 ring-inset" : "bg-muted/40"
       )}
-      onDragOver={(e) => { e.preventDefault(); setIsOver(true); }}
-      onDragLeave={() => setIsOver(false)}
-      onDrop={(e) => { e.preventDefault(); setIsOver(false); onDrop(status); }}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       {cards.length === 0 && (
-        <div className="flex items-center justify-center text-xs text-muted-foreground/40 italic select-none py-6">
+        <div className={cn(
+          "flex items-center justify-center text-xs italic select-none py-6 rounded-lg transition-colors",
+          isOver ? "text-primary font-semibold bg-primary/10 border-2 border-dashed border-primary/40" : "text-muted-foreground/40"
+        )}>
           {isOver ? "Drop here" : "No applications"}
         </div>
       )}
@@ -191,8 +219,13 @@ function KanbanCardColumn({
           onCardClick={onCardClick}
         />
       ))}
+      {/* Sticky drop target — always visible at the bottom of the viewport even in long columns */}
       {isOver && cards.length > 0 && (
-        <div className="h-1.5 rounded-full bg-primary/40 mx-1" />
+        <div
+          className="sticky bottom-2 mx-1 rounded-lg bg-primary/10 border-2 border-dashed border-primary/50 flex items-center justify-center py-2 text-xs font-semibold text-primary/80 gap-1.5 select-none z-10"
+        >
+          <span>Drop here</span>
+        </div>
       )}
     </div>
   );
