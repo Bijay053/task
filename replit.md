@@ -27,7 +27,9 @@ A full-stack task management portal for study abroad consultancies, built to rep
 │   ├── seed.py                 # Seeds initial admin/agent users + sample data
 │   └── routers/
 │       ├── auth.py             # POST /api/auth/login, /logout, GET /me
-│       ├── users.py            # GET/POST /api/users, PUT /api/users/:id
+│       ├── users.py            # GET/POST /api/users, PUT /api/users/:id, PUT /api/users/:id/availability
+│       ├── agents.py           # CRUD external agents + manager-agent mappings
+│       ├── dept_settings.py    # Per-department key-value settings (webhook URLs)
 │       ├── students.py         # CRUD /api/students
 │       ├── universities.py     # CRUD /api/universities
 │       ├── applications.py     # Full CRUD + /my + /status + /assign + /logs; agent-only filter
@@ -66,11 +68,14 @@ A full-stack task management portal for study abroad consultancies, built to rep
 1. **Assigned date preserved**: When task is first assigned, `assigned_date` is set. Only updates on reassignment to a different user.
 2. **Dynamic statuses**: Statuses are stored in `task_app_statuses` table (not hardcoded). Admins manage them via Settings → GS/Offer Statuses tab. Each status has bg_color and text_color for badge rendering.
 3. **Role-based access**: `admin`/`manager` see all apps, Users, Settings, Reports. `team_leader` can assign apps. `agent` only sees own apps.
-4. **Agent visibility**: agents are filtered to only see their own applications in the list and get endpoints.
-5. **Optional student/university**: `student_id` is nullable on Application. `student_name` and `university_name` raw fields are used as fallback when no directory record is linked.
-6. **Department permissions**: `task_user_dept_permissions` table controls per-user, per-department can_view/can_edit/can_delete flags. Managed in Users → Department Permissions.
-7. **Bulk upload**: POST /api/bulk-upload/{gs|offer} accepts .xlsx; columns matched by partial name. Auto-creates students if not found in directory; stores raw names on applications.
-8. **Isolated auth**: Separate `task_users` table, separate JWT secret.
+4. **Agent vs Assignee separation**: `agent_id` (FK to `task_agents`) = external sub-agent/partner. `assigned_to_id` (FK to `task_users`) = internal staff member. These are separate fields on every application.
+5. **Manager-agent access control**: Managers can be mapped to specific external agents (`task_manager_agent_mappings`). If mapped, they only see applications whose `agent_id` is in their assigned agents. No mappings = see all.
+6. **Staff availability**: `task_users.availability_status` column ('available'/'on_leave'/'off_duty'). Team leaders and above can toggle it from the Users page Availability column dropdown.
+7. **Department-specific webhooks**: `task_dept_settings` table (department, key='google_chat_webhook', value=URL). Configured in Settings → Dept Webhooks. Overrides the global `GOOGLE_CHAT_WEBHOOK` env var for that dept. Managed by `notifications.py::get_webhook_for_dept()`.
+8. **Optional student/university**: `student_id` is nullable on Application. `student_name` and `university_name` raw fields are used as fallback when no directory record is linked.
+9. **Department permissions**: `task_user_dept_permissions` table controls per-user, per-department can_view/can_edit/can_delete flags. Managed in Users → Department Permissions.
+10. **Bulk upload**: POST /api/bulk-upload/{gs|offer} accepts .xlsx; columns matched by partial name. Auto-creates students if not found in directory; stores raw names on applications.
+11. **Isolated auth**: Separate `task_users` table, separate JWT secret.
 
 ## Roles
 

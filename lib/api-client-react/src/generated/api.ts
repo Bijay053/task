@@ -18,6 +18,9 @@ import type {
 
 import type {
   ActivityLogOut,
+  AgentCreate,
+  AgentOut,
+  AgentUpdate,
   ApplicationCreate,
   ApplicationOut,
   ApplicationUpdate,
@@ -29,7 +32,10 @@ import type {
   AssigneeCount,
   BulkUploadResult,
   DashboardSummary,
+  DeptSettingOut,
+  DeptSettingUpdate,
   HealthStatus,
+  ListAgentsParams,
   ListApplicationsParams,
   ListStatusesParams,
   MyApplicationsParams,
@@ -50,6 +56,7 @@ import type {
   UniversityCreate,
   UniversityOut,
   UniversityUpdate,
+  UserAvailabilityUpdate,
   UserCreate,
   UserDeptPermOut,
   UserDeptPermUpdate,
@@ -2552,3 +2559,96 @@ export const useBulkUpload = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof bulkUpload>>, TError, { department: string; file: File }, TContext>; request?: SecondParameter<typeof customFetch> }
 ): UseMutationResult<Awaited<ReturnType<typeof bulkUpload>>, TError, { department: string; file: File }, TContext> =>
   useMutation({ mutationFn: ({ department, file }) => bulkUpload(department, file, options?.request), ...options?.mutation });
+
+// ─── Agents ────────────────────────────────────────────────────────────────────
+
+export const listAgents = async (params?: ListAgentsParams, options?: RequestInit): Promise<AgentOut[]> => {
+  const q = new URLSearchParams();
+  if (params?.search) q.append("search", params.search);
+  const qs = q.toString();
+  return customFetch<AgentOut[]>(`/api/agents/${qs ? `?${qs}` : ""}`, { ...options, method: "GET" });
+};
+export const getListAgentsQueryKey = (params?: ListAgentsParams) => [`/api/agents`, ...(params ? [params] : [])] as const;
+export const getListAgentsQueryOptions = <TData = Awaited<ReturnType<typeof listAgents>>, TError = ErrorType<unknown>>(params?: ListAgentsParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listAgents>>, TError, TData>; request?: SecondParameter<typeof customFetch> }) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListAgentsQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAgents>>> = ({ signal }) => listAgents(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof listAgents>>, TError, TData> & { queryKey: QueryKey };
+};
+export function useListAgents<TData = Awaited<ReturnType<typeof listAgents>>, TError = ErrorType<unknown>>(params?: ListAgentsParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listAgents>>, TError, TData>; request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAgentsQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+export const createAgent = async (data: AgentCreate, options?: RequestInit): Promise<AgentOut> =>
+  customFetch<AgentOut>("/api/agents/", { ...options, method: "POST", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+export const useCreateAgent = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof createAgent>>, TError, { data: AgentCreate }, TContext>; request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof createAgent>>, TError, { data: AgentCreate }, TContext> =>
+  useMutation({ mutationFn: ({ data }) => createAgent(data, options?.request), ...options?.mutation });
+
+export const updateAgent = async (agentId: number, data: AgentUpdate, options?: RequestInit): Promise<AgentOut> =>
+  customFetch<AgentOut>(`/api/agents/${agentId}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+export const useUpdateAgent = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateAgent>>, TError, { agentId: number; data: AgentUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof updateAgent>>, TError, { agentId: number; data: AgentUpdate }, TContext> =>
+  useMutation({ mutationFn: ({ agentId, data }) => updateAgent(agentId, data, options?.request), ...options?.mutation });
+
+export const deleteAgent = async (agentId: number, options?: RequestInit): Promise<MessageResponse> =>
+  customFetch<MessageResponse>(`/api/agents/${agentId}`, { ...options, method: "DELETE" });
+export const useDeleteAgent = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteAgent>>, TError, { agentId: number }, TContext>; request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof deleteAgent>>, TError, { agentId: number }, TContext> =>
+  useMutation({ mutationFn: ({ agentId }) => deleteAgent(agentId, options?.request), ...options?.mutation });
+
+export const getManagerAgents = async (managerId: number, options?: RequestInit): Promise<AgentOut[]> =>
+  customFetch<AgentOut[]>(`/api/agents/manager/${managerId}/agents`, { ...options, method: "GET" });
+export const getGetManagerAgentsQueryKey = (managerId: number) => [`/api/agents/manager/${managerId}/agents`] as const;
+export const getGetManagerAgentsQueryOptions = <TData = Awaited<ReturnType<typeof getManagerAgents>>, TError = ErrorType<unknown>>(managerId: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getManagerAgents>>, TError, TData>; request?: SecondParameter<typeof customFetch> }) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetManagerAgentsQueryKey(managerId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getManagerAgents>>> = ({ signal }) => getManagerAgents(managerId, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: !!managerId, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof getManagerAgents>>, TError, TData> & { queryKey: QueryKey };
+};
+export function useGetManagerAgents<TData = Awaited<ReturnType<typeof getManagerAgents>>, TError = ErrorType<unknown>>(managerId: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getManagerAgents>>, TError, TData>; request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetManagerAgentsQueryOptions(managerId, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+export const assignAgentToManager = async (managerId: number, agentId: number, options?: RequestInit): Promise<MessageResponse> =>
+  customFetch<MessageResponse>(`/api/agents/manager/${managerId}/agents/${agentId}`, { ...options, method: "POST" });
+export const useAssignAgentToManager = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof assignAgentToManager>>, TError, { managerId: number; agentId: number }, TContext>; request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof assignAgentToManager>>, TError, { managerId: number; agentId: number }, TContext> =>
+  useMutation({ mutationFn: ({ managerId, agentId }) => assignAgentToManager(managerId, agentId, options?.request), ...options?.mutation });
+
+export const unassignAgentFromManager = async (managerId: number, agentId: number, options?: RequestInit): Promise<MessageResponse> =>
+  customFetch<MessageResponse>(`/api/agents/manager/${managerId}/agents/${agentId}`, { ...options, method: "DELETE" });
+export const useUnassignAgentFromManager = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof unassignAgentFromManager>>, TError, { managerId: number; agentId: number }, TContext>; request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof unassignAgentFromManager>>, TError, { managerId: number; agentId: number }, TContext> =>
+  useMutation({ mutationFn: ({ managerId, agentId }) => unassignAgentFromManager(managerId, agentId, options?.request), ...options?.mutation });
+
+// ─── Availability ─────────────────────────────────────────────────────────────
+
+export const updateAvailability = async (userId: number, data: UserAvailabilityUpdate, options?: RequestInit): Promise<UserOut> =>
+  customFetch<UserOut>(`/api/users/${userId}/availability`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+export const useUpdateAvailability = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateAvailability>>, TError, { userId: number; data: UserAvailabilityUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof updateAvailability>>, TError, { userId: number; data: UserAvailabilityUpdate }, TContext> =>
+  useMutation({ mutationFn: ({ userId, data }) => updateAvailability(userId, data, options?.request), ...options?.mutation });
+
+// ─── Department Settings ──────────────────────────────────────────────────────
+
+export const getDeptSettings = async (department: string, options?: RequestInit): Promise<DeptSettingOut[]> =>
+  customFetch<DeptSettingOut[]>(`/api/dept-settings/${department}`, { ...options, method: "GET" });
+export const getGetDeptSettingsQueryKey = (department: string) => [`/api/dept-settings/${department}`] as const;
+export const getGetDeptSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getDeptSettings>>, TError = ErrorType<unknown>>(department: string, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getDeptSettings>>, TError, TData>; request?: SecondParameter<typeof customFetch> }) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetDeptSettingsQueryKey(department);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeptSettings>>> = ({ signal }) => getDeptSettings(department, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: !!department, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof getDeptSettings>>, TError, TData> & { queryKey: QueryKey };
+};
+export function useGetDeptSettings<TData = Awaited<ReturnType<typeof getDeptSettings>>, TError = ErrorType<unknown>>(department: string, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getDeptSettings>>, TError, TData>; request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDeptSettingsQueryOptions(department, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+export const setDeptSetting = async (department: string, key: string, data: DeptSettingUpdate, options?: RequestInit): Promise<DeptSettingOut> =>
+  customFetch<DeptSettingOut>(`/api/dept-settings/${department}/${key}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+export const useSetDeptSetting = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof setDeptSetting>>, TError, { department: string; key: string; data: DeptSettingUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof setDeptSetting>>, TError, { department: string; key: string; data: DeptSettingUpdate }, TContext> =>
+  useMutation({ mutationFn: ({ department, key, data }) => setDeptSetting(department, key, data, options?.request), ...options?.mutation });

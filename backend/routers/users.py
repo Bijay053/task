@@ -9,6 +9,8 @@ import backend.schemas as schemas
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+AVAILABILITY_CHOICES = {"available", "on_leave", "off_duty"}
+
 
 @router.get("/", response_model=List[schemas.UserOut])
 def list_users(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -45,8 +47,35 @@ def update_user(user_id: int, data: schemas.UserUpdate, db: Session = Depends(ge
         user.role = data.role
     if data.is_active is not None:
         user.is_active = data.is_active
+    if data.availability_status is not None:
+        if data.availability_status not in AVAILABILITY_CHOICES:
+            raise HTTPException(status_code=400, detail=f"Invalid availability status. Choose: {AVAILABILITY_CHOICES}")
+        user.availability_status = data.availability_status
     if data.password is not None:
         user.hashed_password = get_password_hash(data.password)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.put("/{user_id}/availability", response_model=schemas.UserOut)
+def update_availability(
+    user_id: int,
+    data: schemas.UserAvailabilityUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Team leaders and above can update staff availability status."""
+    if current_user.role not in ("admin", "manager", "team_leader"):
+        # Also allow self-update
+        if current_user.id != user_id:
+            raise HTTPException(status_code=403, detail="Insufficient permissions to update availability")
+    if data.availability_status not in AVAILABILITY_CHOICES:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Choose: {AVAILABILITY_CHOICES}")
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.availability_status = data.availability_status
     db.commit()
     db.refresh(user)
     return user

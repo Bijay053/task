@@ -13,6 +13,16 @@ import backend.schemas as schemas
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
+def get_webhook_for_dept(db: Session, department: str) -> str:
+    """Look up department-specific webhook from DB, fall back to env var."""
+    setting = db.query(models.DeptSetting).filter_by(
+        department=department, key="google_chat_webhook"
+    ).first()
+    if setting and setting.value:
+        return setting.value
+    return os.environ.get("GOOGLE_CHAT_WEBHOOK", "")
+
+
 @router.post("/test-email")
 def test_email(
     data: schemas.NotificationTest,
@@ -45,11 +55,27 @@ def test_email(
 @router.post("/test-chat")
 def test_chat(
     data: schemas.NotificationTest,
+    db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    webhook_url = os.environ.get("GOOGLE_CHAT_WEBHOOK", data.target)
+    """
+    Send a test Google Chat message.
+    If data.type is a department ('gs' or 'offer'), uses that department's
+    stored webhook URL. Otherwise uses data.target directly (or falls back to env var).
+    """
+    webhook_url = ""
+    if data.type in ("gs", "offer"):
+        webhook_url = get_webhook_for_dept(db, data.type)
     if not webhook_url:
-        raise HTTPException(status_code=400, detail="Google Chat webhook URL not configured. Set GOOGLE_CHAT_WEBHOOK environment variable.")
+        webhook_url = data.target
+    if not webhook_url:
+        webhook_url = os.environ.get("GOOGLE_CHAT_WEBHOOK", "")
+
+    if not webhook_url:
+        raise HTTPException(
+            status_code=400,
+            detail="No Google Chat webhook configured. Add one via Settings → Dept Webhooks or set GOOGLE_CHAT_WEBHOOK env var."
+        )
 
     try:
         payload = {"text": "Test message from Task Management Portal"}
@@ -58,3 +84,15 @@ def test_chat(
         return {"success": True, "message": "Google Chat notification sent"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send chat notification: {str(e)}")
+
+
+def send_chat_notification(db: Session, department: str, text: str):
+    """Helper to send a notification to the correct department webhook."""
+    webhook_url = get_webhook_for_dept(db, department)
+    if not webhook_url:
+        return False
+    try:
+        httpx.post(webhook_url, json={"text": text}, timeout=5)
+        return True
+    except Exception:
+        return False

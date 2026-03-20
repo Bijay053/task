@@ -5,7 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.database import Base, engine
 from backend.routers import (
     auth, users, students, universities, applications,
-    dashboard, notifications, statuses, reports, permissions, bulk_upload
+    dashboard, notifications, statuses, reports, permissions, bulk_upload,
+    agents, dept_settings
 )
 
 app = FastAPI(title="Task Management Portal API", version="1.0.0")
@@ -44,3 +45,5 @@ app.include_router(statuses.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
 app.include_router(permissions.router, prefix="/api")
 app.include_router(bulk_upload.router, prefix="/api")
+app.include_router(agents.router, prefix="/api")
+app.include_router(dept_settings.router, prefix="/api")

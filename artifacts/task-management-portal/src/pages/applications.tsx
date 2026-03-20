@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   useListApplications, useCreateApplication, useUpdateApplication,
-  useListStudents, useListUniversities, useListUsers, useListStatuses
+  useListStudents, useListUniversities, useListUsers, useListStatuses, useListAgents
 } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Select, StatusBadge, Modal, Label, Textarea } from "@/components/ui-elements";
@@ -90,6 +90,7 @@ export default function GsApplications() {
 
   const { data: statuses } = useListStatuses({ department: "gs" });
   const { data: users } = useListUsers();
+  const { data: agents } = useListAgents();
 
   const createMut = useCreateApplication();
   const updateMut = useUpdateApplication();
@@ -112,6 +113,7 @@ export default function GsApplications() {
       student_name: fd.get("student_name") as string || null,
       university_id: universityId || null,
       university_name: fd.get("university_name") as string || null,
+      agent_id: fd.get("agent_id") ? Number(fd.get("agent_id")) : null,
       assigned_to_id: fd.get("assigned_to_id") ? Number(fd.get("assigned_to_id")) : undefined,
       application_status: fd.get("application_status") as string,
       intake: fd.get("intake") as string,
@@ -305,10 +307,17 @@ export default function GsApplications() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Agent (Assignee)</Label>
+              <Label>External Agent (Sub-Agent / Partner)</Label>
+              <Select name="agent_id" defaultValue={editingApp?.agent_id || ""}>
+                <option value="">— None —</option>
+                {agents?.map(a => <option key={a.id} value={a.id}>{a.name}{a.company_name ? ` (${a.company_name})` : ""}</option>)}
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Internal Assignee (Staff)</Label>
               <Select name="assigned_to_id" defaultValue={editingApp?.assigned_to_id || ""}>
                 <option value="">Unassigned</option>
-                {users?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                {users?.map(u => <option key={u.id} value={u.id}>{u.full_name} ({u.role})</option>)}
               </Select>
             </div>
             <div className="space-y-2">

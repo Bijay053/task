@@ -55,6 +55,21 @@
   }
 }
 
+@layer base {
+  button,
+  [role="button"],
+  a,
+  select,
+  label[for],
+  [tabindex]:not([tabindex="-1"]) {
+    cursor: pointer;
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+}
+
 @layer utilities {
   .glass-panel {
     @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl shadow-black/5;

@@ -14,7 +14,8 @@ import {
   Briefcase,
   FileCheck2,
   Globe,
-  BarChart3
+  BarChart3,
+  UserCheck
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -60,6 +61,7 @@ export function Layout({ children }: { children: ReactNode }) {
       label: "Management",
       items: [
         { href: "/reports", label: "Performance Reports", icon: BarChart3, roles: ["admin", "manager"] },
+        { href: "/agents", label: "External Agents", icon: UserCheck, roles: ["admin", "manager"] },
         { href: "/students", label: "Students Directory", icon: GraduationCap, roles: ["admin", "manager", "agent"] },
         { href: "/universities", label: "Universities", icon: Building2, roles: ["admin", "manager", "agent"] },
         { href: "/users", label: "Team Directory", icon: Users, roles: ["admin", "manager"] },

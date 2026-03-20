@@ -27,6 +27,7 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     is_active: Optional[bool] = None
     password: Optional[str] = None
+    availability_status: Optional[str] = None
 
 
 class UserOut(BaseModel):
@@ -35,10 +36,15 @@ class UserOut(BaseModel):
     full_name: str
     role: str
     is_active: bool
+    availability_status: str = "available"
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class UserAvailabilityUpdate(BaseModel):
+    availability_status: str  # "available", "on_leave", "off_duty"
 
 
 class StudentCreate(BaseModel):
@@ -90,6 +96,58 @@ class UniversityOut(BaseModel):
         from_attributes = True
 
 
+# ─── Agent (external partner / sub-agent) ──────────────────────────────────────
+
+class AgentCreate(BaseModel):
+    name: str
+    company_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    country: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class AgentUpdate(BaseModel):
+    name: Optional[str] = None
+    company_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    country: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class AgentOut(BaseModel):
+    id: int
+    name: str
+    company_name: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]
+    country: Optional[str]
+    notes: Optional[str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ─── Department Settings ────────────────────────────────────────────────────────
+
+class DeptSettingUpdate(BaseModel):
+    value: Optional[str] = None
+
+
+class DeptSettingOut(BaseModel):
+    id: int
+    department: str
+    key: str
+    value: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
 # ─── Application ───────────────────────────────────────────────────────────────
 
 class ApplicationCreate(BaseModel):
@@ -101,6 +159,10 @@ class ApplicationCreate(BaseModel):
     student_name: Optional[str] = None
     university_name: Optional[str] = None
 
+    # External agent (sub-agent/partner)
+    agent_id: Optional[int] = None
+
+    # Internal staff assignee
     assigned_to_id: Optional[int] = None
     application_status: Optional[str] = None
     intake: Optional[str] = None
@@ -123,6 +185,7 @@ class ApplicationCreate(BaseModel):
 class ApplicationUpdate(BaseModel):
     university_id: Optional[int] = None
     university_name: Optional[str] = None
+    agent_id: Optional[int] = None
     assigned_to_id: Optional[int] = None
     application_status: Optional[str] = None
     intake: Optional[str] = None
@@ -155,6 +218,7 @@ class ApplicationOut(BaseModel):
     department: str
     student_id: Optional[int]
     university_id: Optional[int]
+    agent_id: Optional[int]
     assigned_to_id: Optional[int]
     created_by_id: Optional[int]
     application_status: str
@@ -183,6 +247,7 @@ class ApplicationOut(BaseModel):
     updated_at: datetime
     student: Optional[StudentOut]
     university: Optional[UniversityOut]
+    agent: Optional[AgentOut]
     assigned_to: Optional[UserOut]
     created_by: Optional[UserOut]
 

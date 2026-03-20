@@ -44,6 +44,7 @@ STATUS_COLORS = GS_STATUS_COLORS
 OFFER_CHANNEL_CHOICES = ["Direct", "Expert", "KC overseas", "SIUK"]
 ROLE_CHOICES = ["admin", "manager", "team_leader", "agent"]
 DEPARTMENT_CHOICES = ["gs", "offer"]
+AVAILABILITY_CHOICES = ["available", "on_leave", "off_duty"]
 
 
 class User(Base):
@@ -55,6 +56,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(50), default="agent", nullable=False)
     is_active = Column(Boolean, default=True)
+    availability_status = Column(String(50), default="available", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     assigned_applications = relationship(
@@ -65,6 +67,53 @@ class User(Base):
     )
     activity_logs = relationship("ActivityLog", back_populates="changed_by_user")
     dept_permissions = relationship("UserDeptPermission", back_populates="user")
+    managed_agents = relationship("ManagerAgentMapping", foreign_keys="ManagerAgentMapping.manager_id", back_populates="manager")
+
+
+class Agent(Base):
+    """External agents / sub-agents / agencies (not internal staff)."""
+    __tablename__ = "task_agents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    company_name = Column(String(255), nullable=True)
+    email = Column(String(255), nullable=True)
+    phone = Column(String(100), nullable=True)
+    country = Column(String(100), nullable=True)
+    notes = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    applications = relationship("Application", back_populates="agent")
+    manager_mappings = relationship("ManagerAgentMapping", back_populates="agent")
+
+
+class ManagerAgentMapping(Base):
+    """Maps managers to the external agents they are responsible for."""
+    __tablename__ = "task_manager_agent_mappings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    manager_id = Column(Integer, ForeignKey("task_users.id"), nullable=False)
+    agent_id = Column(Integer, ForeignKey("task_agents.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    manager = relationship("User", foreign_keys=[manager_id], back_populates="managed_agents")
+    agent = relationship("Agent", back_populates="manager_mappings")
+
+    __table_args__ = (UniqueConstraint("manager_id", "agent_id", name="uq_manager_agent"),)
+
+
+class DeptSetting(Base):
+    """Per-department key-value settings (e.g., Google Chat webhook URL)."""
+    __tablename__ = "task_dept_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    department = Column(String(20), nullable=False)   # 'gs' or 'offer'
+    key = Column(String(100), nullable=False)
+    value = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("department", "key", name="uq_dept_setting"),)
 
 
 class Student(Base):
@@ -108,6 +157,10 @@ class Application(Base):
     student_name = Column(String(255), nullable=True)
     university_name = Column(String(255), nullable=True)
 
+    # External agent (sub-agent / agency) who referred the student
+    agent_id = Column(Integer, ForeignKey("task_agents.id"), nullable=True)
+
+    # Internal staff member responsible for handling the application
     assigned_to_id = Column(Integer, ForeignKey("task_users.id"), nullable=True)
     created_by_id = Column(Integer, ForeignKey("task_users.id"), nullable=True)
 
@@ -136,6 +189,7 @@ class Application(Base):
 
     student = relationship("Student", back_populates="applications")
     university = relationship("University", back_populates="applications")
+    agent = relationship("Agent", back_populates="applications")
     assigned_to = relationship(
         "User", foreign_keys=[assigned_to_id], back_populates="assigned_applications"
     )

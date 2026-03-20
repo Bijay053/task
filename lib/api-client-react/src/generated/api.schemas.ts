@@ -13,8 +13,32 @@ export interface UserOut {
   full_name: string;
   role: string;
   is_active: boolean;
+  availability_status: string;
   created_at: string;
 }
+
+export interface UserAvailabilityUpdate {
+  availability_status: string;
+}
+
+/** External agent / sub-agent / partner */
+export interface AgentOut {
+  id: number;
+  name: string;
+  company_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  country?: string | null;
+  notes?: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+export interface AgentCreate { name: string; company_name?: string; email?: string; phone?: string; country?: string; notes?: string; }
+export interface AgentUpdate { name?: string; company_name?: string; email?: string; phone?: string; country?: string; notes?: string; is_active?: boolean; }
+
+/** Department settings */
+export interface DeptSettingOut { id: number; department: string; key: string; value?: string | null; }
+export interface DeptSettingUpdate { value?: string | null; }
 
 export interface Token {
   access_token: string;
@@ -41,6 +65,7 @@ export interface ApplicationOut {
   department: string;
   student_id?: number | null;
   university_id?: number | null;
+  agent_id?: number | null;
   assigned_to_id?: number | null;
   created_by_id?: number | null;
   application_status: string;
@@ -63,6 +88,7 @@ export interface ApplicationOut {
   offer_received_date?: string | null;
   created_at: string;
   updated_at: string;
+  agent?: AgentOut | null;
   student?: StudentOut | null;
   university?: UniversityOut | null;
   assigned_to?: UserOut | null;
@@ -75,6 +101,7 @@ export interface ApplicationCreate {
   university_id?: number | null;
   student_name?: string | null;
   university_name?: string | null;
+  agent_id?: number | null;
   assigned_to_id?: number | null;
   application_status?: string;
   intake?: string;
@@ -93,6 +120,7 @@ export interface ApplicationCreate {
 export interface ApplicationUpdate {
   university_id?: number | null;
   university_name?: string | null;
+  agent_id?: number | null;
   assigned_to_id?: number | null;
   application_status?: string;
   intake?: string;
@@ -153,7 +181,8 @@ export interface BulkUploadResult { created: number; skipped: number; errors: st
 
 export type ListStudentsParams = { search?: string };
 export type ListUniversitiesParams = { search?: string };
-export type ListApplicationsParams = { department?: string; assigned_to_id?: number; status?: string; search?: string };
+export type ListApplicationsParams = { department?: string; assigned_to_id?: number; agent_id?: number; status?: string; search?: string };
 export type MyApplicationsParams = { department?: string };
 export type ListStatusesParams = { department?: string; include_inactive?: boolean };
 export type PerformanceReportParams = { department?: string };
+export type ListAgentsParams = { search?: string };

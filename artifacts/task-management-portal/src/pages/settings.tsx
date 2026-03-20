@@ -1,15 +1,61 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Label, Modal, StatusBadge } from "@/components/ui-elements";
-import { BellRing, ShieldAlert, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown, Layers } from "lucide-react";
-import { useTestEmail, useTestChat, useListStatuses, useCreateStatus, useUpdateStatus, useDeleteStatus, useReorderStatuses } from "@workspace/api-client-react";
+import { BellRing, ShieldAlert, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown, Layers, Webhook, Save } from "lucide-react";
+import {
+  useTestEmail, useTestChat, useListStatuses, useCreateStatus,
+  useUpdateStatus, useDeleteStatus, useReorderStatuses,
+  useGetDeptSettings, useSetDeptSetting
+} from "@workspace/api-client-react";
 import type { AppStatusOut } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
-type SettingsTab = "notifications" | "gs-statuses" | "offer-statuses";
+type SettingsTab = "notifications" | "gs-statuses" | "offer-statuses" | "webhooks";
+
+function DeptWebhooksPanel({ department, label }: { department: string; label: string }) {
+  const { data: settings } = useGetDeptSettings(department);
+  const setSettingMut = useSetDeptSetting();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const webhookValue = settings?.find(s => s.key === "google_chat_webhook")?.value || "";
+  const [val, setVal] = useState<string | undefined>(undefined);
+  const current = val !== undefined ? val : webhookValue;
+
+  const save = async () => {
+    await setSettingMut.mutateAsync({ department, key: "google_chat_webhook", data: { value: current || null } });
+    queryClient.invalidateQueries({ queryKey: [`/api/dept-settings/${department}`] });
+    toast({ title: "Saved", description: `${label} webhook updated.` });
+    setVal(undefined);
+  };
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <Webhook className="w-5 h-5 text-primary" />
+        <h3 className="font-display font-semibold text-lg">{label} Webhooks</h3>
+      </div>
+      <div className="space-y-2">
+        <Label>Google Chat Webhook URL</Label>
+        <div className="flex gap-2">
+          <Input
+            value={current}
+            onChange={e => setVal(e.target.value)}
+            placeholder="https://chat.googleapis.com/v1/spaces/..."
+            className="flex-1 font-mono text-xs"
+          />
+          <Button onClick={save} isLoading={setSettingMut.isPending} variant="secondary">
+            <Save className="w-4 h-4 mr-1.5" />Save
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">This webhook will be used for sending {label} notifications to Google Chat. Leave blank to disable.</p>
+      </div>
+    </Card>
+  );
+}
 
 function StatusRow({
   status,
@@ -237,6 +283,7 @@ export default function Settings() {
     { id: "notifications" as SettingsTab, label: "Notifications" },
     { id: "gs-statuses" as SettingsTab, label: "GS Statuses" },
     { id: "offer-statuses" as SettingsTab, label: "Offer Statuses" },
+    { id: "webhooks" as SettingsTab, label: "Dept Webhooks" },
   ];
 
   return (
@@ -317,6 +364,17 @@ export default function Settings() {
             </div>
             <StatusManager department="offer" />
           </Card>
+        )}
+
+        {activeTab === "webhooks" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-display font-semibold mb-1">Department-Specific Webhooks</h2>
+              <p className="text-sm text-muted-foreground">Set different Google Chat webhooks for each department. Overrides the global env-var webhook for that department.</p>
+            </div>
+            <DeptWebhooksPanel department="gs" label="GS Department" />
+            <DeptWebhooksPanel department="offer" label="Offer Department" />
+          </div>
         )}
       </div>
     </Layout>

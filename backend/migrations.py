@@ -25,11 +25,14 @@ def run_migrations():
             ("channel",             "VARCHAR(100)"),
             ("offer_applied_date",  "DATE"),
             ("offer_received_date", "DATE"),
-            # New: allow nullable student_id and raw name fields
             ("student_name",        "VARCHAR(255)"),
             ("university_name",     "VARCHAR(255)"),
+            ("agent_id",            "INTEGER REFERENCES task_agents(id)"),
         ]:
             _add_column(conn, "task_applications", col_name, col_def)
+
+        # task_users — availability_status
+        _add_column(conn, "task_users", "availability_status", "VARCHAR(50) DEFAULT 'available' NOT NULL")
 
         # Make student_id nullable (PostgreSQL)
         try:
@@ -41,7 +44,57 @@ def run_migrations():
         except Exception:
             conn.rollback()
 
-        # task_app_statuses — created via SQLAlchemy metadata but ensure it exists
+        # task_agents
+        try:
+            conn.execute(sa.text("""
+                CREATE TABLE IF NOT EXISTS task_agents (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    company_name VARCHAR(255),
+                    email VARCHAR(255),
+                    phone VARCHAR(100),
+                    country VARCHAR(100),
+                    notes TEXT,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
+        # task_manager_agent_mappings
+        try:
+            conn.execute(sa.text("""
+                CREATE TABLE IF NOT EXISTS task_manager_agent_mappings (
+                    id SERIAL PRIMARY KEY,
+                    manager_id INTEGER REFERENCES task_users(id),
+                    agent_id INTEGER REFERENCES task_agents(id),
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_manager_agent UNIQUE (manager_id, agent_id)
+                )
+            """))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
+        # task_dept_settings
+        try:
+            conn.execute(sa.text("""
+                CREATE TABLE IF NOT EXISTS task_dept_settings (
+                    id SERIAL PRIMARY KEY,
+                    department VARCHAR(20) NOT NULL,
+                    key VARCHAR(100) NOT NULL,
+                    value TEXT,
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_dept_setting UNIQUE (department, key)
+                )
+            """))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
+        # task_app_statuses
         try:
             conn.execute(sa.text("""
                 CREATE TABLE IF NOT EXISTS task_app_statuses (

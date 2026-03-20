@@ -1,14 +1,21 @@
 import { useState } from "react";
 import {
   useListUsers, useCreateUser, useUpdateUser,
-  useGetUserPermissions, useSetUserPermission
+  useGetUserPermissions, useSetUserPermission, useUpdateAvailability
 } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Modal, Label, Select } from "@/components/ui-elements";
-import { Plus, Edit2, ShieldAlert, Shield, Check, X } from "lucide-react";
+import { Plus, Edit2, ShieldAlert, Shield, Check, X, Calendar, Wifi, WifiOff } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+
+const AVAILABILITY_OPTIONS = [
+  { value: "available", label: "Available", className: "bg-green-100 text-green-700" },
+  { value: "on_leave", label: "On Leave", className: "bg-yellow-100 text-yellow-700" },
+  { value: "off_duty", label: "Off Duty", className: "bg-red-100 text-red-700" },
+];
+const availabilityStyle = (v: string) => AVAILABILITY_OPTIONS.find(o => o.value === v)?.className || "bg-slate-100 text-slate-600";
 
 type UsersTab = "team" | "permissions";
 
@@ -77,6 +84,8 @@ export default function Users() {
 
   const createMut = useCreateUser();
   const updateMut = useUpdateUser();
+  const availMut = useUpdateAvailability();
+  const canToggleAvailability = user?.role === "admin" || user?.role === "manager" || user?.role === "team_leader";
 
   const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
 
@@ -158,13 +167,14 @@ export default function Users() {
                     <th>Name</th>
                     <th>Email</th>
                     <th>Role</th>
-                    <th>Status</th>
+                    <th>Account</th>
+                    <th>Availability</th>
                     <th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
-                    <tr><td colSpan={5} className="text-center py-8">Loading...</td></tr>
+                    <tr><td colSpan={6} className="text-center py-8">Loading...</td></tr>
                   ) : users?.map(u => (
                     <tr key={u.id}>
                       <td className="font-semibold text-foreground">
@@ -185,6 +195,24 @@ export default function Users() {
                         <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", u.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
                           {u.is_active ? "Active" : "Inactive"}
                         </span>
+                      </td>
+                      <td>
+                        {canToggleAvailability ? (
+                          <Select
+                            value={u.availability_status || "available"}
+                            onChange={async (e) => {
+                              await availMut.mutateAsync({ userId: u.id, data: { availability_status: e.target.value } });
+                              queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                            }}
+                            className="text-xs h-7 py-0 min-w-[110px]"
+                          >
+                            {AVAILABILITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </Select>
+                        ) : (
+                          <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", availabilityStyle(u.availability_status || "available"))}>
+                            {AVAILABILITY_OPTIONS.find(o => o.value === u.availability_status)?.label || "Available"}
+                          </span>
+                        )}
                       </td>
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-2">

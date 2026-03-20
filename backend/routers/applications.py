@@ -15,6 +15,7 @@ def load_options():
     return (
         joinedload(models.Application.student),
         joinedload(models.Application.university),
+        joinedload(models.Application.agent),
         joinedload(models.Application.assigned_to),
         joinedload(models.Application.created_by),
     )
@@ -31,9 +32,14 @@ def default_status(db: Session, department: str) -> str:
     return "In Review" if department == "gs" else "On Hold"
 
 
-def is_agent_only(user: models.User) -> bool:
-    """Returns True if user should only see their own applications."""
-    return user.role == "agent"
+def get_manager_agent_ids(db: Session, manager_id: int) -> Optional[list]:
+    """Get agent IDs a manager is responsible for. None = no restriction (see all)."""
+    mappings = db.query(models.ManagerAgentMapping).filter(
+        models.ManagerAgentMapping.manager_id == manager_id
+    ).all()
+    if not mappings:
+        return None  # No restriction — see all
+    return [m.agent_id for m in mappings]
 
 
 @router.get("/", response_model=List[schemas.ApplicationOut])
@@ -42,19 +48,29 @@ def list_applications(
     assigned_to_id: Optional[int] = Query(None),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    agent_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
     q = db.query(models.Application).options(*load_options())
 
-    # Agents can only see their own assigned applications
-    if is_agent_only(current_user):
+    # Role-based access control
+    if current_user.role == "agent":
+        # Agents only see their own assigned applications
         q = q.filter(models.Application.assigned_to_id == current_user.id)
+    elif current_user.role == "manager":
+        # Managers are restricted to apps belonging to their mapped agents
+        manager_agent_ids = get_manager_agent_ids(db, current_user.id)
+        if manager_agent_ids is not None:
+            q = q.filter(models.Application.agent_id.in_(manager_agent_ids))
+    # admin and team_leader see all applications
 
     if department:
         q = q.filter(models.Application.department == department)
     if assigned_to_id is not None:
         q = q.filter(models.Application.assigned_to_id == assigned_to_id)
+    if agent_id is not None:
+        q = q.filter(models.Application.agent_id == agent_id)
     if status:
         q = q.filter(models.Application.application_status == status)
     if search:
