@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useUpdateApplication } from "@workspace/api-client-react";
 import { GS_STATUS_COLORS, GS_STATUS_CHOICES } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
-import { GripVertical, User, BookOpen, Calendar, UserCheck } from "lucide-react";
+import { GripVertical, User, BookOpen, Calendar, UserCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Application {
@@ -212,12 +212,36 @@ export function KanbanBoard({
 
   const headerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateArrows = useCallback(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const t = setTimeout(updateArrows, 80);
+    el.addEventListener("scroll", updateArrows, { passive: true });
+    const ro = new ResizeObserver(updateArrows);
+    ro.observe(el);
+    return () => { clearTimeout(t); el.removeEventListener("scroll", updateArrows); ro.disconnect(); };
+  }, [updateArrows, statusChoices.length, applications.length]);
+
+  const scrollBoard = (amount: number) => {
+    cardRef.current?.scrollBy({ left: amount, behavior: "smooth" });
+  };
 
   const onCardScroll = useCallback(() => {
     if (headerRef.current && cardRef.current) {
       headerRef.current.scrollLeft = cardRef.current.scrollLeft;
     }
-  }, []);
+    updateArrows();
+  }, [updateArrows]);
 
   const handleDragStart = (e: React.DragEvent, appId: number) => {
     e.dataTransfer.effectAllowed = "move";
@@ -277,24 +301,48 @@ export function KanbanBoard({
       </div>
 
       {/* Card columns — fills remaining height, scrolls both axes */}
-      <div
-        ref={cardRef}
-        className="flex-1 min-h-0 gap-3 items-start kanban-scroll"
-        onScroll={onCardScroll}
-        onDragEnd={handleDragEnd}
-      >
-        {statusChoices.map((status) => (
-          <KanbanCardColumn
-            key={status}
-            status={status}
-            cards={columnMap[status] || []}
-            colorMap={statusColors}
-            draggingId={draggingId}
-            onDragStart={handleDragStart}
-            onDrop={handleDrop}
-            onCardClick={onCardClick}
-          />
-        ))}
+      <div className="relative flex-1 min-h-0 flex flex-col">
+        {/* Left scroll button */}
+        {canScrollLeft && (
+          <button
+            onClick={() => scrollBoard(-320)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-white border border-gray-300 shadow-md flex items-center justify-center text-gray-600 hover:bg-primary hover:text-white hover:border-primary transition-all"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Right scroll button */}
+        {canScrollRight && (
+          <button
+            onClick={() => scrollBoard(320)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-white border border-gray-300 shadow-md flex items-center justify-center text-gray-600 hover:bg-primary hover:text-white hover:border-primary transition-all"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        )}
+
+        <div
+          ref={cardRef}
+          className="flex-1 min-h-0 gap-3 items-start kanban-scroll"
+          onScroll={onCardScroll}
+          onDragEnd={handleDragEnd}
+        >
+          {statusChoices.map((status) => (
+            <KanbanCardColumn
+              key={status}
+              status={status}
+              cards={columnMap[status] || []}
+              colorMap={statusColors}
+              draggingId={draggingId}
+              onDragStart={handleDragStart}
+              onDrop={handleDrop}
+              onCardClick={onCardClick}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
