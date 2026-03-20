@@ -6,7 +6,7 @@ import {
 } from "@workspace/api-client-react";
 import type { AgentOut } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
-import { Card, Button, Input, Label, Modal, Select, Textarea } from "@/components/ui-elements";
+import { Card, Button, Input, Label, Modal, Select } from "@/components/ui-elements";
 import { Plus, Edit2, Users, Globe, X, Check, ShieldAlert, Upload, Download } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -95,19 +95,27 @@ export default function Agents() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const newManagerId = fd.get("manager_id") ? Number(fd.get("manager_id")) : null;
     const data: any = {
       name: fd.get("name") as string,
-      company_name: fd.get("company_name") as string || undefined,
-      email: fd.get("email") as string || undefined,
-      phone: fd.get("phone") as string || undefined,
       country: fd.get("country") as string || undefined,
-      notes: fd.get("notes") as string || undefined,
     };
+
+    let agentId: number;
     if (editingAgent) {
       await updateMut.mutateAsync({ agentId: editingAgent.id, data });
+      agentId = editingAgent.id;
+      const oldManagerId = editingAgent.manager_id ?? null;
+      if (oldManagerId !== newManagerId) {
+        if (oldManagerId) await unassignMut.mutateAsync({ managerId: oldManagerId, agentId });
+        if (newManagerId) await assignMut.mutateAsync({ managerId: newManagerId, agentId });
+      }
     } else {
-      await createMut.mutateAsync({ data });
+      const created = await createMut.mutateAsync({ data });
+      agentId = created.id;
+      if (newManagerId) await assignMut.mutateAsync({ managerId: newManagerId, agentId });
     }
+
     queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
     setIsModalOpen(false);
   };
@@ -128,7 +136,7 @@ export default function Agents() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = "Agent Name,Company,Email,Phone,Country,Manager Name\nJohn Smith,ABC Agency,john@abc.com,+61400000000,Bangladesh,Alice Manager\n";
+    const csvContent = "Agent Name,Country,Manager Name\nJohn Smith,Bangladesh,Alice Manager\n";
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -260,46 +268,30 @@ export default function Agents() {
       </div>
 
       {/* Add/Edit Agent Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingAgent ? "Edit Agent" : "New External Agent"} maxWidth="max-w-2xl">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingAgent ? "Edit Agent" : "New External Agent"} maxWidth="max-w-lg">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Agent Name *</Label>
               <Input name="name" required defaultValue={editingAgent?.name || ""} placeholder="e.g. John Smith" />
             </div>
             <div className="space-y-2">
-              <Label>Company / Agency</Label>
-              <Input name="company_name" defaultValue={editingAgent?.company_name || ""} placeholder="e.g. Global Study Partners" />
-            </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input name="email" type="email" defaultValue={editingAgent?.email || ""} placeholder="agent@company.com" />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input name="phone" defaultValue={editingAgent?.phone || ""} placeholder="+61 400 000 000" />
-            </div>
-            <div className="space-y-2">
               <Label>Country</Label>
               <Input name="country" defaultValue={editingAgent?.country || ""} placeholder="e.g. Bangladesh" />
             </div>
-            {editingAgent && (
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select name="is_active" defaultValue={editingAgent.is_active ? "true" : "false"}>
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </Select>
-              </div>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label>Notes</Label>
-            <Textarea name="notes" defaultValue={editingAgent?.notes || ""} placeholder="Internal notes about this agent..." />
+            <div className="space-y-2">
+              <Label>Agent Manager</Label>
+              <Select name="manager_id" defaultValue={editingAgent?.manager_id ? String(editingAgent.manager_id) : ""}>
+                <option value="">— No manager —</option>
+                {managers.map(m => (
+                  <option key={m.id} value={String(m.id)}>{m.full_name}</option>
+                ))}
+              </Select>
+            </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" isLoading={createMut.isPending || updateMut.isPending}>
+            <Button type="submit" isLoading={createMut.isPending || updateMut.isPending || assignMut.isPending || unassignMut.isPending}>
               {editingAgent ? "Save Changes" : "Create Agent"}
             </Button>
           </div>
@@ -333,7 +325,7 @@ export default function Agents() {
               </div>
             )}
             <div className="pt-2 text-xs text-muted-foreground">
-              Upload columns: <strong>Agent Name</strong> (required), Company, Email, Phone, Country, Manager Name.
+              Upload columns: <strong>Agent Name</strong> (required), Country, Manager Name.
             </div>
             <div className="flex justify-end">
               <Button onClick={() => setIsBulkModalOpen(false)}>Done</Button>

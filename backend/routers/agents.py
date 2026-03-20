@@ -23,7 +23,14 @@ def list_agents(
     q = db.query(models.Agent)
     if search:
         q = q.filter(models.Agent.name.ilike(f"%{search}%"))
-    return q.order_by(models.Agent.name).all()
+    agents = q.order_by(models.Agent.name).all()
+    result = []
+    for agent in agents:
+        d = schemas.AgentOut.model_validate(agent)
+        mapping = agent.manager_mappings[0] if agent.manager_mappings else None
+        d.manager_id = mapping.manager_id if mapping else None
+        result.append(d)
+    return result
 
 
 @router.post("/", response_model=schemas.AgentOut)
