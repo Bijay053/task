@@ -238,3 +238,13 @@ export type MyApplicationsParams = { department?: string };
 export type ListStatusesParams = { department?: string; include_inactive?: boolean };
 export type PerformanceReportParams = { department?: string };
 export type ListAgentsParams = { search?: string };
+
+
+export interface OtpRequired { otp_required: boolean; email_sent: boolean; message: string; }
+export interface OtpVerify { email: string; code: string; }
+export interface ChangePasswordRequest { current_password: string; new_password: string; }
+export interface ForgotPasswordRequest { email: string; }
+export interface ResetPasswordRequest { token: string; new_password: string; }
+export interface MessageResponse { message: string; }
+export interface AuditLogOut { id: number; user_id: number | null; user_email: string | null; action: string; detail: string | null; ip_address: string | null; created_at: string; }
+export type ListAuditLogsParams = { skip?: number; limit?: number; action?: string; user_id?: number; };

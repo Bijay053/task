@@ -6,7 +6,7 @@ import type { UserOut, LoginRequest } from "@workspace/api-client-react/src/gene
 interface AuthContextType {
   user: UserOut | null;
   isLoading: boolean;
-  login: (data: LoginRequest) => Promise<void>;
+  login: (data: LoginRequest) => Promise<any>;
   logout: () => void;
   isAuthenticated: boolean;
   isAdminOrManager: boolean;
@@ -16,29 +16,27 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
-
-  // useState so token changes trigger re-renders (re-enables the useGetMe query)
   const [hasToken, setHasToken] = useState(() => !!localStorage.getItem("access_token"));
 
   const { data: user, isLoading } = useGetMe({
-    query: {
-      enabled: hasToken,
-      retry: false,
-    },
+    query: { enabled: hasToken, retry: false },
   });
 
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
 
-  const handleLogin = async (data: LoginRequest) => {
+  const handleLogin = async (data: LoginRequest): Promise<any> => {
     const result = await loginMutation.mutateAsync({ data });
-    if (result.access_token) {
-      localStorage.setItem("access_token", result.access_token);
-      // Enable the useGetMe query, then navigate — ProtectedRoute shows Loading
-      // while the /me fetch completes, then renders the page.
+    if ((result as any).otp_required) {
+      // OTP flow — return the result so login.tsx can show the OTP step
+      return result;
+    }
+    if ((result as any).access_token) {
+      localStorage.setItem("access_token", (result as any).access_token);
       setHasToken(true);
       setLocation("/");
     }
+    return result;
   };
 
   const handleLogout = () => {

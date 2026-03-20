@@ -71,6 +71,13 @@ import type {
   RoleUpdate,
   RolePermOut,
   RolePermUpdate,
+  OtpRequired,
+  OtpVerify,
+  ChangePasswordRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  AuditLogOut,
+  ListAuditLogsParams,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2836,3 +2843,63 @@ export const useDeleteRole = <TError = ErrorType<unknown>, TContext = unknown>(
   options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteRole>>, TError, number, TContext>; request?: SecondParameter<typeof customFetch> }
 ): UseMutationResult<Awaited<ReturnType<typeof deleteRole>>, TError, number, TContext> =>
   useMutation({ mutationFn: (roleId) => deleteRole(roleId, options?.request), ...options?.mutation });
+
+// ─── Auth extras ─────────────────────────────────────────────────────────────
+
+export const verifyOtp = async (data: OtpVerify, options?: RequestInit): Promise<Token> =>
+  customFetch<Token>(`/api/auth/verify-otp`, { ...options, method: "POST", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+export const useVerifyOtp = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof verifyOtp>>, TError, OtpVerify, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof verifyOtp>>, TError, OtpVerify, TContext> =>
+  useMutation({ mutationFn: (data) => verifyOtp(data, options?.request), ...options?.mutation });
+
+export const changePassword = async (data: ChangePasswordRequest, options?: RequestInit): Promise<{ message: string }> =>
+  customFetch<{ message: string }>(`/api/auth/change-password`, { ...options, method: "POST", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+export const useChangePassword = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError, ChangePasswordRequest, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof changePassword>>, TError, ChangePasswordRequest, TContext> =>
+  useMutation({ mutationFn: (data) => changePassword(data, options?.request), ...options?.mutation });
+
+export const forgotPassword = async (data: ForgotPasswordRequest, options?: RequestInit): Promise<{ message: string }> =>
+  customFetch<{ message: string }>(`/api/auth/forgot-password`, { ...options, method: "POST", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+export const useForgotPassword = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof forgotPassword>>, TError, ForgotPasswordRequest, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof forgotPassword>>, TError, ForgotPasswordRequest, TContext> =>
+  useMutation({ mutationFn: (data) => forgotPassword(data, options?.request), ...options?.mutation });
+
+export const resetPassword = async (data: ResetPasswordRequest, options?: RequestInit): Promise<{ message: string }> =>
+  customFetch<{ message: string }>(`/api/auth/reset-password`, { ...options, method: "POST", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+export const useResetPassword = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError, ResetPasswordRequest, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof resetPassword>>, TError, ResetPasswordRequest, TContext> =>
+  useMutation({ mutationFn: (data) => resetPassword(data, options?.request), ...options?.mutation });
+
+// ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+export const listAuditLogs = async (params?: ListAuditLogsParams, options?: RequestInit): Promise<AuditLogOut[]> => {
+  const q = new URLSearchParams();
+  if (params?.skip !== undefined) q.set("skip", String(params.skip));
+  if (params?.limit !== undefined) q.set("limit", String(params.limit));
+  if (params?.action) q.set("action", params.action);
+  if (params?.user_id !== undefined) q.set("user_id", String(params.user_id));
+  return customFetch<AuditLogOut[]>(`/api/audit/logs?${q}`, { ...options, method: "GET" });
+};
+export const getListAuditLogsQueryKey = (params?: ListAuditLogsParams) => [`/api/audit/logs`, params] as const;
+export const getListAuditLogsQueryOptions = <TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorType<unknown>>(
+  params?: ListAuditLogsParams,
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListAuditLogsQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAuditLogs>>> = ({ signal }) => listAuditLogs(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData> & { queryKey: QueryKey };
+};
+export function useListAuditLogs<TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorType<unknown>>(
+  params?: ListAuditLogsParams,
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAuditLogsQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}

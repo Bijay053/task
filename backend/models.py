@@ -280,6 +280,49 @@ class RolePermission(Base):
     __table_args__ = (UniqueConstraint("role", "department", name="uq_role_dept_perm"),)
 
 
+class SystemAuditLog(Base):
+    """Tracks system-level user events (logins, password changes, etc.)."""
+    __tablename__ = "task_system_audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("task_users.id", ondelete="SET NULL"), nullable=True)
+    user_email = Column(String(255), nullable=True)   # kept even if user deleted
+    action = Column(String(100), nullable=False)      # e.g. "login", "logout", "change_password"
+    detail = Column(Text, nullable=True)
+    ip_address = Column(String(60), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", foreign_keys=[user_id], passive_deletes=True)
+
+
+class OtpCode(Base):
+    """One-time password codes for 2-step login verification."""
+    __tablename__ = "task_otp_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("task_users.id", ondelete="CASCADE"), nullable=False)
+    code = Column(String(10), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+
+class PasswordResetToken(Base):
+    """Tokens for password reset via email link."""
+    __tablename__ = "task_password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("task_users.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String(64), unique=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+
 class ApplicationFollower(Base):
     """Staff members who follow (watch) an application — they can view it in My Tasks."""
     __tablename__ = "task_application_followers"
