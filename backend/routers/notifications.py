@@ -1,19 +1,28 @@
 import os
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import httpx
 
 from backend.database import get_db
 from backend.auth import get_current_user, require_admin
-from backend.email_service import is_email_configured, send_email
+from backend.email_service import (
+    is_email_configured,
+    send_email,
+    send_assignment_email,
+    send_follower_email,
+    send_status_change_email,
+)
 import backend.models as models
 import backend.schemas as schemas
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
+# ─── webhook helpers ──────────────────────────────────────────────────────────
+
 def get_webhook_for_dept(db: Session, department: str) -> str:
-    """Look up department-specific webhook from DB, fall back to env var."""
     setting = db.query(models.DeptSetting).filter_by(
         department=department, key="google_chat_webhook"
     ).first()
@@ -22,43 +31,35 @@ def get_webhook_for_dept(db: Session, department: str) -> str:
     return os.environ.get("GOOGLE_CHAT_WEBHOOK", "")
 
 
-def send_email(to_email: str, subject: str, html_body: str) -> bool:
-    """Send an HTML email via SMTP. Returns True if sent, False if not configured or failed."""
-    smtp_host = os.environ.get("SMTP_HOST", "")
-    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-    smtp_user = os.environ.get("SMTP_USER", "")
-    smtp_pass = os.environ.get("SMTP_PASS", "")
-
-    if not smtp_host or not smtp_user or not to_email:
-        return False
-
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = smtp_user
-        msg["To"] = to_email
-        msg.attach(MIMEText(html_body, "html"))
-
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(smtp_user, [to_email], msg.as_string())
-        return True
-    except Exception:
-        return False
+def _app_link(department: str) -> str:
+    base = os.environ.get("APP_URL", "").rstrip("/")
+    if not base:
+        return ""
+    path = "applications" if department == "gs" else "offer-applications"
+    return f"{base}/{path}"
 
 
 def send_chat_notification(db: Session, department: str, text: str) -> bool:
-    """Send a Google Chat notification to the correct department webhook."""
     webhook_url = get_webhook_for_dept(db, department)
     if not webhook_url:
         return False
     try:
         httpx.post(webhook_url, json={"text": text}, timeout=5)
         return True
-    except Exception:
+    except Exception as exc:
+        logger.warning(f"[chat] Failed to send webhook: {exc}")
         return False
 
+
+def _app_info(app: models.Application):
+    """Extract common display fields from an application."""
+    student    = app.student_name or (app.student.full_name if app.student else "Unknown Student")
+    university = app.university_name or (app.university.name if app.university else "")
+    course     = app.course or ""
+    return student, university, course
+
+
+# ─── assignment notification ──────────────────────────────────────────────────
 
 def send_assignment_notification(
     db: Session,
@@ -66,45 +67,130 @@ def send_assignment_notification(
     assignee: models.User,
     assigner_name: str,
 ):
-    """Send email + Google Chat notification when an application is assigned to a staff member."""
+    """Send email + Google Chat when an application is assigned."""
     if not assignee:
         return
 
-    dept = app.department
-    student = app.student_name or (app.student.full_name if app.student else "Unknown Student")
-    university = app.university_name or (app.university.name if app.university else "")
-    dept_label = dept.upper()
+    student, university, course = _app_info(app)
+    dept  = app.department
+    link  = _app_link(dept)
 
     # ── Email ─────────────────────────────────────────────────────────────────
-    subject = f"[Task Portal] Application Assigned – {student}"
-    html_body = f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #e2e8f0;border-radius:8px;">
-      <h2 style="color:#1e293b;margin-top:0;">New Application Assigned</h2>
-      <p style="color:#475569;">Hi <strong>{assignee.full_name}</strong>,</p>
-      <p style="color:#475569;">A new application has been assigned to you in the Task Management Portal.</p>
-      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-        <tr><td style="padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;font-weight:600;width:140px;">Student</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">{student}</td></tr>
-        <tr><td style="padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;font-weight:600;">University</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">{university or 'N/A'}</td></tr>
-        <tr><td style="padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;font-weight:600;">Department</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">{dept_label}</td></tr>
-        <tr><td style="padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;font-weight:600;">Status</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">{app.application_status}</td></tr>
-        <tr><td style="padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;font-weight:600;">Assigned by</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">{assigner_name}</td></tr>
-      </table>
-      <p style="color:#64748b;font-size:13px;">Please log in to the Task Management Portal to view full details and take action.</p>
-    </div>
-    """
-    send_email(assignee.email, subject, html_body)
+    try:
+        send_assignment_email(
+            to=assignee.email,
+            assignee_name=assignee.full_name,
+            assigner_name=assigner_name,
+            student=student,
+            university=university,
+            course=course,
+            status=app.application_status,
+            department=dept,
+            app_id=app.id,
+        )
+    except Exception as exc:
+        logger.error(f"[notify] Assignment email failed: {exc}")
 
     # ── Google Chat ────────────────────────────────────────────────────────────
-    chat_text = (
-        f"*📋 Application Assigned — {dept_label} Department*\n"
-        f"*Assigned to:* {assignee.full_name}\n"
-        f"*Student:* {student}\n"
-        f"*University:* {university or 'N/A'}\n"
-        f"*Status:* {app.application_status}\n"
-        f"*Assigned by:* {assigner_name}"
-    )
+    if dept == "gs":
+        chat_text = (
+            f"🔔 *New Task Assigned | Application review*\n\n"
+            f"*Assignee:* {assignee.full_name}\n"
+            f"*Student:* {student}\n"
+        )
+        if university:
+            chat_text += f"*University:* {university}\n"
+        if link:
+            chat_text += f"\n🔗 {link}"
+    else:
+        chat_text = (
+            f"🔔 *New Task Assigned | Offer request*\n\n"
+            f"*Student name:* {student}\n"
+        )
+        if university:
+            chat_text += f"*University:* {university}\n"
+        if course:
+            chat_text += f"*Course:* {course}\n"
+        chat_text += f"*Assign person name:* {assignee.full_name}\n"
+        if link:
+            chat_text += f"\n🔗 {link}"
+
     send_chat_notification(db, dept, chat_text)
 
+
+# ─── follower-added notification ──────────────────────────────────────────────
+
+def send_follower_notification(
+    db: Session,
+    app: models.Application,
+    follower: models.User,
+    adder_name: str,
+):
+    """Notify a user when they are added as a follower on an application."""
+    if not follower:
+        return
+    student, university, course = _app_info(app)
+    try:
+        send_follower_email(
+            to=follower.email,
+            follower_name=follower.full_name,
+            adder_name=adder_name,
+            student=student,
+            university=university,
+            course=course,
+            status=app.application_status,
+            department=app.department,
+            app_id=app.id,
+        )
+    except Exception as exc:
+        logger.error(f"[notify] Follower email failed: {exc}")
+
+
+# ─── status-change notification ───────────────────────────────────────────────
+
+def send_status_change_notification(
+    db: Session,
+    app: models.Application,
+    old_status: str,
+    new_status: str,
+    changed_by_name: str,
+):
+    """Email all followers (and the assignee) when status changes."""
+    if not app.followers:
+        return
+
+    student, university, course = _app_info(app)
+    recipients: list[models.User] = []
+
+    for f in app.followers:
+        if f.user:
+            recipients.append(f.user)
+
+    # Also notify the assignee if they're not already a follower
+    if app.assigned_to:
+        follower_ids = {f.user_id for f in app.followers}
+        if app.assigned_to.id not in follower_ids:
+            recipients.append(app.assigned_to)
+
+    for user in recipients:
+        try:
+            send_status_change_email(
+                to=user.email,
+                recipient_name=user.full_name,
+                changed_by=changed_by_name,
+                student=student,
+                university=university,
+                course=course,
+                old_status=old_status,
+                new_status=new_status,
+                department=app.department,
+                app_id=app.id,
+            )
+        except Exception as exc:
+            logger.error(f"[notify] Status-change email failed for {user.email}: {exc}")
+
+
+# ─── API endpoints ────────────────────────────────────────────────────────────
 
 @router.post("/test-email")
 def test_email(
@@ -120,16 +206,24 @@ def test_email(
             ),
         )
     try:
-        send_email(
-            to=data.target,
-            subject="Test Email – Admission Task Management",
-            html_body=(
-                "<div style='font-family:sans-serif;padding:24px'>"
-                "<h2 style='color:#1d4ed8'>Admission Task Management</h2>"
-                "<p>This is a test email. Your email integration is working correctly.</p>"
-                "</div>"
-            ),
+        from backend.email_service import _base_template
+        html = _base_template(
+            "Test Email",
+            "Your email integration is working correctly.",
+            """
+            <h2 style="margin:0 0 8px;font-size:22px;color:#1e293b;">Test Email ✅</h2>
+            <p style="color:#64748b;font-size:14px;margin:0 0 20px;">
+              Your email integration is working correctly.
+              Emails will be delivered to your team from <strong>Admission Task Management</strong>.
+            </p>
+            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px 18px;">
+              <p style="margin:0;color:#166534;font-size:13px;">
+                ✅ Connection successful — your mail server is configured and sending.
+              </p>
+            </div>
+            """,
         )
+        send_email(to=data.target, subject="Test Email – Admission Task Management", html_body=html)
         return {"success": True, "message": f"Email sent to {data.target}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
@@ -141,11 +235,6 @@ def test_chat(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """
-    Send a test Google Chat message.
-    If data.type is a department ('gs' or 'offer'), uses that department's
-    stored webhook URL. Otherwise uses data.target directly (or falls back to env var).
-    """
     webhook_url = ""
     if data.type in ("gs", "offer"):
         webhook_url = get_webhook_for_dept(db, data.type)
@@ -161,7 +250,7 @@ def test_chat(
         )
 
     try:
-        payload = {"text": "Test message from Task Management Portal"}
+        payload = {"text": "✅ Test message from *Admission Task Management* — webhook is working!"}
         resp = httpx.post(webhook_url, json=payload, timeout=10)
         resp.raise_for_status()
         return {"success": True, "message": "Google Chat notification sent"}

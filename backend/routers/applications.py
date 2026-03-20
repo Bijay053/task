@@ -8,7 +8,11 @@ from backend.database import get_db
 from backend.auth import get_current_user
 import backend.models as models
 import backend.schemas as schemas
-from backend.routers.notifications import send_assignment_notification
+from backend.routers.notifications import (
+    send_assignment_notification,
+    send_follower_notification,
+    send_status_change_notification,
+)
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -316,9 +320,23 @@ def update_followers(
     app = db.query(models.Application).filter(models.Application.id == app_id).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
+
+    # Determine which users are newly added
+    existing_ids = {f.user_id for f in app.followers}
+    new_ids = set(data.follower_ids) - existing_ids
+
     _sync_followers(db, app.id, data.follower_ids)
     db.commit()
     db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by", "followers"])
+
+    # Notify newly added followers
+    for follower in app.followers:
+        if follower.user_id in new_ids and follower.user:
+            try:
+                send_follower_notification(db, app, follower.user, current_user.full_name)
+            except Exception:
+                pass
+
     return app
 
 
@@ -343,6 +361,14 @@ def update_status(
     ))
     db.commit()
     db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by", "followers"])
+
+    # Notify followers of the status change
+    if old_status != app.application_status:
+        try:
+            send_status_change_notification(db, app, old_status, app.application_status, current_user.full_name)
+        except Exception:
+            pass
+
     return app
 
 
