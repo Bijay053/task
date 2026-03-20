@@ -175,6 +175,7 @@ export default function MyTasks() {
                 statusChoices={statusChoices}
                 statusColors={statusColors}
                 queryInvalidateKeys={["/api/applications/my"]}
+                onCardClick={openEdit}
               />
             )}
           </div>

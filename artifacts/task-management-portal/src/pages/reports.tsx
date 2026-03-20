@@ -1,13 +1,12 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui-elements";
-import {
-  useGetPerformanceReport, useGetStaffTiming, useGetStageAnalysis
-} from "@workspace/api-client-react";
+import { useListUsers } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   BarChart3, ShieldAlert, Users, FileText, TrendingUp, Award,
-  Clock, AlertTriangle, CheckCircle2, Timer, Layers
+  Clock, AlertTriangle, CheckCircle2, Timer, Layers, CalendarRange, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,24 +38,75 @@ function DaysBar({ days, max, color = "bg-primary" }: { days: number | null; max
   );
 }
 
+function DateInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs text-muted-foreground whitespace-nowrap">{label}</span>
+      <input
+        type="date"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+      />
+    </div>
+  );
+}
+
+async function fetchReport(path: string, params: Record<string, string | undefined>) {
+  const url = new URL(`${import.meta.env.BASE_URL}api${path}`, window.location.origin);
+  Object.entries(params).forEach(([k, v]) => { if (v) url.searchParams.set(k, v); });
+  const res = await fetch(url.toString(), { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch report");
+  return res.json();
+}
+
 export default function Reports() {
   const { user } = useAuth();
   const isManager = user?.role === "admin" || user?.role === "manager";
   const [deptFilter, setDeptFilter] = useState<"" | "gs" | "offer">("");
   const [reportTab, setReportTab] = useState<ReportTab>("workload");
   const [stagesDept, setStagesDept] = useState<"gs" | "offer">("gs");
+  const [stagesUserId, setStagesUserId] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  const { data: performance, isLoading: perfLoading } = useGetPerformanceReport(
-    deptFilter ? { department: deptFilter } : undefined,
-    { query: { enabled: isManager } }
-  );
-  const { data: staffTiming, isLoading: timingLoading } = useGetStaffTiming(
-    { query: { enabled: isManager && reportTab === "timing" } }
-  );
-  const { data: stageData, isLoading: stageLoading } = useGetStageAnalysis(
-    stagesDept,
-    { query: { enabled: isManager && reportTab === "stages" } }
-  );
+  const { data: allUsers } = useListUsers({ query: { enabled: isManager } });
+
+  const perfParams = {
+    ...(deptFilter ? { department: deptFilter } : {}),
+    ...(dateFrom ? { date_from: dateFrom } : {}),
+    ...(dateTo ? { date_to: dateTo } : {}),
+  };
+  const { data: performance, isLoading: perfLoading } = useQuery({
+    queryKey: ["/api/reports/performance", perfParams],
+    queryFn: () => fetchReport("/reports/performance", perfParams),
+    enabled: isManager,
+  });
+
+  const timingParams = {
+    ...(dateFrom ? { date_from: dateFrom } : {}),
+    ...(dateTo ? { date_to: dateTo } : {}),
+  };
+  const { data: staffTiming, isLoading: timingLoading } = useQuery({
+    queryKey: ["/api/reports/staff-timing", timingParams],
+    queryFn: () => fetchReport("/reports/staff-timing", timingParams),
+    enabled: isManager && reportTab === "timing",
+  });
+
+  const stageParams = {
+    department: stagesDept,
+    ...(stagesUserId ? { user_id: stagesUserId } : {}),
+    ...(dateFrom ? { date_from: dateFrom } : {}),
+    ...(dateTo ? { date_to: dateTo } : {}),
+  };
+  const { data: stageData, isLoading: stageLoading } = useQuery({
+    queryKey: ["/api/reports/stage-analysis", stageParams],
+    queryFn: () => fetchReport("/reports/stage-analysis", stageParams),
+    enabled: isManager && reportTab === "stages",
+  });
+
+  const hasDateFilter = dateFrom || dateTo;
+  const clearDates = () => { setDateFrom(""); setDateTo(""); };
 
   if (!isManager) {
     return (
@@ -70,48 +120,71 @@ export default function Reports() {
     );
   }
 
-  const maxAssigned = Math.max(1, ...(performance?.map(p => p.total_assigned) || [0]));
-  const maxHandling = Math.max(1, ...(staffTiming?.map(p => p.avg_handling_days ?? 0) || [0]));
-  const maxStageDays = Math.max(1, ...(stageData?.map(s => s.avg_days ?? 0) || [0]));
+  const maxAssigned = Math.max(1, ...(performance?.map((p: any) => p.total_assigned) || [0]));
+  const maxHandling = Math.max(1, ...(staffTiming?.map((p: any) => p.avg_handling_days ?? 0) || [0]));
+  const maxStageDays = Math.max(1, ...(stageData?.map((s: any) => s.avg_days ?? 0) || [0]));
 
   return (
     <Layout>
-      <div className="h-full flex flex-col space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+      <div className="h-full flex flex-col space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 shrink-0">
           <div>
             <h1 className="text-3xl font-display font-bold tracking-tight">Performance Reports</h1>
             <p className="text-muted-foreground mt-1">Workload analytics, handling time, and stage bottleneck analysis.</p>
           </div>
-          {reportTab === "workload" && (
-            <div className="flex gap-2 bg-muted/40 border border-border rounded-xl overflow-hidden p-1">
-              {(["", "gs", "offer"] as const).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDeptFilter(d)}
-                  className={cn(
-                    "px-4 py-1.5 text-sm font-medium rounded-lg transition-colors",
-                    deptFilter === d ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {d === "" ? "All Departments" : d === "gs" ? "GS Dept" : "Offer Dept"}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {reportTab === "workload" && (
+              <div className="flex gap-2 bg-muted/40 border border-border rounded-xl overflow-hidden p-1">
+                {(["", "gs", "offer"] as const).map((d) => (
+                  <button key={d} onClick={() => setDeptFilter(d)}
+                    className={cn("px-4 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                      deptFilter === d ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                    {d === "" ? "All Depts" : d === "gs" ? "GS Dept" : "Offer Dept"}
+                  </button>
+                ))}
+              </div>
+            )}
+            {reportTab === "stages" && (
+              <div className="flex gap-2 bg-muted/40 border border-border rounded-xl overflow-hidden p-1">
+                {(["gs", "offer"] as const).map((d) => (
+                  <button key={d} onClick={() => setStagesDept(d)}
+                    className={cn("px-4 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                      stagesDept === d ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                    {d === "gs" ? "GS Dept" : "Offer Dept"}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Date range filter bar — always visible */}
+        <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border shrink-0">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <CalendarRange className="w-4 h-4" />
+            <span className="text-xs font-medium">Date Range</span>
+          </div>
+          <DateInput label="From" value={dateFrom} onChange={setDateFrom} />
+          <DateInput label="To" value={dateTo} onChange={setDateTo} />
+          {hasDateFilter && (
+            <button onClick={clearDates}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+              <X className="w-3 h-3" />Clear
+            </button>
           )}
           {reportTab === "stages" && (
-            <div className="flex gap-2 bg-muted/40 border border-border rounded-xl overflow-hidden p-1">
-              {(["gs", "offer"] as const).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setStagesDept(d)}
-                  className={cn(
-                    "px-4 py-1.5 text-sm font-medium rounded-lg transition-colors",
-                    stagesDept === d ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {d === "gs" ? "GS Dept" : "Offer Dept"}
-                </button>
-              ))}
+            <div className="flex items-center gap-1.5 ml-auto">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <select
+                value={stagesUserId}
+                onChange={e => setStagesUserId(e.target.value)}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">All Staff</option>
+                {allUsers?.map((u: any) => (
+                  <option key={u.id} value={String(u.id)}>{u.full_name}</option>
+                ))}
+              </select>
             </div>
           )}
         </div>
@@ -125,14 +198,11 @@ export default function Reports() {
           ].map(tab => {
             const Icon = tab.icon;
             return (
-              <button
-                key={tab.id}
-                onClick={() => setReportTab(tab.id)}
+              <button key={tab.id} onClick={() => setReportTab(tab.id)}
                 className={cn(
                   "px-5 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-2",
                   reportTab === tab.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
+                )}>
                 <Icon className="w-4 h-4" />{tab.label}
               </button>
             );
@@ -150,15 +220,15 @@ export default function Reports() {
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><FileText className="w-6 h-6 text-blue-600" /></div>
-                  <div><div className="text-2xl font-bold">{performance.reduce((sum, p) => sum + p.total_assigned, 0)}</div><div className="text-sm text-muted-foreground">Total Applications</div></div>
+                  <div><div className="text-2xl font-bold">{performance.reduce((sum: number, p: any) => sum + p.total_assigned, 0)}</div><div className="text-sm text-muted-foreground">Total Applications</div></div>
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><TrendingUp className="w-6 h-6 text-green-600" /></div>
-                  <div><div className="text-2xl font-bold">{performance.reduce((sum, p) => sum + p.gs_count, 0)}</div><div className="text-sm text-muted-foreground">GS Applications</div></div>
+                  <div><div className="text-2xl font-bold">{performance.reduce((sum: number, p: any) => sum + p.gs_count, 0)}</div><div className="text-sm text-muted-foreground">GS Applications</div></div>
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center shrink-0"><Award className="w-6 h-6 text-violet-600" /></div>
-                  <div><div className="text-2xl font-bold">{performance.reduce((sum, p) => sum + p.offer_count, 0)}</div><div className="text-sm text-muted-foreground">Offer Applications</div></div>
+                  <div><div className="text-2xl font-bold">{performance.reduce((sum: number, p: any) => sum + p.offer_count, 0)}</div><div className="text-sm text-muted-foreground">Offer Applications</div></div>
                 </Card>
               </div>
             )}
@@ -182,7 +252,7 @@ export default function Reports() {
                     ) : performance?.length === 0 ? (
                       <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
                     ) : (
-                      performance?.map((p) => {
+                      performance?.map((p: any) => {
                         const pct = Math.round((p.total_assigned / maxAssigned) * 100);
                         const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
                         return (
@@ -210,7 +280,7 @@ export default function Reports() {
                                 {Object.entries(p.status_breakdown).slice(0, 4).map(([status, count]) => (
                                   <span key={status} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-muted text-muted-foreground" title={status}>
                                     <span className="truncate max-w-[80px]">{status}</span>
-                                    <span className="font-bold text-foreground">{count}</span>
+                                    <span className="font-bold text-foreground">{count as number}</span>
                                   </span>
                                 ))}
                                 {Object.keys(p.status_breakdown).length > 4 && (
@@ -236,21 +306,21 @@ export default function Reports() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><Users className="w-6 h-6 text-blue-600" /></div>
-                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s, p) => s + p.total_gs, 0)}</div><div className="text-sm text-muted-foreground">Total GS Apps</div></div>
+                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s: number, p: any) => s + p.total_gs, 0)}</div><div className="text-sm text-muted-foreground">Total GS Apps</div></div>
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
-                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s, p) => s + p.completed_gs, 0)}</div><div className="text-sm text-muted-foreground">Completed</div></div>
+                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s: number, p: any) => s + p.completed_gs, 0)}</div><div className="text-sm text-muted-foreground">Completed</div></div>
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0"><Timer className="w-6 h-6 text-amber-600" /></div>
-                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s, p) => s + p.pending_gs, 0)}</div><div className="text-sm text-muted-foreground">Pending</div></div>
+                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s: number, p: any) => s + p.pending_gs, 0)}</div><div className="text-sm text-muted-foreground">Pending</div></div>
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Clock className="w-6 h-6 text-primary" /></div>
                   <div>
                     <div className="text-2xl font-bold">
-                      {fmtDays(staffTiming.filter(p => p.avg_handling_days).reduce((s, p, _, arr) => s + (p.avg_handling_days ?? 0) / arr.filter(x => x.avg_handling_days).length, 0) || null)}
+                      {fmtDays(staffTiming.filter((p: any) => p.avg_handling_days).reduce((s: number, p: any, _: number, arr: any[]) => s + (p.avg_handling_days ?? 0) / arr.filter((x: any) => x.avg_handling_days).length, 0) || null)}
                     </div>
                     <div className="text-sm text-muted-foreground">Avg Handling Time</div>
                   </div>
@@ -278,7 +348,7 @@ export default function Reports() {
                     ) : staffTiming?.length === 0 ? (
                       <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
                     ) : (
-                      staffTiming?.map((p) => {
+                      staffTiming?.map((p: any) => {
                         const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
                         return (
                           <tr key={p.user_id} className="align-middle">
@@ -322,21 +392,21 @@ export default function Reports() {
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0"><AlertTriangle className="w-6 h-6 text-amber-600" /></div>
                   <div>
-                    <div className="text-2xl font-bold">{fmtDays(Math.max(...stageData.map(s => s.avg_days ?? 0)))}</div>
+                    <div className="text-2xl font-bold">{fmtDays(Math.max(...stageData.map((s: any) => s.avg_days ?? 0)))}</div>
                     <div className="text-sm text-muted-foreground">Longest Avg Stage</div>
                   </div>
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
                   <div>
-                    <div className="text-2xl font-bold">{stageData.reduce((s, x) => s + x.currently_in_stage, 0)}</div>
+                    <div className="text-2xl font-bold">{stageData.reduce((s: number, x: any) => s + x.currently_in_stage, 0)}</div>
                     <div className="text-sm text-muted-foreground">Apps in Stages</div>
                   </div>
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><Timer className="w-6 h-6 text-red-500" /></div>
                   <div>
-                    <div className="text-sm font-bold truncate">{[...stageData].sort((a, b) => (b.avg_days ?? 0) - (a.avg_days ?? 0))[0]?.status ?? "—"}</div>
+                    <div className="text-sm font-bold truncate">{[...stageData].sort((a: any, b: any) => (b.avg_days ?? 0) - (a.avg_days ?? 0))[0]?.status ?? "—"}</div>
                     <div className="text-sm text-muted-foreground">Biggest Bottleneck</div>
                   </div>
                 </Card>
@@ -361,7 +431,7 @@ export default function Reports() {
                     ) : stageData?.length === 0 ? (
                       <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No stage data. Status changes will populate this as applications move through stages.</td></tr>
                     ) : (
-                      [...(stageData || [])].sort((a, b) => (b.avg_days ?? 0) - (a.avg_days ?? 0)).map((stage) => {
+                      [...(stageData || [])].sort((a: any, b: any) => (b.avg_days ?? 0) - (a.avg_days ?? 0)).map((stage: any) => {
                         const isBottleneck = (stage.avg_days ?? 0) >= maxStageDays * 0.75;
                         return (
                           <tr key={stage.status} className="align-middle">

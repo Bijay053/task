@@ -110,7 +110,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent-foreground flex items-center justify-center mr-3 shadow-lg">
             <Globe className="w-4 h-4 text-white" />
           </div>
-          <h1 className="font-display font-bold text-lg tracking-wide text-white">GlobalStudy</h1>
+          <h1 className="font-display font-bold text-sm tracking-wide text-white leading-tight">Admission Task<br/>Management</h1>
         </div>
 
         <nav className="flex-1 py-5 px-4 overflow-y-auto space-y-5">
