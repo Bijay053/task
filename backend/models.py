@@ -59,6 +59,9 @@ class User(Base):
     availability_status = Column(String(50), default="available", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     password_changed_at = Column(DateTime, default=datetime.utcnow)
+    token_version = Column(Integer, default=0, nullable=False, server_default="0")
+    failed_login_attempts = Column(Integer, default=0, nullable=False, server_default="0")
+    locked_until = Column(DateTime, nullable=True)
 
     assigned_applications = relationship(
         "Application", foreign_keys="Application.assigned_to_id", back_populates="assigned_to"

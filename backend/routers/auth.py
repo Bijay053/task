@@ -25,6 +25,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 OTP_EXPIRE_MINUTES    = 10
 RESET_EXPIRE_MINUTES  = 30
 PASSWORD_EXPIRY_DAYS  = 90
+MAX_FAILED_ATTEMPTS   = 5
+LOCKOUT_MINUTES       = 30
 
 COMMON_PASSWORDS = {
     "password", "password1", "password123", "123456", "12345678", "qwerty",
@@ -133,10 +135,45 @@ class OtpRequired(BaseModel):
 @router.post("/login")
 def login(data: schemas.LoginRequest, request: Request, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == data.email).first()
+
+    # ── Account lockout check ───────────────────────────────────────────────
+    if user:
+        locked_until = getattr(user, "locked_until", None)
+        if locked_until and locked_until > datetime.utcnow():
+            remaining = int((locked_until - datetime.utcnow()).total_seconds() / 60) + 1
+            _log(db, user, "login_blocked", "Locked account access attempt", request)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Account locked due to too many failed attempts. Try again in {remaining} minute(s).",
+            )
+
+    # ── Verify credentials ──────────────────────────────────────────────────
     if not user or not verify_password(data.password, user.hashed_password):
+        if user:
+            attempts = (getattr(user, "failed_login_attempts", 0) or 0) + 1
+            user.failed_login_attempts = attempts
+            if attempts >= MAX_FAILED_ATTEMPTS:
+                user.locked_until = datetime.utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
+                db.commit()
+                _log(db, user, "account_locked",
+                     f"Account locked after {attempts} failed attempts", request)
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Account locked after {MAX_FAILED_ATTEMPTS} failed attempts. Try again in {LOCKOUT_MINUTES} minutes.",
+                )
+            db.commit()
+            _log(db, user, "login_failed", f"Failed attempt {attempts}/{MAX_FAILED_ATTEMPTS}", request)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is inactive")
+
+    # ── Reset failure counter on successful login ───────────────────────────
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+
+    token_ver = getattr(user, "token_version", 0) or 0
 
     if is_email_configured():
         # Invalidate previous OTPs for this user
@@ -160,7 +197,7 @@ def login(data: schemas.LoginRequest, request: Request, db: Session = Depends(ge
                            message=f"Verification code sent to {user.email}")
 
     # No SMTP — issue token directly
-    token = create_access_token({"sub": str(user.id)})
+    token = create_access_token({"sub": str(user.id), "ver": token_ver})
     _log(db, user, "login", "Direct login (no OTP)", request)
     password_expired = _is_password_expired(user)
     return {"access_token": token, "token_type": "bearer", "user": user, "password_expired": password_expired}
@@ -190,7 +227,8 @@ def verify_otp(data: OtpVerify, request: Request, db: Session = Depends(get_db))
     otp.used = True
     db.commit()
 
-    token = create_access_token({"sub": str(user.id)})
+    token_ver = getattr(user, "token_version", 0) or 0
+    token = create_access_token({"sub": str(user.id), "ver": token_ver})
     _log(db, user, "login", "Login via OTP", request)
     password_expired = _is_password_expired(user)
     return {"access_token": token, "token_type": "bearer", "user": user, "password_expired": password_expired}
@@ -230,6 +268,8 @@ def change_password(
 
     current_user.hashed_password = get_password_hash(data.new_password)
     current_user.password_changed_at = datetime.utcnow()
+    # Invalidate all existing sessions by bumping the token version
+    current_user.token_version = (getattr(current_user, "token_version", 0) or 0) + 1
     db.commit()
     _log(db, current_user, "change_password", "User changed their own password", request)
     return {"message": "Password changed successfully"}
@@ -301,6 +341,10 @@ def reset_password(
     _validate_password_strength(data.new_password, user.full_name)
     user.hashed_password = get_password_hash(data.new_password)
     user.password_changed_at = datetime.utcnow()
+    # Invalidate all existing sessions
+    user.token_version = (getattr(user, "token_version", 0) or 0) + 1
+    user.failed_login_attempts = 0
+    user.locked_until = None
     rec.used = True
     db.commit()
     _log(db, user, "reset_password", "Password reset via email token", request)

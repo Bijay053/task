@@ -132,3 +132,8 @@ def run_migrations():
 
         # can_upload permission column
         _add_column(conn, "task_user_dept_permissions", "can_upload", "BOOLEAN DEFAULT FALSE")
+
+        # Security columns for account lockout and token invalidation
+        _add_column(conn, "task_users", "token_version",          "INTEGER NOT NULL DEFAULT 0")
+        _add_column(conn, "task_users", "failed_login_attempts",  "INTEGER NOT NULL DEFAULT 0")
+        _add_column(conn, "task_users", "locked_until",           "TIMESTAMP")

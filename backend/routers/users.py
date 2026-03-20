@@ -59,6 +59,10 @@ def update_user(user_id: int, data: schemas.UserUpdate, db: Session = Depends(ge
         user.availability_status = data.availability_status
     if data.password is not None:
         user.hashed_password = get_password_hash(data.password)
+        # Invalidate existing sessions and clear any lockout
+        user.token_version = (getattr(user, "token_version", 0) or 0) + 1
+        user.failed_login_attempts = 0
+        user.locked_until = None
     db.commit()
     db.refresh(user)
     return user

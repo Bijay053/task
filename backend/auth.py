@@ -46,14 +46,19 @@ def get_current_user(
         if sub is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
         user_id: int = int(sub)
-        if user_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    except JWTError:
+        token_ver: int = int(payload.get("ver", 0))
+    except (JWTError, ValueError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+
+    # Reject tokens issued before a password change (token invalidation)
+    current_ver = getattr(user, "token_version", 0) or 0
+    if token_ver < current_ver:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired — please log in again")
+
     return user
 
 
