@@ -2652,3 +2652,25 @@ export const setDeptSetting = async (department: string, key: string, data: Dept
   customFetch<DeptSettingOut>(`/api/dept-settings/${department}/${key}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
 export const useSetDeptSetting = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof setDeptSetting>>, TError, { department: string; key: string; data: DeptSettingUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof setDeptSetting>>, TError, { department: string; key: string; data: DeptSettingUpdate }, TContext> =>
   useMutation({ mutationFn: ({ department, key, data }) => setDeptSetting(department, key, data, options?.request), ...options?.mutation });
+
+export interface StudentSummary {
+  id: number;
+  full_name: string;
+  app_ids: number[];
+  agents: string[];
+  universities: string[];
+}
+
+export const listStudentsSummary = async (params?: { search?: string }, options?: RequestInit): Promise<StudentSummary[]> =>
+  customFetch<StudentSummary[]>(`/api/students/summary${params?.search ? `?search=${encodeURIComponent(params.search)}` : ""}`, { ...options });
+
+export const getListStudentsSummaryQueryKey = (params?: { search?: string }) => [`/api/students/summary`, ...(params ? [params] : [])] as const;
+
+export const useListStudentsSummary = <TData = Awaited<ReturnType<typeof listStudentsSummary>>, TError = ErrorType<unknown>>(params?: { search?: string }, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listStudentsSummary>>, TError, TData>; request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const queryKey = getListStudentsSummaryQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStudentsSummary>>> = ({ signal }) => listStudentsSummary(params, { signal, ...options?.request });
+  const queryOptions = { queryKey, queryFn, ...options?.query };
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+};

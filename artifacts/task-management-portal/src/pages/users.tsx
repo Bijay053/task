@@ -17,7 +17,7 @@ const AVAILABILITY_OPTIONS = [
 ];
 const availabilityStyle = (v: string) => AVAILABILITY_OPTIONS.find(o => o.value === v)?.className || "bg-slate-100 text-slate-600";
 
-type UsersTab = "team" | "permissions";
+type UsersTab = "team" | "leave" | "permissions";
 
 const DEPARTMENTS = ["gs", "offer"];
 
@@ -144,7 +144,11 @@ export default function Users() {
         </div>
 
         <div className="flex gap-1 border-b border-border shrink-0">
-          {[{ id: "team" as UsersTab, label: "Team Members" }, { id: "permissions" as UsersTab, label: "Department Permissions" }].map(tab => (
+          {[
+            { id: "team" as UsersTab, label: "Team Members" },
+            { id: "leave" as UsersTab, label: "Leave & Availability" },
+            { id: "permissions" as UsersTab, label: "Department Permissions" },
+          ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -168,13 +172,12 @@ export default function Users() {
                     <th>Email</th>
                     <th>Role</th>
                     <th>Account</th>
-                    <th>Availability</th>
                     <th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
-                    <tr><td colSpan={6} className="text-center py-8">Loading...</td></tr>
+                    <tr><td colSpan={5} className="text-center py-8">Loading...</td></tr>
                   ) : users?.map(u => (
                     <tr key={u.id}>
                       <td className="font-semibold text-foreground">
@@ -196,24 +199,6 @@ export default function Users() {
                           {u.is_active ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td>
-                        {canToggleAvailability ? (
-                          <Select
-                            value={u.availability_status || "available"}
-                            onChange={async (e) => {
-                              await availMut.mutateAsync({ userId: u.id, data: { availability_status: e.target.value } });
-                              queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                            }}
-                            className="text-xs h-7 py-0 min-w-[110px]"
-                          >
-                            {AVAILABILITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </Select>
-                        ) : (
-                          <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", availabilityStyle(u.availability_status || "available"))}>
-                            {AVAILABILITY_OPTIONS.find(o => o.value === u.availability_status)?.label || "Available"}
-                          </span>
-                        )}
-                      </td>
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="ghost" size="sm" onClick={() => { setSelectedUserId(u.id); setActiveTab("permissions"); }}>
@@ -223,6 +208,68 @@ export default function Users() {
                             <Edit2 className="w-4 h-4 mr-1" />Edit
                           </Button>
                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        {activeTab === "leave" && (
+          <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="table-container flex-1 h-full border-0 rounded-none">
+              <table className="spreadsheet-table w-full h-full">
+                <thead>
+                  <tr>
+                    <th>Staff Member</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Update Availability</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr><td colSpan={4} className="text-center py-8">Loading...</td></tr>
+                  ) : users?.map(u => (
+                    <tr key={u.id}>
+                      <td className="font-semibold text-foreground">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold shrink-0">
+                            {u.full_name.charAt(0)}
+                          </div>
+                          <div>
+                            <div>{u.full_name}</div>
+                            <div className="text-xs text-muted-foreground">{u.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={cn("px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider", roleColors[u.role] || "bg-slate-100 text-slate-600")}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={cn("px-2.5 py-1 rounded-full text-xs font-semibold", availabilityStyle(u.availability_status || "available"))}>
+                          {AVAILABILITY_OPTIONS.find(o => o.value === u.availability_status)?.label || "Available"}
+                        </span>
+                      </td>
+                      <td>
+                        {canToggleAvailability ? (
+                          <Select
+                            value={u.availability_status || "available"}
+                            onChange={async (e) => {
+                              await availMut.mutateAsync({ userId: u.id, data: { availability_status: e.target.value } });
+                              queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                            }}
+                            className="text-xs h-8 min-w-[130px]"
+                          >
+                            {AVAILABILITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </Select>
+                        ) : (
+                          <span className="text-muted-foreground text-xs italic">No permission to change</span>
+                        )}
                       </td>
                     </tr>
                   ))}

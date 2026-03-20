@@ -190,63 +190,70 @@ export default function GsApplications() {
               <table className="spreadsheet-table w-full h-full">
                 <thead>
                   <tr>
-                    <th className="w-10 text-center">#</th>
+                    <th className="w-8 text-center">#</th>
                     <th>Student</th>
-                    <th>University / Course</th>
+                    <th>University</th>
+                    <th>Course</th>
                     <th>Intake</th>
                     <th>Submitted</th>
                     <th>Verification</th>
                     <th>Status</th>
-                    <th>Agent</th>
+                    <th>Ext. Agent</th>
+                    <th>Assignee</th>
                     <th>Priority</th>
-                    <th className="w-10"></th>
+                    <th>Remarks</th>
                   </tr>
                 </thead>
                 <tbody className="align-top">
                   {isLoading ? (
-                    <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
+                    <tr><td colSpan={12} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
                   ) : applications?.length === 0 ? (
-                    <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">No GS applications found.</td></tr>
+                    <tr><td colSpan={12} className="text-center py-12 text-muted-foreground">No GS applications found.</td></tr>
                   ) : (
                     applications?.map(app => (
                       <tr key={app.id} className="group cursor-pointer" onClick={() => handleOpenEdit(app)}>
                         <td className="text-center text-muted-foreground text-xs">{app.id}</td>
-                        <td className="font-semibold">{displayName(app)}</td>
-                        <td>
-                          <div className="font-medium text-primary">{displayUni(app)}</div>
-                          <div className="text-xs text-muted-foreground">{app.course || "-"}</div>
+                        <td className="font-semibold whitespace-nowrap">{displayName(app)}</td>
+                        <td className="max-w-[160px]">
+                          <div className="font-medium text-primary truncate">{displayUni(app)}</div>
                         </td>
-                        <td>{app.intake || "-"}</td>
-                        <td className="text-sm text-muted-foreground">{app.submitted_date ? format(new Date(app.submitted_date), "MMM d, yyyy") : "-"}</td>
+                        <td className="max-w-[140px]">
+                          <div className="text-sm truncate">{app.course || "-"}</div>
+                        </td>
+                        <td className="whitespace-nowrap">{app.intake || "-"}</td>
+                        <td className="text-sm text-muted-foreground whitespace-nowrap">{app.submitted_date ? format(new Date(app.submitted_date), "MMM d, yy") : "-"}</td>
                         <td>
                           {app.verification ? (
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${app.verification === "Verified" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${app.verification === "Verified" ? "bg-green-100 text-green-700" : app.verification === "Failed" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
                               {app.verification}
                             </span>
-                          ) : "-"}
+                          ) : <span className="text-muted-foreground/40">—</span>}
                         </td>
                         <td>
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: statusColors[app.application_status]?.bg || "#f1f5f9", color: statusColors[app.application_status]?.text || "#475569" }}>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap" style={{ backgroundColor: statusColors[app.application_status]?.bg || "#f1f5f9", color: statusColors[app.application_status]?.text || "#475569" }}>
                             {app.application_status}
                           </span>
                         </td>
-                        <td>
-                          {app.assigned_to ? (
-                            <div className="flex items-center">
-                              <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-xs font-bold mr-2 border border-border">{app.assigned_to.full_name.charAt(0)}</div>
-                              <span className="text-sm">{app.assigned_to.full_name}</span>
-                            </div>
-                          ) : <span className="text-muted-foreground text-sm italic">Unassigned</span>}
+                        <td className="text-xs text-sky-600 whitespace-nowrap">
+                          {app.agent?.name || <span className="text-muted-foreground/40">—</span>}
                         </td>
                         <td>
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${app.priority === "high" ? "bg-red-100 text-red-700" : app.priority === "low" ? "bg-slate-100 text-slate-600" : "bg-blue-100 text-blue-700"}`}>
+                          {app.assigned_to ? (
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
+                              <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-xs font-bold border border-border shrink-0">{app.assigned_to.full_name.charAt(0)}</div>
+                              <span className="text-sm">{app.assigned_to.full_name.split(" ")[0]}</span>
+                            </div>
+                          ) : <span className="text-muted-foreground/40 text-xs">Unassigned</span>}
+                        </td>
+                        <td>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase whitespace-nowrap ${app.priority === "high" ? "bg-red-100 text-red-700" : app.priority === "low" ? "bg-slate-100 text-slate-600" : "bg-blue-100 text-blue-700"}`}>
                             {app.priority || "normal"}
                           </span>
                         </td>
-                        <td>
-                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleOpenEdit(app); }}>
-                            <FileEdit className="w-4 h-4" />
-                          </Button>
+                        <td className="max-w-[180px]">
+                          <span className="text-xs text-muted-foreground" title={app.remarks || ""}>
+                            {app.remarks ? (app.remarks.length > 50 ? app.remarks.slice(0, 50) + "…" : app.remarks) : <span className="opacity-30">—</span>}
+                          </span>
                         </td>
                       </tr>
                     ))
@@ -264,6 +271,7 @@ export default function GsApplications() {
                 applications={applications || []}
                 statusChoices={statusChoices}
                 statusColors={statusColors}
+                onCardClick={handleOpenEdit}
               />
             )}
           </div>

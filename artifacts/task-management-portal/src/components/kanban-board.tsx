@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useUpdateApplication } from "@workspace/api-client-react";
 import { GS_STATUS_COLORS, GS_STATUS_CHOICES } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
-import { GripVertical, User, BookOpen, Calendar } from "lucide-react";
+import { GripVertical, User, BookOpen, Calendar, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Application {
@@ -12,11 +12,13 @@ interface Application {
   student_name?: string | null;
   university?: { name: string } | null;
   university_name?: string | null;
+  agent?: { name: string } | null;
   assigned_to?: { full_name: string } | null;
   course?: string | null;
   intake?: string | null;
   priority?: string | null;
   channel?: string | null;
+  remarks?: string | null;
 }
 
 interface KanbanBoardProps {
@@ -24,6 +26,7 @@ interface KanbanBoardProps {
   statusChoices?: string[];
   statusColors?: Record<string, { bg: string; text: string }>;
   queryInvalidateKeys?: string[];
+  onCardClick?: (app: Application) => void;
 }
 
 function PriorityDot({ priority }: { priority?: string }) {
@@ -41,21 +44,31 @@ function KanbanCard({
   colorMap,
   onDragStart,
   isDragging,
+  onCardClick,
 }: {
   app: Application;
   colorMap: Record<string, { bg: string; text: string }>;
   onDragStart: (e: React.DragEvent, id: number) => void;
   isDragging: boolean;
+  onCardClick?: (app: Application) => void;
 }) {
   const color = colorMap[app.application_status] || { bg: "#f1f5f9", text: "#64748b" };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (onCardClick) {
+      e.stopPropagation();
+      onCardClick(app);
+    }
+  };
 
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, app.id)}
+      onClick={handleClick}
       className={cn(
-        "bg-card rounded-xl border border-border shadow-sm p-3.5 cursor-grab active:cursor-grabbing select-none transition-all",
-        "hover:shadow-md hover:border-primary/30",
+        "bg-card rounded-xl border border-border shadow-sm p-3.5 select-none transition-all",
+        onCardClick ? "cursor-pointer hover:shadow-md hover:border-primary/40 hover:bg-primary/[0.02]" : "cursor-grab active:cursor-grabbing hover:shadow-md hover:border-primary/30",
         isDragging && "opacity-40 scale-95"
       )}
     >
@@ -67,27 +80,40 @@ function KanbanCard({
       </div>
 
       {(app.university?.name || app.university_name) && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
           <BookOpen className="w-3 h-3 shrink-0" />
           <span className="truncate">{app.university?.name || app.university_name}</span>
         </div>
       )}
 
       {app.course && (
-        <p className="text-xs text-muted-foreground truncate mb-1.5 pl-4">{app.course}</p>
+        <p className="text-xs text-muted-foreground truncate mb-1 pl-4">{app.course}</p>
       )}
 
       {app.intake && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
           <Calendar className="w-3 h-3 shrink-0" />
           <span>{app.intake}</span>
         </div>
       )}
 
       {app.channel && (
-        <div className="text-xs text-muted-foreground mb-2 pl-0">
-          <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">{app.channel}</span>
+        <div className="mb-1">
+          <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium text-xs">{app.channel}</span>
         </div>
+      )}
+
+      {app.agent?.name && (
+        <div className="flex items-center gap-1.5 text-xs text-sky-600 mb-1">
+          <UserCheck className="w-3 h-3 shrink-0" />
+          <span className="truncate">{app.agent.name}</span>
+        </div>
+      )}
+
+      {app.remarks && (
+        <p className="text-xs text-muted-foreground italic truncate mb-1 border-t border-border/40 pt-1 mt-1">
+          {app.remarks.length > 60 ? app.remarks.slice(0, 60) + "…" : app.remarks}
+        </p>
       )}
 
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/60">
@@ -122,6 +148,7 @@ function KanbanColumn({
   draggingId,
   onDragStart,
   onDrop,
+  onCardClick,
 }: {
   status: string;
   cards: Application[];
@@ -129,12 +156,13 @@ function KanbanColumn({
   draggingId: number | null;
   onDragStart: (e: React.DragEvent, id: number) => void;
   onDrop: (status: string) => void;
+  onCardClick?: (app: Application) => void;
 }) {
   const [isOver, setIsOver] = useState(false);
   const color = colorMap[status] || { bg: "#f1f5f9", text: "#64748b" };
 
   return (
-    <div className="flex flex-col min-w-[260px] max-w-[260px] h-full">
+    <div className="flex flex-col min-w-[280px] max-w-[280px] h-full">
       <div
         className="flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide shrink-0"
         style={{ backgroundColor: color.bg, color: color.text }}
@@ -168,6 +196,7 @@ function KanbanColumn({
             colorMap={colorMap}
             onDragStart={onDragStart}
             isDragging={draggingId === app.id}
+            onCardClick={onCardClick}
           />
         ))}
         {isOver && cards.length > 0 && (
@@ -183,6 +212,7 @@ export function KanbanBoard({
   statusChoices = GS_STATUS_CHOICES,
   statusColors = GS_STATUS_COLORS,
   queryInvalidateKeys = [],
+  onCardClick,
 }: KanbanBoardProps) {
   const queryClient = useQueryClient();
   const updateMut = useUpdateApplication();
@@ -230,6 +260,7 @@ export function KanbanBoard({
           draggingId={draggingId}
           onDragStart={handleDragStart}
           onDrop={handleDrop}
+          onCardClick={onCardClick}
         />
       ))}
     </div>

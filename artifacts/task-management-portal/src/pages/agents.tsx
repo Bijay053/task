@@ -154,19 +154,15 @@ export default function Agents() {
                   <tr>
                     <th>#</th>
                     <th>Agent Name</th>
-                    <th>Company</th>
-                    <th>Email</th>
-                    <th>Phone</th>
                     <th>Country</th>
-                    <th>Status</th>
                     <th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
-                    <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">Loading...</td></tr>
+                    <tr><td colSpan={4} className="text-center py-10 text-muted-foreground">Loading...</td></tr>
                   ) : agents?.length === 0 ? (
-                    <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">No agents yet. Add one above.</td></tr>
+                    <tr><td colSpan={4} className="text-center py-10 text-muted-foreground">No agents yet. Add one above.</td></tr>
                   ) : agents?.map(agent => (
                     <tr key={agent.id} className="cursor-pointer group" onClick={() => { setEditingAgent(agent); setIsModalOpen(true); }}>
                       <td className="text-muted-foreground text-xs">{agent.id}</td>
@@ -178,15 +174,7 @@ export default function Agents() {
                           <span className="font-semibold">{agent.name}</span>
                         </div>
                       </td>
-                      <td>{agent.company_name || "-"}</td>
-                      <td className="text-muted-foreground">{agent.email || "-"}</td>
-                      <td className="text-muted-foreground">{agent.phone || "-"}</td>
-                      <td>{agent.country ? <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{agent.country}</span> : "-"}</td>
-                      <td>
-                        <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", agent.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
-                          {agent.is_active ? "Active" : "Inactive"}
-                        </span>
-                      </td>
+                      <td>{agent.country ? <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{agent.country}</span> : <span className="text-muted-foreground/40">—</span>}</td>
                       <td className="text-right">
                         <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 cursor-pointer"
                           onClick={(e) => { e.stopPropagation(); setEditingAgent(agent); setIsModalOpen(true); }}>
