@@ -72,18 +72,25 @@ def _check_duplicate(
     department: str,
     app_id_val: Optional[str],
     student_name: Optional[str],
+    student_id: Optional[int],
     university_id: Optional[int],
     exclude_id: Optional[int] = None,
 ) -> bool:
     """Return True if a duplicate application exists (all three fields match)."""
-    if not app_id_val or not student_name or not university_id:
+    if not app_id_val or not university_id:
+        return False
+    # Need at least one student identifier
+    if not student_name and not student_id:
         return False
     q = db.query(models.Application).filter(
         models.Application.department == department,
         models.Application.app_id == app_id_val,
-        models.Application.student_name.ilike(student_name),
         models.Application.university_id == university_id,
     )
+    if student_id:
+        q = q.filter(models.Application.student_id == student_id)
+    else:
+        q = q.filter(models.Application.student_name.ilike(student_name))
     if exclude_id:
         q = q.filter(models.Application.id != exclude_id)
     return q.first() is not None
@@ -188,7 +195,7 @@ def create_application(
     if resolved_uni_id:
         app_data["university_id"] = resolved_uni_id
 
-    if _check_duplicate(db, dept, app_data.get("app_id"), app_data.get("student_name"), app_data.get("university_id")):
+    if _check_duplicate(db, dept, app_data.get("app_id"), app_data.get("student_name"), app_data.get("student_id"), app_data.get("university_id")):
         raise HTTPException(
             status_code=409,
             detail="A duplicate application already exists with the same App ID, Student, and University in this department.",

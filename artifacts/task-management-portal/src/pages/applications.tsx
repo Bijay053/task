@@ -290,7 +290,7 @@ export default function GsApplications() {
                         <td className="max-w-[140px]">
                           <div className="text-sm truncate">{app.course || "-"}</div>
                         </td>
-                        <td className="whitespace-nowrap">{app.intake || "-"}</td>
+                        <td className="whitespace-nowrap">{app.intake ? app.intake.replace(/\s00:00:00$/, "") : "-"}</td>
                         <td className="text-sm text-muted-foreground whitespace-nowrap">{app.submitted_date ? format(new Date(app.submitted_date), "MMM d, yy") : "-"}</td>
                         <td>
                           {app.verification ? (

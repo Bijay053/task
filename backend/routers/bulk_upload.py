@@ -187,7 +187,14 @@ async def bulk_upload(
             if idx < 0 or idx >= len(row):
                 return None
             v = row[idx]
-            return str(v).strip() if v is not None else None
+            if v is None:
+                return None
+            from datetime import datetime as _dt, date as _d
+            if isinstance(v, _dt):
+                return v.strftime("%Y-%m-%d")
+            if isinstance(v, _d):
+                return v.strftime("%Y-%m-%d")
+            return str(v).strip()
 
         student_name_val = cell("student")
         if not student_name_val:

@@ -254,7 +254,7 @@ export default function OfferApplications() {
                         <td className="max-w-[130px]">
                           <div className="text-sm truncate">{app.course || "-"}</div>
                         </td>
-                        <td className="whitespace-nowrap">{app.intake || "-"}</td>
+                        <td className="whitespace-nowrap">{app.intake ? app.intake.replace(/\s00:00:00$/, "") : "-"}</td>
                         <td>
                           {app.channel ? <span className="px-2 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-700 whitespace-nowrap">{app.channel}</span> : <span className="text-muted-foreground/40">—</span>}
                         </td>
