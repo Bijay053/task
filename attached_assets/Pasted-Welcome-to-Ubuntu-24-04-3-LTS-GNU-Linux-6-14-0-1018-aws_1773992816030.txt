@@ -1,0 +1,72 @@
+Welcome to Ubuntu 24.04.3 LTS (GNU/Linux 6.14.0-1018-aws x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Fri Mar 20 07:47:31 UTC 2026
+
+  System load:  0.51               Temperature:           -273.1 C
+  Usage of /:   74.8% of 18.33GB   Processes:             149
+  Memory usage: 55%                Users logged in:       0
+  Swap usage:   44%                IPv4 address for ens5: 172.31.41.234
+
+ * Ubuntu Pro delivers the most comprehensive open source security and
+   compliance features.
+
+   https://ubuntu.com/aws/pro
+
+Expanded Security Maintenance for Applications is not enabled.
+
+50 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+*** System restart required ***
+Last login: Fri Mar 20 06:33:27 2026 from 13.233.177.5
+ubuntu@ip-172-31-41-234:~$ sed -i '/from backend.email_service import SMTP_FROM/d' /var/www/task-portal/backend/routers/auth.py
+ubuntu@ip-172-31-41-234:~$ cat > /var/www/task-portal/artifacts/task-management-portal/src/pages/reset-password.tsx << 'ENDOFFILE'
+import { useState } from "react";
+import { useResetPassword } from "@workspace/api-client-react";
+import { Files, Eye, EyeOff, KeyRound, CheckCircle2, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
+
+function PasswordField({ placeholder, value, onChange }: { placeholder: string; value: string; onChange: (v: string) => void }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input type={show ? "text" : "password"} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} required className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition" />
+      <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" tabIndex={-1}>
+        {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+    </div>
+  );
+}
+
+export default function ResetPassword() {
+  const token = new URLSearchParams(window.location.search).get("token") || "";
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+  const resetMut = useResetPassword();
+
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <div className="text-center max-w-sm">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Invalid reset link</h2>
+          <p className="text-slate-500 text-sm mb-6">No reset token found. Please request a new password reset.</p>
+          <Link href="/login" className="text-blue-600 hover:underline text-sm font-medium">Back to sign in</Link>
+        </div>
+      </div>
+    );
+  }
+
+ENDOFFILE>v>v>>></div>ssName="mt-6 text-center"><Link href="/login" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition"><ArrowLeft className="w-3.5 h-3.5" />Back t
+ubuntu@ip-172-31-41-234:~$ ^C
+ubuntu@ip-172-31-41-234:~$ 
