@@ -49,6 +49,24 @@ def is_agent_only(user: models.User) -> bool:
     return user.role == "agent"
 
 
+def _ensure_university(db: Session, university_id: Optional[int], university_name: Optional[str]) -> Optional[int]:
+    """Look up or auto-create a university by name, returning its ID."""
+    if university_id:
+        return university_id
+    if not university_name or not university_name.strip():
+        return None
+    name = university_name.strip()
+    existing = db.query(models.University).filter(
+        models.University.name.ilike(name)
+    ).first()
+    if existing:
+        return existing.id
+    new_uni = models.University(name=name)
+    db.add(new_uni)
+    db.flush()
+    return new_uni.id
+
+
 def get_manager_agent_ids(db: Session, manager_id: int) -> Optional[list]:
     """Get agent IDs a manager is responsible for. None = no restriction (see all)."""
     mappings = db.query(models.ManagerAgentMapping).filter(
@@ -144,6 +162,10 @@ def create_application(
     if not app_data.get("application_status"):
         app_data["application_status"] = default_status(db, dept)
 
+    resolved_uni_id = _ensure_university(db, app_data.get("university_id"), app_data.get("university_name"))
+    if resolved_uni_id:
+        app_data["university_id"] = resolved_uni_id
+
     app = models.Application(**app_data)
     db.add(app)
     db.flush()  # get app.id before adding followers
@@ -213,6 +235,14 @@ def update_application(
             old_value=old_status,
             new_value=update_data["application_status"],
         ))
+
+    resolved_uni_id = _ensure_university(
+        db,
+        update_data.get("university_id"),
+        update_data.get("university_name"),
+    )
+    if resolved_uni_id:
+        update_data["university_id"] = resolved_uni_id
 
     for key, val in update_data.items():
         setattr(app, key, val)

@@ -6,14 +6,22 @@ import {
   LayoutDashboard, Files, CheckCircle, Users, GraduationCap,
   Building2, Settings, LogOut, Menu, Briefcase, FileCheck2,
   Globe, BarChart3, UserCheck, Calendar, KeyRound, AlertTriangle,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button, Input, Label, Modal } from "./ui-elements";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const IDLE_TIMEOUT_MS  = 30 * 60 * 1000;  // 30 minutes
-const WARN_BEFORE_MS   =  5 * 60 * 1000;  // warn at 25 minutes
-const WARN_DURATION_MS =  5 * 60 * 1000;  // countdown lasts 5 minutes
+const IDLE_TIMEOUT_MS  = 30 * 60 * 1000;
+const WARN_BEFORE_MS   =  5 * 60 * 1000;
+const WARN_DURATION_MS =  5 * 60 * 1000;
+
+const SIDEBAR_COLLAPSED_KEY = "sidebar_collapsed";
 
 interface NavGroup {
   label: string;
@@ -44,18 +52,13 @@ function useInactivityLogout(logout: () => void) {
       setWarnVisible(true);
       countTimer.current = setInterval(() => {
         setSecondsLeft(s => {
-          if (s <= 1) {
-            clearInterval(countTimer.current!);
-            return 0;
-          }
+          if (s <= 1) { clearInterval(countTimer.current!); return 0; }
           return s - 1;
         });
       }, 1000);
     }, IDLE_TIMEOUT_MS - WARN_BEFORE_MS);
 
-    idleTimer.current = setTimeout(() => {
-      logout();
-    }, IDLE_TIMEOUT_MS);
+    idleTimer.current = setTimeout(() => { logout(); }, IDLE_TIMEOUT_MS);
   }, [clearAll, logout]);
 
   useEffect(() => {
@@ -69,10 +72,7 @@ function useInactivityLogout(logout: () => void) {
     };
   }, [reset, clearAll]);
 
-  const stayLoggedIn = useCallback(() => {
-    reset();
-  }, [reset]);
-
+  const stayLoggedIn = useCallback(() => { reset(); }, [reset]);
   return { warnVisible, secondsLeft, stayLoggedIn };
 }
 
@@ -87,7 +87,6 @@ function ChangePasswordModal({ open, onClose }: { open: boolean; onClose: () => 
   const mut = useChangePassword();
 
   const reset = () => { setCurrent(""); setNext(""); setConfirm(""); setError(""); };
-
   const handleClose = () => { reset(); onClose(); };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,7 +138,6 @@ function InactivityWarning({
 }: { visible: boolean; secondsLeft: number; onStay: () => void; onLogout: () => void }) {
   const mins = Math.floor(secondsLeft / 60);
   const secs = secondsLeft % 60;
-
   return (
     <Modal isOpen={visible} onClose={onStay} title="">
       <div className="text-center py-4 space-y-5">
@@ -148,9 +146,7 @@ function InactivityWarning({
         </div>
         <div>
           <h3 className="text-xl font-bold mb-1">Still there?</h3>
-          <p className="text-muted-foreground text-sm">
-            You'll be signed out in
-          </p>
+          <p className="text-muted-foreground text-sm">You'll be signed out in</p>
           <div className="text-4xl font-mono font-bold text-amber-500 mt-2">
             {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
           </div>
@@ -165,6 +161,57 @@ function InactivityWarning({
   );
 }
 
+// ─── Sidebar nav link (supports both expanded and collapsed) ─────────────────
+
+function NavLink({
+  item,
+  isActive,
+  collapsed,
+  onClick,
+}: {
+  item: { href: string; label: string; icon: any };
+  isActive: boolean;
+  collapsed: boolean;
+  onClick: () => void;
+}) {
+  const Icon = item.icon;
+  const linkClass = cn(
+    "flex items-center rounded-xl transition-all duration-200 group font-medium text-sm",
+    collapsed ? "justify-center w-10 h-10 mx-auto" : "px-3 py-2.5 w-full",
+    isActive
+      ? "bg-primary/10 text-primary hover:bg-primary/15"
+      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+  );
+
+  const iconClass = cn(
+    "w-5 h-5 shrink-0 transition-colors",
+    collapsed ? "" : "mr-3",
+    isActive ? "text-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground"
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link href={item.href} onClick={onClick} className={linkClass}>
+            <Icon className={iconClass} />
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="font-medium">
+          {item.label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Link href={item.href} onClick={onClick} className={linkClass}>
+      <Icon className={iconClass} />
+      {item.label}
+    </Link>
+  );
+}
+
 // ─── Main Layout ─────────────────────────────────────────────────────────────
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -172,6 +219,17 @@ export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [changePwOpen, setChangePwOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true";
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      return next;
+    });
+  };
 
   const { warnVisible, secondsLeft, stayLoggedIn } = useInactivityLogout(logout);
 
@@ -179,8 +237,8 @@ export function Layout({ children }: { children: ReactNode }) {
     {
       label: "Overview",
       items: [
-        { href: "/",        label: "Dashboard",  icon: LayoutDashboard, roles: ["admin", "manager", "agent"] },
-        { href: "/my-tasks", label: "My Tasks",  icon: Briefcase,       roles: ["admin", "manager", "agent"] },
+        { href: "/",         label: "Dashboard",       icon: LayoutDashboard, roles: ["admin", "manager", "agent"] },
+        { href: "/my-tasks", label: "My Tasks",         icon: Briefcase,       roles: ["admin", "manager", "agent"] },
       ],
     },
     {
@@ -198,38 +256,19 @@ export function Layout({ children }: { children: ReactNode }) {
     {
       label: "Management",
       items: [
-        { href: "/reports",      label: "Performance Reports",  icon: BarChart3,    roles: ["admin", "manager"] },
-        { href: "/agents",       label: "External Agents",      icon: UserCheck,    roles: ["admin", "manager"] },
+        { href: "/reports",      label: "Performance Reports",  icon: BarChart3,     roles: ["admin", "manager"] },
+        { href: "/agents",       label: "External Agents",      icon: UserCheck,     roles: ["admin", "manager"] },
         { href: "/students",     label: "Students Directory",   icon: GraduationCap, roles: ["admin", "manager", "agent"] },
-        { href: "/universities", label: "Universities",         icon: Building2,    roles: ["admin", "manager", "agent"] },
-        { href: "/users",        label: "Team Directory",       icon: Users,        roles: ["admin", "manager"] },
-        { href: "/leave",        label: "Leave & Availability", icon: Calendar,     roles: ["admin", "manager"] },
-        { href: "/settings",     label: "Settings",             icon: Settings,     roles: ["admin", "manager"] },
+        { href: "/universities", label: "Universities",         icon: Building2,     roles: ["admin", "manager", "agent"] },
+        { href: "/users",        label: "Team Directory",       icon: Users,         roles: ["admin", "manager"] },
+        { href: "/leave",        label: "Leave & Availability", icon: Calendar,      roles: ["admin", "manager"] },
+        { href: "/settings",     label: "Settings",             icon: Settings,      roles: ["admin", "manager"] },
       ],
     },
   ];
 
   const allNavItems = navGroups.flatMap(g => g.items);
   const currentLabel = allNavItems.find(i => i.href === location)?.label || "Portal";
-
-  const renderLink = (item: { href: string; label: string; icon: any; roles: string[] }) => {
-    if (!user || !item.roles.includes(user.role)) return null;
-    const Icon = item.icon;
-    const isActive = location === item.href;
-    return (
-      <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
-        className={cn(
-          "flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group font-medium text-sm",
-          isActive
-            ? "bg-primary/10 text-primary hover:bg-primary/15"
-            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-        )}>
-        <Icon className={cn("w-5 h-5 mr-3 transition-colors shrink-0",
-          isActive ? "text-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground")} />
-        {item.label}
-      </Link>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -238,57 +277,142 @@ export function Layout({ children }: { children: ReactNode }) {
       )}
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 bg-sidebar text-sidebar-foreground flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:flex-shrink-0 shadow-xl lg:shadow-none",
+        "fixed inset-y-0 left-0 z-50 bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 lg:translate-x-0 lg:static lg:flex-shrink-0 shadow-xl lg:shadow-none",
+        collapsed ? "w-[68px]" : "w-72",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="h-16 flex items-center px-6 border-b border-sidebar-border/50 bg-black/10">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent-foreground flex items-center justify-center mr-3 shadow-lg">
-            <Globe className="w-4 h-4 text-white" />
-          </div>
-          <h1 className="font-display font-bold text-sm tracking-wide text-white leading-tight">
-            Admission Task<br/>Management
-          </h1>
+        {/* Header */}
+        <div className="h-16 flex items-center border-b border-sidebar-border/50 bg-black/10 relative shrink-0"
+          style={{ paddingLeft: collapsed ? 0 : "1.5rem", paddingRight: collapsed ? 0 : "1rem" }}>
+          {collapsed ? (
+            <div className="w-full flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent-foreground flex items-center justify-center shadow-lg">
+                <Globe className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent-foreground flex items-center justify-center mr-3 shadow-lg shrink-0">
+                <Globe className="w-4 h-4 text-white" />
+              </div>
+              <h1 className="font-display font-bold text-sm tracking-wide text-white leading-tight flex-1 min-w-0">
+                Admission Task<br />Management
+              </h1>
+            </>
+          )}
+
+          {/* Collapse toggle — only on desktop */}
+          <button
+            onClick={toggleCollapsed}
+            className={cn(
+              "hidden lg:flex items-center justify-center absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-sidebar border border-sidebar-border/60 text-sidebar-foreground/60 hover:text-white hover:bg-primary/20 transition-colors shadow z-10"
+            )}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed
+              ? <ChevronRight className="w-3.5 h-3.5" />
+              : <ChevronLeft  className="w-3.5 h-3.5" />}
+          </button>
         </div>
 
-        <nav className="flex-1 py-5 px-4 overflow-y-auto space-y-5">
+        {/* Nav */}
+        <nav className={cn("flex-1 py-5 overflow-y-auto space-y-5", collapsed ? "px-2" : "px-4")}>
           {navGroups.map(group => {
             const visible = group.items.filter(item => user && item.roles.includes(user.role));
             if (!visible.length) return null;
             return (
               <div key={group.label}>
-                <div className="text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-widest mb-2 px-3">
-                  {group.label}
+                {!collapsed && (
+                  <div className="text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-widest mb-2 px-3">
+                    {group.label}
+                  </div>
+                )}
+                {collapsed && (
+                  <div className="border-t border-sidebar-border/30 mb-2" />
+                )}
+                <div className={cn("space-y-0.5", collapsed && "flex flex-col items-center gap-1")}>
+                  {visible.map(item => (
+                    <NavLink
+                      key={item.href}
+                      item={item}
+                      isActive={location === item.href}
+                      collapsed={collapsed}
+                      onClick={() => setSidebarOpen(false)}
+                    />
+                  ))}
                 </div>
-                <div className="space-y-0.5">{visible.map(renderLink)}</div>
               </div>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-sidebar-border/50 bg-black/10">
-          <div className="flex items-center mb-3 px-2">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold mr-3 border border-primary/20 shrink-0">
-              {user?.full_name.charAt(0)}
+        {/* Footer */}
+        <div className={cn("border-t border-sidebar-border/50 bg-black/10 shrink-0", collapsed ? "p-2" : "p-4")}>
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold border border-primary/20 cursor-default select-none">
+                    {user?.full_name.charAt(0)}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p className="font-semibold">{user?.full_name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setChangePwOpen(true)}
+                    className="w-10 h-10 flex items-center justify-center rounded-xl text-sidebar-foreground/60 hover:bg-white/5 hover:text-white transition-colors"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Change Password</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={logout}
+                    className="w-10 h-10 flex items-center justify-center rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Sign Out</TooltipContent>
+              </Tooltip>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{user?.full_name}</p>
-              <p className="text-xs text-sidebar-foreground/60 capitalize">{user?.role}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setChangePwOpen(true)}
-            className="w-full flex items-center px-3 py-2 rounded-xl text-sidebar-foreground/60 hover:bg-white/5 hover:text-white transition-colors font-medium text-sm mb-1"
-          >
-            <KeyRound className="w-4 h-4 mr-3" />
-            Change Password
-          </button>
-          <button
-            onClick={logout}
-            className="w-full flex items-center px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors font-medium text-sm"
-          >
-            <LogOut className="w-4 h-4 mr-3" />
-            Sign Out
-          </button>
+          ) : (
+            <>
+              <div className="flex items-center mb-3 px-2">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold mr-3 border border-primary/20 shrink-0">
+                  {user?.full_name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{user?.full_name}</p>
+                  <p className="text-xs text-sidebar-foreground/60 capitalize">{user?.role}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setChangePwOpen(true)}
+                className="w-full flex items-center px-3 py-2 rounded-xl text-sidebar-foreground/60 hover:bg-white/5 hover:text-white transition-colors font-medium text-sm mb-1"
+              >
+                <KeyRound className="w-4 h-4 mr-3" />
+                Change Password
+              </button>
+              <button
+                onClick={logout}
+                className="w-full flex items-center px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors font-medium text-sm"
+              >
+                <LogOut className="w-4 h-4 mr-3" />
+                Sign Out
+              </button>
+            </>
+          )}
         </div>
       </aside>
 

@@ -149,6 +149,7 @@ export default function OfferApplications() {
     }
     queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
     queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/universities"] });
     setIsModalOpen(false);
   };
 
