@@ -1,0 +1,632 @@
+/***********************************************************
+ * GS TASK SYSTEM - V32 SAFE + FAST FULL CODE
+ * - "GS Status" -> "Application status"
+ * - Added new Application status options
+ * - Assigned Date fixed
+ * - Existing data preserved
+ * - Faster sync to avoid timeout
+ * - Old validation cleared before sync
+ * - Manual sync does NOT auto-delete rows
+ ***********************************************************/
+
+const CONFIG = {
+  MAIN_SHEET: "Main",
+  DASHBOARD_SHEET: "Dashboard",
+  APPROVED_SHEET: "GS approve student",
+  ENABLE_EMAIL: true,
+  ENABLE_CHAT: true,
+  CHAT_WEBHOOK_URL: "https://chat.googleapis.com/v1/spaces/AAQAvA8BZbU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=FdB8WIiNT3TaDCNMKx-j5BB4Haqa8501MuQVU08t49o",
+  DASHBOARD_EVERY_MINUTES: 5
+};
+
+const APPLICATION_STATUS_OPTIONS = [
+  "GS Rejected",
+  "GS approved",
+  "GS document pending",
+  "GS onhold",
+  "GS submitted",
+  "GS additional document request",
+  "In Review",
+  "Refund Requested",
+  "Visa Refused",
+  "Visa Granted",
+  "Visa Lodged",
+  "CoE Requested",
+  "CoE Approved"
+];
+
+const APPLICATION_STATUS_COLORS = {
+  "GS Rejected": "#F8D7DA",
+  "GS approved": "#D1E7DD",
+  "GS document pending": "#FFF3CD",
+  "GS onhold": "#E2E3E5",
+  "GS submitted": "#CFE2FF",
+  "GS additional document request": "#FAD7F0",
+  "In Review": "#E7D9FF",
+  "Refund Requested": "#FCE5CD",
+  "Visa Refused": "#F4CCCC",
+  "Visa Granted": "#D9EAD3",
+  "Visa Lodged": "#D0E0E3",
+  "CoE Requested": "#FFF2CC",
+  "CoE Approved": "#D9D2E9"
+};
+
+/**
+ * INSTALLER
+ */
+function install() {
+  const ss = SpreadsheetApp.getActive();
+
+  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger("handleEdit").forSpreadsheet(ss).onEdit().create();
+
+  if (typeof buildDashboard === "function") {
+    ScriptApp.newTrigger("buildDashboard")
+      .timeBased()
+      .everyMinutes(CONFIG.DASHBOARD_EVERY_MINUTES)
+      .create();
+  }
+
+  ensureHeadersAndValidation_();
+  syncAllRowsManual();
+  ss.toast("🚀 V32 Installed safely.");
+}
+
+/**
+ * CORE EDIT HANDLER
+ */
+function handleEdit(e) {
+  if (!e || !e.range) return;
+
+  const sh = e.range.getSheet();
+  const name = sh.getName();
+  const row = e.range.getRow();
+  if (row === 1) return;
+
+  const ss = e.source;
+  const main = ss.getSheetByName(CONFIG.MAIN_SHEET);
+  if (!main) return;
+
+  const hm = getHeaderMap_(main);
+
+  if (name === CONFIG.MAIN_SHEET) {
+    const rowValues = main.getRange(row, 1, 1, hm.lastCol).getValues()[0];
+    const assignee = normalize_(rowValues[hm.ASSIGN_COL - 1]);
+    const student = normalize_(rowValues[hm.STUDENT_COL - 1]);
+
+    if (assignee === "" || student === "") return;
+
+    if (e.range.getColumn() === hm.ASSIGN_COL) {
+      const oldAssignee = normalize_(e.oldValue || "");
+      if (oldAssignee && oldAssignee !== assignee) {
+        removeTaskFromSpecificUserSheet_(ss, row, oldAssignee);
+      }
+      syncMainRowToUser_(ss, hm, row);
+    } else {
+      syncMainRowToUser_(ss, hm, row);
+    }
+  } else if (![CONFIG.DASHBOARD_SHEET, CONFIG.APPROVED_SHEET].includes(name)) {
+    syncUserRowToMain_(ss, hm, sh, row);
+  }
+}
+
+/**
+ * Remove from all user sheets by MAIN_ROW note
+ */
+function removeTaskFromAllUserSheets_(ss, mainRowIndex, excludeSheetName = "") {
+  const sheets = ss.getSheets();
+  const targetNote = `MAIN_ROW:${mainRowIndex}`;
+  let foundAndRemoved = false;
+
+  sheets.forEach(sh => {
+    const sName = sh.getName();
+    if (
+      sName === CONFIG.MAIN_SHEET ||
+      sName === CONFIG.DASHBOARD_SHEET ||
+      sName === CONFIG.APPROVED_SHEET ||
+      sName === excludeSheetName
+    ) return;
+
+    const lastRow = sh.getLastRow();
+    if (lastRow < 2) return;
+
+    const notes = sh.getRange(2, 1, lastRow - 1, 1).getNotes();
+    for (let i = notes.length - 1; i >= 0; i--) {
+      if (notes[i][0] === targetNote) {
+        sh.deleteRow(i + 2);
+        foundAndRemoved = true;
+      }
+    }
+
+    renumberSerials_(sh);
+  });
+
+  return foundAndRemoved;
+}
+
+/**
+ * Remove task from specific old user sheet
+ */
+function removeTaskFromSpecificUserSheet_(ss, mainRowIndex, userSheetName) {
+  const sh = ss.getSheetByName(userSheetName);
+  if (!sh) return false;
+
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return false;
+
+  const targetNote = `MAIN_ROW:${mainRowIndex}`;
+  const notes = sh.getRange(2, 1, lastRow - 1, 1).getNotes();
+
+  for (let i = notes.length - 1; i >= 0; i--) {
+    if (notes[i][0] === targetNote) {
+      sh.deleteRow(i + 2);
+      renumberSerials_(sh);
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * User -> Main sync
+ */
+function syncUserRowToMain_(ss, hm, userSh, userRow) {
+  const note = userSh.getRange(userRow, 1).getNote() || "";
+  const m = note.match(/MAIN_ROW:(\d+)/);
+  if (!m) return;
+
+  const mainRowIndex = Number(m[1]);
+  const main = ss.getSheetByName(CONFIG.MAIN_SHEET);
+  if (!main) return;
+
+  const mainLastCol = main.getLastColumn();
+  const mainHeaders = main.getRange(1, 1, 1, mainLastCol).getValues()[0];
+  const userHeaders = userSh.getRange(1, 1, 1, userSh.getLastColumn()).getValues()[0];
+  const userData = userSh.getRange(userRow, 1, 1, userSh.getLastColumn()).getValues()[0];
+  const currentMainData = main.getRange(mainRowIndex, 1, 1, mainLastCol).getValues()[0];
+
+  const mainHeaderMap = {};
+  mainHeaders.forEach((h, i) => {
+    mainHeaderMap[normalizeHeader_(h)] = i;
+  });
+
+  const updatedMainData = currentMainData.slice();
+
+  userHeaders.forEach((header, userIdx) => {
+    const key = normalizeHeader_(header);
+    if (key === "assigned date") return;
+    const mainIdx = mainHeaderMap[key];
+    if (mainIdx !== undefined) {
+      updatedMainData[mainIdx] = userData[userIdx];
+    }
+  });
+
+  if (hm.STATUS_COL) {
+    updatedMainData[hm.STATUS_COL - 1] = normalizeApplicationStatus_(updatedMainData[hm.STATUS_COL - 1]);
+  }
+
+  main.getRange(mainRowIndex, 1, 1, updatedMainData.length).setValues([updatedMainData]);
+  applyApplicationStatusRules_(main, hm.STATUS_COL);
+}
+
+/**
+ * Main -> User sync
+ * Fast full-row write after old validations are cleared
+ */
+function syncMainRowToUser_(ss, hm, mainRowIndex) {
+  const main = ss.getSheetByName(CONFIG.MAIN_SHEET);
+  if (!main) return;
+
+  const mainData = main.getRange(mainRowIndex, 1, 1, hm.lastCol).getValues()[0];
+  const assignee = normalize_(mainData[hm.ASSIGN_COL - 1]);
+  const student = normalize_(mainData[hm.STUDENT_COL - 1]);
+
+  if (!assignee || !student) return;
+
+  if (hm.STATUS_COL) {
+    mainData[hm.STATUS_COL - 1] = normalizeApplicationStatus_(mainData[hm.STATUS_COL - 1]);
+  }
+
+  let userSh = ss.getSheetByName(assignee);
+  if (!userSh) {
+    userSh = ss.insertSheet(assignee);
+  }
+
+  ensureUserSheetStructure_(main, userSh);
+
+  const found = findRowByNote_(userSh, mainRowIndex);
+  const assignedDate = getAssignedDate_(assignee, mainRowIndex);
+  const userHeaders = userSh.getRange(1, 1, 1, userSh.getLastColumn()).getValues()[0];
+  const rowToWrite = buildUserRowFromMainData_(main, userHeaders, mainData, assignedDate);
+
+  let targetRow = found > 1 ? found : userSh.getLastRow() + 1;
+
+  if (found > 1) {
+    const assignedDateCol = findAssignedDateCol_(userSh);
+    if (assignedDateCol > 0) {
+      const existingAssignedDate = userSh.getRange(found, assignedDateCol).getValue();
+      if (existingAssignedDate) {
+        rowToWrite[assignedDateCol - 1] = existingAssignedDate;
+      }
+    }
+  } else {
+    rowToWrite[0] = targetRow - 1;
+  }
+
+  userSh.getRange(targetRow, 1, 1, rowToWrite.length).setValues([rowToWrite]);
+  userSh.getRange(targetRow, 1).setNote(`MAIN_ROW:${mainRowIndex}`);
+
+  if (found <= 1) {
+    const uni = hm.UNI_COL ? mainData[hm.UNI_COL - 1] : "N/A";
+    const url = `${ss.getUrl()}#gid=${userSh.getSheetId()}`;
+    sendUnifiedNotifications_(assignee, student, uni, url);
+  }
+}
+
+/**
+ * Clear old status validations from all sheets before sync
+ */
+function clearAllStatusValidationsFast_() {
+  const ss = SpreadsheetApp.getActive();
+  const sheets = ss.getSheets();
+
+  sheets.forEach(sh => {
+    const name = sh.getName();
+    if (name === CONFIG.DASHBOARD_SHEET) return;
+
+    const statusCol = findStatusCol_(sh);
+    const lastRow = sh.getLastRow();
+
+    if (!statusCol || lastRow < 2) return;
+    sh.getRange(2, statusCol, lastRow - 1, 1).clearDataValidations();
+  });
+}
+
+/**
+ * SAFE manual sync
+ * does not auto-delete
+ */
+function syncAllRowsManual() {
+  const ss = SpreadsheetApp.getActive();
+  const main = ss.getSheetByName(CONFIG.MAIN_SHEET);
+  if (!main) return;
+
+  ensureHeadersAndValidation_();
+  clearAllStatusValidationsFast_();
+
+  const hm = getHeaderMap_(main);
+  const lastRow = main.getLastRow();
+  if (lastRow < 2) return;
+
+  const fullData = main.getRange(2, 1, lastRow - 1, hm.lastCol).getValues();
+
+  for (let i = 0; i < fullData.length; i++) {
+    const row = fullData[i];
+    const assignee = normalize_(row[hm.ASSIGN_COL - 1]);
+    const student = normalize_(row[hm.STUDENT_COL - 1]);
+    const mainRowIdx = i + 2;
+
+    if (!assignee || !student) continue;
+    syncMainRowToUser_(ss, hm, mainRowIdx);
+  }
+
+  applyApplicationStatusRules_(main, hm.STATUS_COL);
+
+  const sheets = ss.getSheets();
+  sheets.forEach(sh => {
+    const name = sh.getName();
+    if (
+      name === CONFIG.MAIN_SHEET ||
+      name === CONFIG.DASHBOARD_SHEET ||
+      name === CONFIG.APPROVED_SHEET
+    ) return;
+
+    applyApplicationStatusRules_(sh, findStatusCol_(sh));
+  });
+
+  ss.toast("✅ Manual sync completed.");
+}
+
+/**
+ * Ensure headers and validation
+ */
+function ensureHeadersAndValidation_() {
+  const ss = SpreadsheetApp.getActive();
+  const main = ss.getSheetByName(CONFIG.MAIN_SHEET);
+  if (!main) return;
+
+  renameStatusHeaderIfNeeded_(main);
+
+  const sheets = ss.getSheets();
+  sheets.forEach(sh => {
+    const name = sh.getName();
+    if (
+      name === CONFIG.MAIN_SHEET ||
+      name === CONFIG.DASHBOARD_SHEET ||
+      name === CONFIG.APPROVED_SHEET
+    ) return;
+
+    ensureUserSheetStructure_(main, sh);
+  });
+
+  const hm = getHeaderMap_(main);
+  applyApplicationStatusRules_(main, hm.STATUS_COL);
+}
+
+/**
+ * Rename GS Status header
+ */
+function renameStatusHeaderIfNeeded_(sheet) {
+  const lastCol = sheet.getLastColumn();
+  if (lastCol < 1) return;
+
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  for (let i = 0; i < headers.length; i++) {
+    const h = normalizeHeader_(headers[i]);
+    if (h === "gs status") {
+      sheet.getRange(1, i + 1).setValue("Application status");
+    }
+  }
+}
+
+/**
+ * Ensure user sheet structure
+ */
+function ensureUserSheetStructure_(mainSheet, userSheet) {
+  const mainHeadersRaw = mainSheet.getRange(1, 1, 1, mainSheet.getLastColumn()).getValues()[0];
+  const mainHeaders = mainHeadersRaw.map(h => {
+    const x = normalize_(h);
+    return normalizeHeader_(x) === "gs status" ? "Application status" : x;
+  });
+
+  const requiredHeaders = [...mainHeaders];
+  if (!requiredHeaders.some(h => normalizeHeader_(h) === "assigned date")) {
+    requiredHeaders.push("Assigned Date");
+  }
+
+  const userLastRow = userSheet.getLastRow();
+  const userLastCol = Math.max(userSheet.getLastColumn(), 1);
+
+  if (userLastRow === 0) {
+    userSheet.getRange(1, 1, 1, requiredHeaders.length)
+      .setValues([requiredHeaders])
+      .setFontWeight("bold");
+    return;
+  }
+
+  let existingHeaders = userSheet.getRange(1, 1, 1, userLastCol).getValues()[0].map(normalize_);
+
+  existingHeaders.forEach((header, i) => {
+    if (normalizeHeader_(header) === "gs status") {
+      userSheet.getRange(1, i + 1).setValue("Application status").setFontWeight("bold");
+      existingHeaders[i] = "Application status";
+    }
+  });
+
+  const existingNormalized = existingHeaders.map(normalizeHeader_);
+
+  requiredHeaders.forEach(header => {
+    const key = normalizeHeader_(header);
+    if (!existingNormalized.includes(key)) {
+      const newCol = userSheet.getLastColumn() + 1;
+      userSheet.getRange(1, newCol).setValue(header).setFontWeight("bold");
+      existingHeaders.push(header);
+      existingNormalized.push(key);
+    }
+  });
+}
+
+/**
+ * Build row based on user headers
+ */
+function buildUserRowFromMainData_(mainSheet, userHeaders, mainData, assignedDate) {
+  const mainHeadersRaw = mainSheet.getRange(1, 1, 1, mainSheet.getLastColumn()).getValues()[0];
+  const mainHeaders = mainHeadersRaw.map(h => {
+    const x = normalize_(h);
+    return normalizeHeader_(x) === "gs status" ? "Application status" : x;
+  });
+
+  const mainMap = {};
+  mainHeaders.forEach((h, i) => {
+    mainMap[normalizeHeader_(h)] = mainData[i];
+  });
+
+  return userHeaders.map((header, idx) => {
+    const key = normalizeHeader_(header);
+    if (idx === 0) return "";
+    if (key === "assigned date") return assignedDate;
+    return mainMap[key] !== undefined ? mainMap[key] : "";
+  });
+}
+
+/**
+ * Header map
+ */
+function getHeaderMap_(sheet) {
+  const v = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const h = v.map(i => normalizeHeader_(i));
+
+  return {
+    lastCol: v.length,
+    headersOriginal: v.map(x => normalizeHeader_(x) === "gs status" ? "Application status" : x),
+    ASSIGN_COL: findHeaderIndex_(h, ["assign"]),
+    STUDENT_COL: findHeaderIndex_(h, ["student name", "student"]),
+    STATUS_COL: findHeaderIndex_(h, ["application status", "gs status", "status"]),
+    UNI_COL: findHeaderIndex_(h, ["university"])
+  };
+}
+
+function findHeaderIndex_(headers, keywords) {
+  for (let i = 0; i < headers.length; i++) {
+    if (keywords.includes(headers[i])) return i + 1;
+  }
+  for (let i = 0; i < headers.length; i++) {
+    if (keywords.some(k => headers[i].includes(k))) return i + 1;
+  }
+  return 0;
+}
+
+/**
+ * Apply dropdown + colors
+ */
+function applyApplicationStatusRules_(sheet, statusColIndex) {
+  if (!statusColIndex) return;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  const colLetter = columnToLetter_(statusColIndex);
+  const fullRange = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn());
+
+  const statusRules = Object.entries(APPLICATION_STATUS_COLORS).map(([status, color]) =>
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied(`=$${colLetter}2="${status}"`)
+      .setBackground(color)
+      .setRanges([fullRange])
+      .build()
+  );
+
+  sheet.setConditionalFormatRules(statusRules);
+
+  const statusRange = sheet.getRange(2, statusColIndex, lastRow - 1, 1);
+  statusRange.clearDataValidations();
+  statusRange.setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(APPLICATION_STATUS_OPTIONS, true)
+      .setAllowInvalid(true)
+      .build()
+  );
+}
+
+function normalizeApplicationStatus_(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return raw;
+
+  const v = raw.toLowerCase().replace(/\s+/g, " ").trim();
+
+  const map = {
+    "gs rejected": "GS Rejected",
+    "gs approved": "GS approved",
+    "gs document pending": "GS document pending",
+    "gs onhold": "GS onhold",
+    "gs on hold": "GS onhold",
+    "gs submitted": "GS submitted",
+    "gs additional document request": "GS additional document request",
+    "in review": "In Review",
+    "refund requested": "Refund Requested",
+    "visa refused": "Visa Refused",
+    "visa granted": "Visa Granted",
+    "visa lodged": "Visa Lodged",
+    "coe requested": "CoE Requested",
+    "coe approved": "CoE Approved"
+  };
+
+  return map[v] || raw;
+}
+
+function normalizeHeader_(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function getAssignedDate_(user, mainRowIndex) {
+  const p = PropertiesService.getScriptProperties();
+  const key = `ASSIGNED_DATE__${normalize_(user).toLowerCase()}__${mainRowIndex}`;
+
+  let d = p.getProperty(key);
+  if (!d) {
+    d = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+    p.setProperty(key, d);
+  }
+
+  return d;
+}
+
+function findAssignedDateCol_(sheet) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  for (let i = 0; i < headers.length; i++) {
+    if (normalizeHeader_(headers[i]) === "assigned date") return i + 1;
+  }
+  return 0;
+}
+
+function findStatusCol_(sheet) {
+  const lastCol = sheet.getLastColumn();
+  if (lastCol < 1) return 0;
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(normalizeHeader_);
+  return findHeaderIndex_(headers, ["application status", "gs status", "status"]);
+}
+
+function renumberSerials_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  const vals = Array.from({ length: lastRow - 1 }, (_, i) => [i + 1]);
+  sheet.getRange(2, 1, lastRow - 1, 1).setValues(vals);
+}
+
+function findRowByNote_(sheet, mainRowIndex) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 0;
+
+  const notes = sheet.getRange(2, 1, lastRow - 1, 1).getNotes();
+  const target = `MAIN_ROW:${mainRowIndex}`;
+
+  for (let i = 0; i < notes.length; i++) {
+    if (notes[i][0] === target) return i + 2;
+  }
+  return 0;
+}
+
+function columnToLetter_(column) {
+  let temp, letter = "";
+  while (column > 0) {
+    temp = (column - 1) % 26;
+    letter = String.fromCharCode(65 + temp) + letter;
+    column = (column - temp - 1) / 26;
+  }
+  return letter;
+}
+
+function normalize_(v) {
+  return String(v || "").trim();
+}
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("🚀 GS System")
+    .addItem("Force Sync All", "syncAllRowsManual")
+    .addItem("Re-Install", "install")
+    .addToUi();
+}
+
+function getRecipientEmail(user) {
+  const name = user.trim().toLowerCase();
+  if (name === "bijay") return "au@studyinfocentre.com";
+  if (name.includes("manjita")) return "manjita.rajthala@learnsicabroad.com";
+
+  const parts = user.trim().split(/\s+/);
+  return parts.length > 1
+    ? `${parts[0].toLowerCase()}.${parts[parts.length - 1].toLowerCase()}@studyinfocentre.com`
+    : `${parts[0].toLowerCase()}@studyinfocentre.com`;
+}
+
+function sendUnifiedNotifications_(user, student, university, sheetUrl) {
+  const recipientEmail = getRecipientEmail(user);
+  const header = "🔔 New Task Assigned | Application review";
+  const content = `*${header}*\n\nAssignee: ${user}\nStudent: ${student}\nUniversity: ${university || "N/A"}\n\nLink: ${sheetUrl}`;
+
+  if (CONFIG.ENABLE_EMAIL) {
+    try {
+      MailApp.sendEmail(recipientEmail, header, content.replace(/\*/g, ""));
+    } catch (e) {}
+  }
+
+  if (CONFIG.ENABLE_CHAT) {
+    try {
+      UrlFetchApp.fetch(CONFIG.CHAT_WEBHOOK_URL, {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify({ text: content })
+      });
+    } catch (e) {}
+  }
+}

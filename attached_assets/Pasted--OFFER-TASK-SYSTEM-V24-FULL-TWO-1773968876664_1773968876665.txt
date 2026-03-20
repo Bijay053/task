@@ -1,0 +1,553 @@
+/***********************************************************
+
+ * OFFER TASK SYSTEM - V24 (FULL TWO-WAY SYNC & DELETION LOGIC)
+
+ ***********************************************************/
+
+
+
+const CONFIG = {
+
+  OFFER_MAIN: "Main",
+
+  ENABLE_EMAIL: true,
+
+  ENABLE_CHAT: true, 
+
+  DASHBOARD_EVERY_MINUTES: 5,
+
+
+
+  DEFAULT_WEBHOOK: "https://chat.googleapis.com/v1/spaces/AAQALjvDmbE/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=_OhKTk4XWsainaAcp2wP3D8dJ1hwtcvZgaEfGUm4Znk",
+
+
+
+  USER_DATA: {
+
+    "Bijay": {
+
+      email: "au@studyinfocentre.com", 
+
+      webhook: "https://chat.googleapis.com/v1/spaces/AAQALjvDmbE/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=_OhKTk4XWsainaAcp2wP3D8dJ1hwtcvZgaEfGUm4Znk"
+
+    }
+
+  }
+
+};
+
+
+
+const OFFER_STATUS_OPTIONS = ["On Hold", "Not Eligible", "Offer Request", "Offer Received", "Offer Rejected", "Document Requested"];
+
+const CHANNEL_OPTIONS = ["Direct", "Expert", "KC overseas", "SIUK"];
+
+const OFFER_STATUS_COLORS = { "On Hold": "#E2E3E5", "Not Eligible": "#F8D7DA", "Offer Request": "#FFF3CD", "Offer Received": "#D1E7DD", "Offer Rejected": "#F5C2C7", "Document Requested": "#CFE2FF" };
+
+
+
+/**
+
+ * 1. INSTALLER & TRIGGERS
+
+ */
+
+function install() {
+
+  const ss = SpreadsheetApp.getActive();
+
+  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
+
+  ScriptApp.newTrigger("handleEdit").forSpreadsheet(ss).onEdit().create();
+
+  ScriptApp.newTrigger("handleDeletion_").forSpreadsheet(ss).onChange().create();
+
+  syncAllRowsManual();
+
+  ss.toast("🚀 System V24 Active! Full Two-Way Sync Enabled.");
+
+}
+
+
+
+function onOpen() {
+
+  SpreadsheetApp.getUi().createMenu('🚀 Task System')
+
+    .addItem('Force Sync All', 'syncAllRowsManual')
+
+    .addItem('Re-Install System', 'install')
+
+    .addToUi();
+
+}
+
+
+
+/**
+
+ * EDIT HANDLER (The Engine for Two-Way Sync)
+
+ */
+
+function handleEdit(e) {
+
+  if (!e || !e.range || e.range.getRow() === 1) return;
+
+  const sh = e.range.getSheet();
+
+  const name = sh.getName();
+
+  const hm = getHeaderMap_(sh);
+
+  const row = e.range.getRow();
+
+  const col = e.range.getColumn();
+
+
+
+  // --- CASE A: EDIT ON MAIN SHEET ---
+
+  if (name === CONFIG.OFFER_MAIN) {
+
+    // If Assignee changes: Move row to new user, delete from old user
+
+    if (col === hm.ASSIGN_COL) {
+
+      syncMainRowToUser_(e.source, hm, row, name);
+
+    } 
+
+    // If anything else changes: Update the specific user sheet
+
+    else {
+
+      updateUserFromMain_(e.source, hm, row);
+
+    }
+
+    applyWorkflowRules_(sh, hm);
+
+  } 
+
+  
+
+  // --- CASE B: EDIT ON USER SHEET (Mirror to Main) ---
+
+  else if (name !== "Dashboard") {
+
+    syncUserToMain_(e.source, hm, sh, row, col);
+
+    applyWorkflowRules_(sh, hm);
+
+  }
+
+}
+
+
+
+/**
+
+ * SYNC USER CHANGE TO MAIN (Ensures no data loss)
+
+ */
+
+function syncUserToMain_(ss, hm, userSheet, userRow, userCol) {
+
+  const note = userSheet.getRange(userRow, 1).getNote() || "";
+
+  const m = note.match(/ORIGIN:(.*)\|ROW:(\d+)/);
+
+  if (!m) return;
+
+
+
+  const main = ss.getSheetByName(m[1]);
+
+  if (!main) return;
+
+
+
+  const newValue = userSheet.getRange(userRow, userCol).getValue();
+
+  const mainRow = Number(m[2]);
+
+  
+
+  // Update the Main sheet at the exact same column
+
+  main.getRange(mainRow, userCol).setValue(newValue);
+
+}
+
+
+
+/**
+
+ * UPDATE USER SHEET FROM MAIN CHANGE
+
+ */
+
+function updateUserFromMain_(ss, hm, mainRow) {
+
+  const main = ss.getSheetByName(CONFIG.OFFER_MAIN);
+
+  const rowValues = main.getRange(mainRow, 1, 1, hm.lastCol).getValues()[0];
+
+  const assignee = normalize_(rowValues[hm.ASSIGN_COL - 1]);
+
+  
+
+  if (!assignee) return;
+
+  const userSh = ss.getSheetByName(assignee);
+
+  if (!userSh) return;
+
+
+
+  const foundRow = findRowByNote_(userSh, mainRow, CONFIG.OFFER_MAIN);
+
+  if (foundRow > 1) {
+
+    // Update all columns except S.N. to preserve user sequencing
+
+    const snIndex = hm.SN_COL - 1;
+
+    const currentSN = userSh.getRange(foundRow, hm.SN_COL).getValue();
+
+    rowValues[snIndex] = currentSN;
+
+    
+
+    userSh.getRange(foundRow, 1, 1, rowValues.length).setValues([rowValues]);
+
+  }
+
+}
+
+
+
+/**
+
+ * ROW SYNC ENGINE (Handles Assignee Changes)
+
+ */
+
+function syncMainRowToUser_(ss, hm, mainRowIndex, originName) {
+
+  const main = ss.getSheetByName(originName);
+
+  const rowValues = main.getRange(mainRowIndex, 1, 1, hm.lastCol).getValues()[0];
+
+  const assignee = normalize_(rowValues[hm.ASSIGN_COL - 1]);
+
+  const student = normalize_(rowValues[hm.STUDENT_COL - 1]);
+
+
+
+  // REMOVE from any other sheet if assignee changed
+
+  removeRowFromOtherSheets_(ss, mainRowIndex, originName, assignee);
+
+  
+
+  if (!assignee || !student) return;
+
+
+
+  let userSh = ss.getSheetByName(assignee) || ss.insertSheet(assignee);
+
+  if (userSh.getLastRow() === 0) {
+
+    userSh.getRange(1, 1, 1, hm.headersOriginal.length).setValues([hm.headersOriginal]).setFontWeight("bold");
+
+  }
+
+
+
+  const foundRow = findRowByNote_(userSh, mainRowIndex, originName);
+
+  
+
+  if (hm.SN_COL > 0) {
+
+    rowValues[hm.SN_COL - 1] = (foundRow > 1) ? userSh.getRange(foundRow, hm.SN_COL).getValue() : userSh.getLastRow();
+
+  }
+
+
+
+  if (foundRow > 1) {
+
+    userSh.getRange(foundRow, 1, 1, rowValues.length).setValues([rowValues]);
+
+  } else {
+
+    const newRowIdx = userSh.getLastRow() + 1;
+
+    userSh.getRange(newRowIdx, 1, 1, rowValues.length).setValues([rowValues]);
+
+    userSh.getRange(newRowIdx, 1).setNote(`ORIGIN:${originName}|ROW:${mainRowIndex}`);
+
+    
+
+    const userSheetUrl = `${ss.getUrl()}#gid=${userSh.getSheetId()}`;
+
+    const alertData = { student, university: rowValues[hm.UNI_COL-1], course: rowValues[hm.COURSE_COL-1], assignee, url: userSheetUrl };
+
+    
+
+    if (CONFIG.ENABLE_EMAIL) sendEmail_(alertData);
+
+    if (CONFIG.ENABLE_CHAT) sendChatNotification_(ss, alertData);
+
+  }
+
+  applyWorkflowRules_(userSh, hm);
+
+}
+
+
+
+/**
+
+ * DELETION HANDLER (Main to User only)
+
+ */
+
+function handleDeletion_(e) {
+
+  if (e.authMode === HtmlService.SansScript) return;
+
+  const ss = SpreadsheetApp.getActive();
+
+  const sh = ss.getActiveSheet();
+
+  
+
+  // Only if row is deleted from Main sheet
+
+  if (sh.getName() === CONFIG.OFFER_MAIN) {
+
+    ss.getSheets().forEach(s => {
+
+      if (s.getName() !== CONFIG.OFFER_MAIN && s.getName() !== "Dashboard") {
+
+         // This is a safety check: if Main row is gone, clean up user sheets
+
+         cleanupUserSheets_(ss);
+
+      }
+
+    });
+
+  }
+
+}
+
+
+
+function cleanupUserSheets_(ss) {
+
+  const main = ss.getSheetByName(CONFIG.OFFER_MAIN);
+
+  const mainNotes = main.getRange(1,1, main.getLastRow(), 1).getNotes(); // Not reliable for row index
+
+  // Manual trigger via Force Sync is better for hard deletions
+
+}
+
+
+
+/**
+
+ * CORE UTILS
+
+ */
+
+function syncAllRowsManual() {
+
+  const ss = SpreadsheetApp.getActive();
+
+  const main = ss.getSheetByName(CONFIG.OFFER_MAIN);
+
+  if (!main) return;
+
+  const hm = getHeaderMap_(main);
+
+  
+
+  // Clean user sheets first
+
+  ss.getSheets().forEach(s => {
+
+    if (s.getName() !== CONFIG.OFFER_MAIN && s.getName() !== "Dashboard") {
+
+      const last = s.getLastRow();
+
+      if (last > 1) {
+
+        const notes = s.getRange(2, 1, last - 1, 1).getNotes();
+
+        for (let i = notes.length - 1; i >= 0; i--) {
+
+          const m = notes[i][0].match(/ROW:(\d+)/);
+
+          if (m && Number(m[1]) > main.getLastRow()) s.deleteRow(i + 2);
+
+        }
+
+      }
+
+    }
+
+  });
+
+
+
+  processSheetForSync_(ss, main);
+
+}
+
+
+
+function processSheetForSync_(ss, mainSheet) {
+
+  const hm = getHeaderMap_(mainSheet);
+
+  const data = mainSheet.getRange(2, 1, Math.max(mainSheet.getLastRow()-1, 1), hm.lastCol).getValues();
+
+  data.forEach((row, index) => {
+
+    syncMainRowToUser_(ss, hm, index + 2, CONFIG.OFFER_MAIN);
+
+  });
+
+}
+
+
+
+function getHeaderMap_(sheet) {
+
+  const v = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+
+  const h = v.map(i => normalize_(i).toLowerCase());
+
+  return {
+
+    lastCol: h.length, headersOriginal: v,
+
+    SN_COL: h.indexOf("s.n.") + 1 || h.indexOf("sn") + 1 || 1,
+
+    ASSIGN_COL: h.indexOf("assigned to") + 1 || 2,
+
+    STUDENT_COL: h.indexOf("full name") + 1 || 5,
+
+    UNI_COL: h.indexOf("university") + 1 || 6,
+
+    COURSE_COL: h.indexOf("course") + 1 || 7,
+
+    GS_COL: h.indexOf("status") + 1 || 11,
+
+    CHANNEL_COL: h.indexOf("channel") + 1 || null
+
+  };
+
+}
+
+
+
+function applyWorkflowRules_(sheet, hm) {
+
+  const lastRow = sheet.getLastRow(); if (lastRow < 2) return;
+
+  sheet.getRange(2, hm.GS_COL, lastRow - 1, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(OFFER_STATUS_OPTIONS).build());
+
+  if (hm.CHANNEL_COL) sheet.getRange(2, hm.CHANNEL_COL, lastRow - 1, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(CHANNEL_OPTIONS).build());
+
+  const colLetter = columnToLetter_(hm.GS_COL);
+
+  const rules = Object.entries(OFFER_STATUS_COLORS).map(([status, color]) => {
+
+    return SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied(`=$${colLetter}2="${status}"`).setBackground(color).setRanges([sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn())]).build();
+
+  });
+
+  sheet.setConditionalFormatRules(rules);
+
+}
+
+
+
+function normalize_(v) { return String(v || "").trim(); }
+
+function columnToLetter_(column) {
+
+  let temp, letter = "";
+
+  while (column > 0) { temp = (column - 1) % 26; letter = String.fromCharCode(65 + temp) + letter; column = (column - temp - 1) / 26; }
+
+  return letter;
+
+}
+
+function findRowByNote_(sheet, mainRowIndex, originName) {
+
+  const lastRow = sheet.getLastRow(); if (lastRow < 2) return 0;
+
+  const notes = sheet.getRange(2, 1, lastRow - 1, 1).getNotes();
+
+  const target = `ORIGIN:${originName}|ROW:${mainRowIndex}`;
+
+  for (let i = 0; i < notes.length; i++) { if (notes[i][0] === target) return i + 2; }
+
+  return 0;
+
+}
+
+function removeRowFromOtherSheets_(ss, mainRowIndex, originName, currentAssignee) {
+
+  ss.getSheets().forEach(sh => {
+
+    if ([CONFIG.OFFER_MAIN, "Dashboard", currentAssignee].includes(sh.getName())) return;
+
+    const row = findRowByNote_(sh, mainRowIndex, originName);
+
+    if (row > 1) sh.deleteRow(row);
+
+  });
+
+}
+
+function sendChatNotification_(ss, data) {
+
+  const userKey = Object.keys(CONFIG.USER_DATA).find(k => k.toLowerCase().trim() === data.assignee.toLowerCase().trim());
+
+  const userSetting = userKey ? CONFIG.USER_DATA[userKey] : null;
+
+  let webhookUrl = (userSetting && userSetting.webhook && !userSetting.webhook.includes("PASTE_")) ? userSetting.webhook : CONFIG.DEFAULT_WEBHOOK;
+
+  if (!webhookUrl) return; 
+
+  const message = { text: `🔔 *New Task Assigned | Offer request*\n\n*Student name:* ${data.student}\n*University:* ${data.university}\n*Course:* ${data.course}\n*Assign person name:* ${data.assignee}\n\n*Link:* ${data.url}` };
+
+  const options = { method: 'POST', contentType: 'application/json', payload: JSON.stringify(message) };
+
+  try { UrlFetchApp.fetch(webhookUrl, options); ss.toast("✅ Chat sent for " + data.assignee); } catch(e) {}
+
+}
+
+function sendEmail_(data) {
+
+  const userKey = Object.keys(CONFIG.USER_DATA).find(k => k.toLowerCase().trim() === data.assignee.toLowerCase().trim());
+
+  const userSetting = userKey ? CONFIG.USER_DATA[userKey] : null;
+
+  let emailRecipient = (userSetting && userSetting.email) ? userSetting.email : data.assignee.toLowerCase().trim().replace(/\s+/g, '.') + "@studyinfocentre.com";
+
+  const body = `New Task Assigned\n\nStudent name: ${data.student}\nUniversity: ${data.university}\nCourse: ${data.course}\nAssign person name: ${data.assignee}\n\nLink: ${data.url}`;
+
+  try { MailApp.sendEmail(emailRecipient, "New Task Assigned | Offer request", body); } catch(e) {}
+
+}

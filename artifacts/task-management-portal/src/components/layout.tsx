@@ -120,9 +120,11 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-background/50 p-4 lg:p-8">
-          <div className="max-w-[1600px] mx-auto">
-            {children}
+        <main className="flex-1 overflow-hidden bg-background/50 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-auto p-4 lg:p-8">
+            <div className="max-w-[1600px] mx-auto h-full">
+              {children}
+            </div>
           </div>
         </main>
       </div>
