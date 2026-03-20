@@ -256,6 +256,30 @@ class UserDeptPermission(Base):
     __table_args__ = (UniqueConstraint("user_id", "department", name="uq_user_dept_perm"),)
 
 
+class Role(Base):
+    """Admin-managed custom roles (fully manual, no defaults)."""
+    __tablename__ = "task_roles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RolePermission(Base):
+    """Permissions per role per department — the ONLY source of truth for access."""
+    __tablename__ = "task_role_permissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    role = Column(String(100), nullable=False)
+    department = Column(String(20), nullable=False)
+    can_view = Column(Boolean, default=False)
+    can_edit = Column(Boolean, default=False)
+    can_delete = Column(Boolean, default=False)
+    can_upload = Column(Boolean, default=False)
+
+    __table_args__ = (UniqueConstraint("role", "department", name="uq_role_dept_perm"),)
+
+
 class ApplicationFollower(Base):
     """Staff members who follow (watch) an application — they can view it in My Tasks."""
     __tablename__ = "task_application_followers"

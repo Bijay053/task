@@ -170,9 +170,16 @@ export interface AppStatusCreate { department: string; name: string; text_color?
 export interface AppStatusUpdate { name?: string; text_color?: string; bg_color?: string; is_active?: boolean; }
 export interface AppStatusReorder { ordered_ids: number[]; }
 
-/** Department permissions */
+/** Department permissions (legacy user-level) */
 export interface UserDeptPermOut { id: number; user_id: number; department: string; can_view: boolean; can_edit: boolean; can_delete: boolean; can_upload: boolean; }
 export interface UserDeptPermUpdate { can_view: boolean; can_edit: boolean; can_delete: boolean; can_upload: boolean; }
+
+/** Dynamic roles */
+export interface RoleOut { id: number; name: string; }
+export interface RoleCreate { name: string; }
+export interface RoleUpdate { name: string; }
+export interface RolePermOut { id: number; role: string; department: string; can_view: boolean; can_edit: boolean; can_delete: boolean; can_upload: boolean; }
+export interface RolePermUpdate { can_view: boolean; can_edit: boolean; can_delete: boolean; can_upload: boolean; }
 
 /** Performance reports */
 export interface StaffPerformance {

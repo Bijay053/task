@@ -1,5 +1,6 @@
 """
-Department-level permission management per user and per role.
+Role-based permission management — fully manual, no defaults or auto-apply.
+Permissions are stored per-role, not per-user.
 """
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,33 +20,33 @@ def require_admin(current_user: models.User = Depends(get_current_user)):
     return current_user
 
 
-@router.get("/user/{user_id}", response_model=List[schemas.UserDeptPermOut])
-def get_user_permissions(
-    user_id: int,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
-):
-    if current_user.role not in ("admin", "manager") and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Forbidden")
-    return db.query(models.UserDeptPermission).filter(
-        models.UserDeptPermission.user_id == user_id
-    ).all()
-
-
-@router.put("/user/{user_id}/{department}", response_model=schemas.UserDeptPermOut)
-def set_user_permission(
-    user_id: int,
-    department: str,
-    data: schemas.UserDeptPermUpdate,
+@router.get("/role/{role}", response_model=List[schemas.RolePermOut])
+def get_role_permissions(
+    role: str,
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    perm = db.query(models.UserDeptPermission).filter(
-        models.UserDeptPermission.user_id == user_id,
-        models.UserDeptPermission.department == department,
+    """Return stored permissions for a role across all departments."""
+    return db.query(models.RolePermission).filter(
+        models.RolePermission.role == role
+    ).all()
+
+
+@router.put("/role/{role}/{department}", response_model=schemas.RolePermOut)
+def set_role_permission(
+    role: str,
+    department: str,
+    data: schemas.RolePermUpdate,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(require_admin),
+):
+    """Set permissions for a role in a department. No batch-apply to users."""
+    perm = db.query(models.RolePermission).filter(
+        models.RolePermission.role == role,
+        models.RolePermission.department == department,
     ).first()
     if not perm:
-        perm = models.UserDeptPermission(user_id=user_id, department=department)
+        perm = models.RolePermission(role=role, department=department)
         db.add(perm)
     perm.can_view = data.can_view
     perm.can_edit = data.can_edit
@@ -54,53 +55,3 @@ def set_user_permission(
     db.commit()
     db.refresh(perm)
     return perm
-
-
-@router.get("/role/{role}", response_model=List[schemas.UserDeptPermOut])
-def get_role_permissions(
-    role: str,
-    db: Session = Depends(get_db),
-    _: models.User = Depends(require_admin),
-):
-    """Return permissions for any one user of the given role (as a representative sample)."""
-    user = db.query(models.User).filter(models.User.role == role).first()
-    if not user:
-        return []
-    return db.query(models.UserDeptPermission).filter(
-        models.UserDeptPermission.user_id == user.id
-    ).all()
-
-
-@router.put("/role/{role}/{department}", response_model=schemas.UserDeptPermOut)
-def set_role_permission(
-    role: str,
-    department: str,
-    data: schemas.UserDeptPermUpdate,
-    db: Session = Depends(get_db),
-    _: models.User = Depends(require_admin),
-):
-    """Apply the same permission settings to ALL users of a given role."""
-    users = db.query(models.User).filter(models.User.role == role).all()
-    last_perm = None
-    for user in users:
-        perm = db.query(models.UserDeptPermission).filter(
-            models.UserDeptPermission.user_id == user.id,
-            models.UserDeptPermission.department == department,
-        ).first()
-        if not perm:
-            perm = models.UserDeptPermission(user_id=user.id, department=department)
-            db.add(perm)
-        perm.can_view = data.can_view
-        perm.can_edit = data.can_edit
-        perm.can_delete = data.can_delete
-        perm.can_upload = data.can_upload
-        last_perm = perm
-    db.commit()
-    if last_perm:
-        db.refresh(last_perm)
-        return last_perm
-    return schemas.UserDeptPermOut(
-        id=0, user_id=0, department=department,
-        can_view=data.can_view, can_edit=data.can_edit,
-        can_delete=data.can_delete, can_upload=data.can_upload,
-    )

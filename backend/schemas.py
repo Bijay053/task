@@ -362,6 +362,44 @@ class UserDeptPermUpdate(BaseModel):
     can_upload: bool = False
 
 
+# ─── Roles (dynamic, admin-managed) ────────────────────────────────────────────
+
+class RoleOut(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class RoleCreate(BaseModel):
+    name: str
+
+
+class RoleUpdate(BaseModel):
+    name: str
+
+
+class RolePermOut(BaseModel):
+    id: int
+    role: str
+    department: str
+    can_view: bool
+    can_edit: bool
+    can_delete: bool
+    can_upload: bool
+
+    class Config:
+        from_attributes = True
+
+
+class RolePermUpdate(BaseModel):
+    can_view: bool = False
+    can_edit: bool = False
+    can_delete: bool = False
+    can_upload: bool = False
+
+
 # ─── Reports ───────────────────────────────────────────────────────────────────
 
 class StaffPerformance(BaseModel):

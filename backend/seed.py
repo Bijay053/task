@@ -21,11 +21,22 @@ def seed_statuses(db):
             print(f"[seed] Seeded {len(defaults)} {department.upper()} statuses")
 
 
+def seed_roles(db):
+    """Seed default roles if none exist."""
+    if db.query(models.Role).count() == 0:
+        default_roles = ["admin", "manager", "team_leader", "agent"]
+        for name in default_roles:
+            db.add(models.Role(name=name))
+        db.commit()
+        print(f"[seed] Seeded {len(default_roles)} default roles")
+
+
 def seed():
     db = SessionLocal()
     try:
-        # Always seed statuses (idempotent)
+        # Always seed statuses and roles (idempotent)
         seed_statuses(db)
+        seed_roles(db)
 
         if db.query(models.User).count() > 0:
             print("Database already seeded, skipping.")

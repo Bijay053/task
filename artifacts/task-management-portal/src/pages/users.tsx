@@ -1,19 +1,18 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   useListUsers, useCreateUser, useUpdateUser,
-  useGetUserPermissions, useSetUserPermission,
-  useGetRolePermissions, useSetRolePermission
+  useGetRolePermissions, useSetRolePermission,
+  useListRoles, useCreateRole, useUpdateRole, useDeleteRole,
 } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Modal, Label, Select } from "@/components/ui-elements";
-import { Plus, Edit2, ShieldAlert, Shield, Users as UsersIcon } from "lucide-react";
+import { Plus, Edit2, ShieldAlert, Shield, Users as UsersIcon, Trash2, Pencil, Check, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 type UsersTab = "team" | "permissions";
-type PermSubTab = "by_role" | "by_user";
 
 const DEPARTMENTS: { key: string; label: string }[] = [
   { key: "gs", label: "GS Department" },
@@ -25,13 +24,6 @@ const PERM_COLS: { key: "can_view" | "can_edit" | "can_upload" | "can_delete"; l
   { key: "can_edit",   label: "EDIT"   },
   { key: "can_upload", label: "UPLOAD" },
   { key: "can_delete", label: "DELETE" },
-];
-
-const ROLES = [
-  { key: "admin",       label: "Admin"       },
-  { key: "manager",     label: "Manager"     },
-  { key: "team_leader", label: "Team Leader" },
-  { key: "agent",       label: "Agent"       },
 ];
 
 function MatrixCheckbox({ checked, onChange }: { checked: boolean; onChange: () => void }) {
@@ -67,7 +59,7 @@ function PermMatrix({
 }) {
   const getPerm = (dept: string) =>
     perms?.find((p: any) => p.department === dept) ||
-    { can_view: true, can_edit: true, can_delete: false, can_upload: false };
+    { can_view: false, can_edit: false, can_delete: false, can_upload: false };
 
   const colAllChecked = (field: "can_view" | "can_edit" | "can_upload" | "can_delete") =>
     DEPARTMENTS.every(d => getPerm(d.key)[field]);
@@ -86,7 +78,7 @@ function PermMatrix({
         <thead>
           <tr className="bg-primary text-white">
             <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider w-56">
-              Module Permission
+              Department / Module
             </th>
             {PERM_COLS.map(col => (
               <th key={col.key} className="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wider">
@@ -130,16 +122,16 @@ function PermMatrix({
   );
 }
 
-function RolePermissionsMatrix() {
+function RolePermissionsPanel({ roles }: { roles: any[] }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [selectedRole, setSelectedRole] = useState<string>(ROLES[0].key);
+  const [selectedRole, setSelectedRole] = useState<string>(roles[0]?.name || "");
   const { data: perms, isLoading } = useGetRolePermissions(selectedRole);
   const setRolePermMut = useSetRolePermission();
 
   const getPerm = (dept: string) =>
     perms?.find((p: any) => p.department === dept) ||
-    { can_view: true, can_edit: true, can_delete: false, can_upload: false };
+    { can_view: false, can_edit: false, can_delete: false, can_upload: false };
 
   const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete") => {
     const p = getPerm(dept);
@@ -156,97 +148,203 @@ function RolePermissionsMatrix() {
         },
       });
       queryClient.invalidateQueries({ queryKey: [`/api/permissions/role/${selectedRole}`] });
-      toast({ title: "Permissions updated", description: `Applied to all ${selectedRole.replace("_", " ")}s.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e.message });
     }
   };
 
-  const roleLabel = ROLES.find(r => r.key === selectedRole)?.label || selectedRole;
+  if (!selectedRole && roles.length > 0) {
+    setSelectedRole(roles[0].name);
+  }
 
   return (
     <div className="space-y-6">
-      {/* Role selector */}
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</Label>
+        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Role</Label>
         <div className="flex flex-wrap gap-2">
-          {ROLES.map(r => (
+          {roles.map(r => (
             <button
-              key={r.key}
+              key={r.id}
               type="button"
-              onClick={() => setSelectedRole(r.key)}
+              onClick={() => setSelectedRole(r.name)}
               className={cn(
                 "px-5 py-2 rounded-lg text-sm font-medium border-2 transition-colors",
-                selectedRole === r.key
+                selectedRole === r.name
                   ? "border-primary bg-primary text-white shadow-sm"
                   : "border-border text-muted-foreground bg-card hover:border-primary/40 hover:text-foreground"
               )}
             >
-              {r.label}
+              {r.name}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Info banner */}
-      <div className="flex items-start gap-3 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs">
-        <Shield className="w-4 h-4 shrink-0 mt-0.5" />
-        <span>
-          These defaults apply to <strong>all {roleLabel}s</strong>.
-          Individual user overrides (set via "By User") always take precedence.
-        </span>
-      </div>
-
-      {/* Matrix */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Shield className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Permissions</span>
+      {selectedRole && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Shield className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Permissions for <span className="text-foreground">{selectedRole}</span>
+            </span>
+          </div>
+          <PermMatrix perms={perms} onToggle={toggle} isLoading={isLoading} />
         </div>
-        <PermMatrix perms={perms} onToggle={toggle} isLoading={isLoading} />
-      </div>
+      )}
+
+      {roles.length === 0 && (
+        <div className="text-center py-12 text-muted-foreground">
+          <Shield className="w-12 h-12 mx-auto mb-3 opacity-20" />
+          <p>No roles yet. Create a role first.</p>
+        </div>
+      )}
     </div>
   );
 }
 
-function UserPermissionsMatrix({ userId, userName }: { userId: number; userName: string }) {
+function RoleManager() {
   const queryClient = useQueryClient();
-  const { data: perms, isLoading } = useGetUserPermissions(userId);
-  const setPermMut = useSetUserPermission();
+  const { toast } = useToast();
+  const { data: roles, isLoading } = useListRoles();
+  const createMut = useCreateRole();
+  const updateMut = useUpdateRole();
+  const deleteMut = useDeleteRole();
 
-  const getPerm = (dept: string) =>
-    perms?.find((p: any) => p.department === dept) ||
-    { can_view: true, can_edit: true, can_delete: false, can_upload: false };
+  const [newRoleName, setNewRoleName] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const newRoleInputRef = useRef<HTMLInputElement>(null);
 
-  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete") => {
-    const p = getPerm(dept);
-    await setPermMut.mutateAsync({
-      userId,
-      department: dept,
-      data: {
-        can_view: p.can_view,
-        can_edit: p.can_edit,
-        can_delete: p.can_delete,
-        can_upload: p.can_upload ?? false,
-        [field]: !p[field],
-      },
-    });
-    queryClient.invalidateQueries({ queryKey: [`/api/permissions/user/${userId}`] });
+  const handleCreate = async () => {
+    const name = newRoleName.trim();
+    if (!name) return;
+    try {
+      await createMut.mutateAsync({ name });
+      queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
+      setNewRoleName("");
+      toast({ title: "Role created", description: `"${name}" added.` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message || e.detail || "Could not create role" });
+    }
+  };
+
+  const handleRename = async (roleId: number) => {
+    const name = editingName.trim();
+    if (!name) return;
+    try {
+      await updateMut.mutateAsync({ roleId, data: { name } });
+      queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setEditingId(null);
+      toast({ title: "Role renamed", description: `Renamed to "${name}".` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message || e.detail || "Could not rename role" });
+    }
+  };
+
+  const handleDelete = async (roleId: number) => {
+    try {
+      await deleteMut.mutateAsync(roleId);
+      queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
+      setDeleteConfirmId(null);
+      toast({ title: "Role deleted" });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Cannot delete", description: e.message || e.detail || "Could not delete role" });
+      setDeleteConfirmId(null);
+    }
   };
 
   return (
-    <div className="space-y-5">
-      <div>
-        <div className="text-base font-semibold">{userName}</div>
-        <div className="text-sm text-muted-foreground mt-0.5">Individual permission overrides for this staff member.</div>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Input
+          ref={newRoleInputRef}
+          value={newRoleName}
+          onChange={e => setNewRoleName(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleCreate()}
+          placeholder="New role name (e.g. GS Staff, Offer Staff)"
+          className="max-w-xs"
+        />
+        <Button onClick={handleCreate} disabled={!newRoleName.trim() || createMut.isPending} size="sm">
+          <Plus className="w-4 h-4 mr-1" />Add Role
+        </Button>
       </div>
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Shield className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Permissions</span>
+
+      {isLoading ? (
+        <div className="text-muted-foreground text-sm">Loading roles...</div>
+      ) : (
+        <div className="rounded-xl border border-border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/40 border-b border-border">
+                <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Role Name</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {roles?.map(role => (
+                <tr key={role.id} className="bg-white hover:bg-slate-50/60">
+                  <td className="px-4 py-3">
+                    {editingId === role.id ? (
+                      <Input
+                        value={editingName}
+                        onChange={e => setEditingName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") handleRename(role.id);
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                        className="max-w-xs h-8 text-sm"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="font-medium">{role.name}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {deleteConfirmId === role.id ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-xs text-destructive font-medium">Delete &quot;{role.name}&quot;?</span>
+                        <Button size="sm" variant="destructive" onClick={() => handleDelete(role.id)} disabled={deleteMut.isPending}>
+                          <Check className="w-3.5 h-3.5 mr-1" />Yes
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setDeleteConfirmId(null)}>
+                          <X className="w-3.5 h-3.5 mr-1" />No
+                        </Button>
+                      </div>
+                    ) : editingId === role.id ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" onClick={() => handleRename(role.id)} disabled={updateMut.isPending}>
+                          <Check className="w-3.5 h-3.5 mr-1" />Save
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
+                          <X className="w-3.5 h-3.5 mr-1" />Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => { setEditingId(role.id); setEditingName(role.name); }}>
+                          <Pencil className="w-3.5 h-3.5 mr-1" />Rename
+                        </Button>
+                        {role.name !== "admin" && (
+                          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(role.id)}>
+                            <Trash2 className="w-3.5 h-3.5 mr-1" />Delete
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {!roles?.length && (
+                <tr>
+                  <td colSpan={2} className="text-center py-8 text-muted-foreground">No roles yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-        <PermMatrix perms={perms} onToggle={toggle} isLoading={isLoading} />
-      </div>
+      )}
     </div>
   );
 }
@@ -254,17 +352,19 @@ function UserPermissionsMatrix({ userId, userName }: { userId: number; userName:
 export default function Users() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: users, isLoading } = useListUsers();
+  const { data: users, isLoading: usersLoading } = useListUsers();
+  const { data: roles } = useListRoles();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<UsersTab>("team");
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [permSubTab, setPermSubTab] = useState<PermSubTab>("by_role");
+  const [permSection, setPermSection] = useState<"matrix" | "roles">("matrix");
 
   const createMut = useCreateUser();
   const updateMut = useUpdateUser();
+  const { toast } = useToast();
 
   const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
+  const isAdmin = user?.role === "admin";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -277,13 +377,17 @@ export default function Users() {
     };
     if (fd.get("password")) data.password = fd.get("password") as string;
 
-    if (editingItem) {
-      await updateMut.mutateAsync({ userId: editingItem.id, data });
-    } else {
-      await createMut.mutateAsync({ data });
+    try {
+      if (editingItem) {
+        await updateMut.mutateAsync({ userId: editingItem.id, data });
+      } else {
+        await createMut.mutateAsync({ data });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setIsModalOpen(false);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message || "Could not save user" });
     }
-    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-    setIsModalOpen(false);
   };
 
   if (!isAdminOrManager) {
@@ -298,14 +402,14 @@ export default function Users() {
     );
   }
 
-  const selectedUser = users?.find(u => u.id === selectedUserId);
-
   const roleColors: Record<string, string> = {
     admin: "bg-purple-100 text-purple-700",
     manager: "bg-indigo-100 text-indigo-700",
     team_leader: "bg-emerald-100 text-emerald-700",
     agent: "bg-slate-100 text-slate-600",
   };
+
+  const getRoleColor = (role: string) => roleColors[role] || "bg-blue-100 text-blue-700";
 
   return (
     <Layout>
@@ -322,7 +426,6 @@ export default function Users() {
           )}
         </div>
 
-        {/* Main tabs */}
         <div className="flex gap-1 border-b border-border shrink-0">
           {[
             { id: "team" as UsersTab, label: "Team Members" },
@@ -338,7 +441,6 @@ export default function Users() {
           ))}
         </div>
 
-        {/* ── Team Members ── */}
         {activeTab === "team" && (
           <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="table-container flex-1 h-full border-0 rounded-none">
@@ -353,7 +455,7 @@ export default function Users() {
                   </tr>
                 </thead>
                 <tbody>
-                  {isLoading ? (
+                  {usersLoading ? (
                     <tr><td colSpan={5} className="text-center py-8">Loading...</td></tr>
                   ) : users?.map(u => (
                     <tr key={u.id}>
@@ -367,8 +469,8 @@ export default function Users() {
                       </td>
                       <td className="text-muted-foreground">{u.email}</td>
                       <td>
-                        <span className={cn("px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider", roleColors[u.role] || "bg-slate-100 text-slate-600")}>
-                          {u.role.replace("_", " ")}
+                        <span className={cn("px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider", getRoleColor(u.role))}>
+                          {u.role.replace(/_/g, " ")}
                         </span>
                       </td>
                       <td>
@@ -377,15 +479,9 @@ export default function Users() {
                         </span>
                       </td>
                       <td className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm"
-                            onClick={() => { setSelectedUserId(u.id); setPermSubTab("by_user"); setActiveTab("permissions"); }}>
-                            <Shield className="w-4 h-4 mr-1" />Permissions
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => { setEditingItem(u); setIsModalOpen(true); }}>
-                            <Edit2 className="w-4 h-4 mr-1" />Edit
-                          </Button>
-                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => { setEditingItem(u); setIsModalOpen(true); }}>
+                          <Edit2 className="w-4 h-4 mr-1" />Edit
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -395,84 +491,58 @@ export default function Users() {
           </Card>
         )}
 
-        {/* ── Role & Permissions ── */}
         {activeTab === "permissions" && (
           <div className="flex flex-col gap-4 flex-1 min-h-0">
-            {/* Sub-tabs */}
+            {/* Section toggle */}
             <div className="flex gap-1 border-b border-border shrink-0">
               {[
-                { id: "by_role" as PermSubTab, label: "By Role", icon: <UsersIcon className="w-4 h-4" /> },
-                { id: "by_user" as PermSubTab, label: "By User", icon: <Shield className="w-4 h-4" /> },
-              ].map(sub => (
-                <button key={sub.id} onClick={() => setPermSubTab(sub.id)}
+                { id: "matrix" as const, label: "Permission Matrix", icon: <Shield className="w-4 h-4" /> },
+                ...(isAdmin ? [{ id: "roles" as const, label: "Manage Roles", icon: <UsersIcon className="w-4 h-4" /> }] : []),
+              ].map(sec => (
+                <button key={sec.id} onClick={() => setPermSection(sec.id)}
                   className={cn(
                     "px-5 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5",
-                    permSubTab === sub.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                    permSection === sec.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
                   )}>
-                  {sub.icon}{sub.label}
+                  {sec.icon}{sec.label}
                 </button>
               ))}
             </div>
 
-            {/* By Role — matrix */}
-            {permSubTab === "by_role" && (
+            {permSection === "matrix" && (
               <Card className="flex-1 p-6 overflow-y-auto">
                 <div className="mb-5">
-                  <h3 className="font-semibold text-base">Role-Based Permissions</h3>
+                  <h3 className="font-semibold text-base">Role Permissions</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Set default permissions for each role. Individual overrides set via "By User" take precedence.
+                    Select a role and manually configure what each role can do. What you set here is final — no automatic defaults or overrides.
                   </p>
                 </div>
-                <RolePermissionsMatrix />
+                {roles && roles.length > 0 ? (
+                  <RolePermissionsPanel roles={roles} />
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Shield className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>No roles found. Go to <strong>Manage Roles</strong> to create roles first.</p>
+                  </div>
+                )}
               </Card>
             )}
 
-            {/* By User — split pane with matrix */}
-            {permSubTab === "by_user" && (
-              <div className="flex gap-5 flex-1 min-h-0">
-                {/* Sidebar */}
-                <Card className="w-60 shrink-0 flex flex-col overflow-hidden">
-                  <div className="p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide border-b">
-                    Select Staff Member
-                  </div>
-                  <div className="flex-1 overflow-y-auto">
-                    {users?.map(u => (
-                      <button key={u.id} onClick={() => setSelectedUserId(u.id)}
-                        className={cn(
-                          "w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-muted/50 transition-colors border-b border-border/50",
-                          selectedUserId === u.id && "bg-primary/5 border-l-2 border-l-primary"
-                        )}>
-                        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">
-                          {u.full_name.charAt(0)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm truncate">{u.full_name}</div>
-                          <div className="text-xs text-muted-foreground truncate capitalize">{u.role.replace("_", " ")}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </Card>
-
-                {/* Matrix panel */}
-                <Card className="flex-1 p-6 overflow-y-auto">
-                  {selectedUser ? (
-                    <UserPermissionsMatrix userId={selectedUser.id} userName={selectedUser.full_name} />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                      <Shield className="w-12 h-12 mb-4 opacity-20" />
-                      <p className="font-medium">Select a staff member</p>
-                      <p className="text-sm mt-1">Choose from the list to manage their permissions.</p>
-                    </div>
-                  )}
-                </Card>
-              </div>
+            {permSection === "roles" && isAdmin && (
+              <Card className="flex-1 p-6 overflow-y-auto">
+                <div className="mb-5">
+                  <h3 className="font-semibold text-base">Manage Roles</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Create, rename, or delete roles. Each user is assigned one role. The <strong>admin</strong> role cannot be deleted.
+                  </p>
+                </div>
+                <RoleManager />
+              </Card>
             )}
           </div>
         )}
       </div>
 
-      {/* Add / Edit User Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? "Edit User" : "New Team Member"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -485,11 +555,10 @@ export default function Users() {
           </div>
           <div className="space-y-2">
             <Label>Role *</Label>
-            <Select name="role" required defaultValue={editingItem?.role || "agent"}>
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="team_leader">Team Leader</option>
-              <option value="agent">Agent</option>
+            <Select name="role" required defaultValue={editingItem?.role || roles?.[0]?.name || ""}>
+              {roles?.map(r => (
+                <option key={r.id} value={r.name}>{r.name.replace(/_/g, " ")}</option>
+              ))}
             </Select>
           </div>
           {editingItem && (

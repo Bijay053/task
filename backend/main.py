@@ -6,7 +6,7 @@ from backend.database import Base, engine
 from backend.routers import (
     auth, users, students, universities, applications,
     dashboard, notifications, statuses, reports, permissions, bulk_upload,
-    agents, dept_settings
+    agents, dept_settings, roles
 )
 
 app = FastAPI(title="Task Management Portal API", version="1.0.0")
@@ -47,3 +47,4 @@ app.include_router(permissions.router, prefix="/api")
 app.include_router(bulk_upload.router, prefix="/api")
 app.include_router(agents.router, prefix="/api")
 app.include_router(dept_settings.router, prefix="/api")
+app.include_router(roles.router, prefix="/api")

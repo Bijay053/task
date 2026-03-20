@@ -66,6 +66,11 @@ import type {
   UserDeptPermUpdate,
   UserOut,
   UserUpdate,
+  RoleOut,
+  RoleCreate,
+  RoleUpdate,
+  RolePermOut,
+  RolePermUpdate,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2551,8 +2556,8 @@ export const useSetUserPermission = <TError = ErrorType<unknown>, TContext = unk
 ): UseMutationResult<Awaited<ReturnType<typeof setUserPermission>>, TError, { userId: number; department: string; data: UserDeptPermUpdate }, TContext> =>
   useMutation({ mutationFn: ({ userId, department, data }) => setUserPermission(userId, department, data, options?.request), ...options?.mutation });
 
-export const getRolePermissions = async (role: string, options?: RequestInit): Promise<UserDeptPermOut[]> =>
-  customFetch<UserDeptPermOut[]>(`/api/permissions/role/${role}`, { ...options, method: "GET" });
+export const getRolePermissions = async (role: string, options?: RequestInit): Promise<RolePermOut[]> =>
+  customFetch<RolePermOut[]>(`/api/permissions/role/${role}`, { ...options, method: "GET" });
 export const getRolePermissionsQueryKey = (role: string) => [`/api/permissions/role/${role}`] as const;
 export const getGetRolePermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getRolePermissions>>, TError = ErrorType<unknown>>(role: string, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getRolePermissions>>, TError, TData>; request?: SecondParameter<typeof customFetch> }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
@@ -2567,11 +2572,11 @@ export function useGetRolePermissions<TData = Awaited<ReturnType<typeof getRoleP
   return query;
 }
 
-export const setRolePermission = async (role: string, department: string, data: UserDeptPermUpdate, options?: RequestInit): Promise<UserDeptPermOut> =>
-  customFetch<UserDeptPermOut>(`/api/permissions/role/${role}/${department}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+export const setRolePermission = async (role: string, department: string, data: RolePermUpdate, options?: RequestInit): Promise<RolePermOut> =>
+  customFetch<RolePermOut>(`/api/permissions/role/${role}/${department}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
 export const useSetRolePermission = <TError = ErrorType<unknown>, TContext = unknown>(
-  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof setRolePermission>>, TError, { role: string; department: string; data: UserDeptPermUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }
-): UseMutationResult<Awaited<ReturnType<typeof setRolePermission>>, TError, { role: string; department: string; data: UserDeptPermUpdate }, TContext> =>
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof setRolePermission>>, TError, { role: string; department: string; data: RolePermUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof setRolePermission>>, TError, { role: string; department: string; data: RolePermUpdate }, TContext> =>
   useMutation({ mutationFn: ({ role, department, data }) => setRolePermission(role, department, data, options?.request), ...options?.mutation });
 
 // ─── Bulk Upload ────────────────────────────────────────────────────────────────
@@ -2782,3 +2787,52 @@ export const useUpdateFollowers = <TError = ErrorType<unknown>, TContext = unkno
     mutationFn: ({ appId, data }) => updateFollowers(appId, data, options?.request),
     ...options?.mutation,
   });
+
+// ─── Roles ────────────────────────────────────────────────────────────────────
+
+export const listRoles = async (options?: RequestInit): Promise<RoleOut[]> =>
+  customFetch<RoleOut[]>(`/api/roles/`, { ...options, method: "GET" });
+
+export const getListRolesQueryKey = () => [`/api/roles`] as const;
+
+export const getListRolesQueryOptions = <TData = Awaited<ReturnType<typeof listRoles>>, TError = ErrorType<unknown>>(
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListRolesQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listRoles>>> = ({ signal }) => listRoles({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData> & { queryKey: QueryKey };
+};
+
+export function useListRoles<TData = Awaited<ReturnType<typeof listRoles>>, TError = ErrorType<unknown>>(
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListRolesQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+}
+
+export const createRole = async (data: RoleCreate, options?: RequestInit): Promise<RoleOut> =>
+  customFetch<RoleOut>(`/api/roles/`, { ...options, method: "POST", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useCreateRole = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof createRole>>, TError, RoleCreate, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof createRole>>, TError, RoleCreate, TContext> =>
+  useMutation({ mutationFn: (data) => createRole(data, options?.request), ...options?.mutation });
+
+export const updateRole = async (roleId: number, data: RoleUpdate, options?: RequestInit): Promise<RoleOut> =>
+  customFetch<RoleOut>(`/api/roles/${roleId}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useUpdateRole = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateRole>>, TError, { roleId: number; data: RoleUpdate }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof updateRole>>, TError, { roleId: number; data: RoleUpdate }, TContext> =>
+  useMutation({ mutationFn: ({ roleId, data }) => updateRole(roleId, data, options?.request), ...options?.mutation });
+
+export const deleteRole = async (roleId: number, options?: RequestInit): Promise<unknown> =>
+  customFetch<unknown>(`/api/roles/${roleId}`, { ...options, method: "DELETE" });
+
+export const useDeleteRole = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteRole>>, TError, number, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof deleteRole>>, TError, number, TContext> =>
+  useMutation({ mutationFn: (roleId) => deleteRole(roleId, options?.request), ...options?.mutation });
