@@ -308,7 +308,7 @@ export function KanbanBoard({
       {/* Board — scrolls horizontally, grows vertically with content */}
       <div
         ref={scrollRef}
-        className="flex gap-3 pb-4 items-start"
+        className="flex gap-3 pb-2 items-start kanban-scroll"
         style={{ overflowX: "auto" }}
         onDragEnd={handleDragEnd}
       >
