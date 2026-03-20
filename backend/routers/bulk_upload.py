@@ -2,8 +2,8 @@
 Bulk upload via XLSX for GS and Offer applications.
 Expected columns:
 
-GS:   Student Name | Country | University | Course | Intake | Status | Agent Name | Agent Email | Submitted Date | Verification | Remarks
-Offer: Student Name | University | Course | Intake | Channel | Status | Agent Name | Agent Email | Offer Applied Date | Offer Received Date | Remarks
+GS:   App ID | Student Name | Country | University | Course | Intake | Status | Agent Name | Agent Email | Submitted Date | Verification | Remarks
+Offer: App ID | Student Name | University | Course | Intake | Channel | Status | Agent Name | Agent Email | Offer Applied Date | Offer Received Date | Remarks
 
 Agent Name / Agent Email → auto-creates External Agent record if not already in the system.
 Assigned To Email → optional internal staff assignment.
@@ -224,8 +224,17 @@ async def bulk_upload(
             )
             assignee = _find_user_by_email(db, handler_email) if handler_email else None
 
+            app_id_val = (
+                cell("app id")
+                or cell("app_id")
+                or cell("application id")
+                or cell("appid")
+                or cell("ref")
+            )
+
             app_data: dict = {
                 "department": department,
+                "app_id": app_id_val or None,
                 "student_id": student.id if student else None,
                 "student_name": student_name_val,
                 "university_id": university.id if university else None,
