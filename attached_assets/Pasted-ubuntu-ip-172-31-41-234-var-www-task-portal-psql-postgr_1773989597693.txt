@@ -1,0 +1,28 @@
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ psql postgresql://taskuser:TaskPortal2026@localhost:5432/task_portal -c "SELECT 1;"
+psql: error: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "taskuser"
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo cat /etc/postgresql/16/main/pg_hba.conf | grep -v "^#" | grep -v "^$"
+local   all             postgres                                peer
+local   all             all                                     peer
+host    all             all             127.0.0.1/32            scram-sha-256
+host    all             all             ::1/128                 scram-sha-256
+local   replication     all                                     peer
+host    replication     all             127.0.0.1/32            scram-sha-256
+host    replication     all             ::1/128                 scram-sha-256
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo sed -i 's/scram-sha-256/md5/g' /etc/postgresql/16/main/pg_hba.conf
+sudo systemctl reload postgresql
+
+# Test connection
+psql postgresql://taskuser:TaskPortal2026@localhost:5432/task_portal -c "SELECT 1;"
+psql: error: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "taskuser"
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo -u postgres psql -c "ALTER USER taskuser WITH PASSWORD 'TaskPortal2026';"
+sudo systemctl reload postgresql
+
+psql postgresql://taskuser:TaskPortal2026@localhost:5432/task_portal -c "SELECT 1;"
+ALTER ROLE
+psql: error: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "taskuser"
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo bash -c 'echo "host    task_portal     taskuser        127.0.0.1/32            trust" >> /etc/postgresql/16/main/pg_hba.conf'
+sudo systemctl restart postgresql
+
+# Test without password
+psql postgresql://taskuser@localhost:5432/task_portal -c "SELECT 1;"
+Password for user taskuser: 
