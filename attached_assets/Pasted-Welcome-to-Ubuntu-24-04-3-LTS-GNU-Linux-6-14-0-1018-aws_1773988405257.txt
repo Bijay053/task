@@ -1,0 +1,119 @@
+Welcome to Ubuntu 24.04.3 LTS (GNU/Linux 6.14.0-1018-aws x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Fri Mar 20 06:33:26 UTC 2026
+
+  System load:  0.08               Temperature:           -273.1 C
+  Usage of /:   69.1% of 18.33GB   Processes:             141
+  Memory usage: 58%                Users logged in:       0
+  Swap usage:   46%                IPv4 address for ens5: 172.31.41.234
+
+ * Ubuntu Pro delivers the most comprehensive open source security and
+   compliance features.
+
+   https://ubuntu.com/aws/pro
+
+Expanded Security Maintenance for Applications is not enabled.
+
+42 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+*** System restart required ***
+Last login: Fri Mar 20 05:58:28 2026 from 13.233.177.3
+ubuntu@ip-172-31-41-234:~$ # Check if the build output exists
+ls /var/www/task-portal/artifacts/task-management-portal/dist/public/
+
+# Check Nginx error log
+sudo tail -20 /var/log/nginx/error.log
+
+# Check API service status
+sudo systemctl status task-portal-api
+ls: cannot access '/var/www/task-portal/artifacts/task-management-portal/dist/public/': No such file or directory
+2026/03/20 06:26:31 [error] 3132979#3132979: *40230 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /.env HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:31 [error] 3132979#3132979: *40227 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /billing HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:32 [error] 3132979#3132979: *40232 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /.env.prod HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:32 [error] 3132979#3132979: *40233 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /.env.staging HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:32 [error] 3132979#3132979: *40234 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /.env.stage HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:32 [error] 3132979#3132979: *40235 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /.env.dev HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:32 [error] 3132979#3132979: *40237 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /robots.txt HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:33 [error] 3132979#3132979: *40239 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /shop HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:33 [error] 3132979#3132979: *40238 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /order HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:30:00 [error] 3132979#3132979: *40240 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 54.159.70.42, server: task.studyinfocentre.com, request: "GET / HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:30:00 [error] 3132979#3132979: *40241 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 54.159.70.42, server: task.studyinfocentre.com, request: "GET /favicon.ico HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:30:01 [error] 3132979#3132979: *40242 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 54.159.70.42, server: task.studyinfocentre.com, request: "GET /favicon.png HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:32:35 [error] 3132978#3132978: *40243 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 27.33.30.70, server: task.studyinfocentre.com, request: "GET / HTTP/1.1", host: "task.studyinfocentre.com", referrer: "https://replit.com/"
+2026/03/20 06:32:36 [error] 3132978#3132978: *40244 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 27.33.30.70, server: task.studyinfocentre.com, request: "GET /favicon.ico HTTP/1.1", host: "task.studyinfocentre.com", referrer: "https://task.studyinfocentre.com/"
+2026/03/20 06:32:38 [error] 3132978#3132978: *40245 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 27.33.30.70, server: task.studyinfocentre.com, request: "GET / HTTP/1.1", host: "task.studyinfocentre.com", referrer: "https://replit.com/"
+2026/03/20 06:32:39 [error] 3132978#3132978: *40246 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 27.33.30.70, server: task.studyinfocentre.com, request: "GET /favicon.ico HTTP/1.1", host: "task.studyinfocentre.com", referrer: "https://task.studyinfocentre.com/"
+2026/03/20 06:33:31 [error] 3132978#3132978: *40255 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.60, server: task.studyinfocentre.com, request: "GET / HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:33:31 [error] 3132978#3132978: *40256 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.60, server: task.studyinfocentre.com, request: "GET /admin HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:33:31 [error] 3132978#3132978: *40259 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.60, server: task.studyinfocentre.com, request: "GET /payment HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:33:31 [error] 3132978#3132978: *40262 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.60, server: task.studyinfocentre.com, request: "GET /robots.txt HTTP/1.1", host: "task.studyinfocentre.com"
+● task-portal-api.service - Task Portal API
+     Loaded: loaded (/etc/systemd/system/task-portal-api.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Fri 2026-03-20 06:33:30 UTC; 2s ago
+    Process: 3141810 ExecStart=/usr/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 (code=exited, status=217/USER)
+   Main PID: 3141810 (code=exited, status=217/USER)
+        CPU: 2ms
+ubuntu@ip-172-31-41-234:~$ ^C
+ubuntu@ip-172-31-41-234:~$ sudo sed -i 's/User=ec2-user/User=ubuntu/' /etc/systemd/system/task-portal-api.service
+sudo systemctl daemon-reload
+ubuntu@ip-172-31-41-234:~$ sudo npm install -g pnpm
+cd /var/www/task-portal
+pnpm install --frozen-lockfile
+BASE_PATH=/ PORT=3000 pnpm --filter @workspace/task-management-portal run build
+sudo: npm: command not found
+Command 'pnpm' not found, did you mean:
+  command 'npm' from deb npm (9.2.0~ds1-2)
+Try: sudo apt install <deb name>
+Command 'pnpm' not found, did you mean:
+  command 'npm' from deb npm (9.2.0~ds1-2)
+Try: sudo apt install <deb name>
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo systemctl restart task-portal-api
+sleep 3
+sudo systemctl status task-portal-api
+sudo journalctl -u task-portal-api -n 30
+● task-portal-api.service - Task Portal API
+     Loaded: loaded (/etc/systemd/system/task-portal-api.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Fri 2026-03-20 06:34:25 UTC; 3s ago
+    Process: 3142349 ExecStart=/usr/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 (code=exited, status=1/FAILURE)
+   Main PID: 3142349 (code=exited, status=1/FAILURE)
+        CPU: 25ms
+Mar 20 06:34:01 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 195.
+Mar 20 06:34:01 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:01 ip-172-31-41-234 (python3)[3142063]: task-portal-api.service: Failed to determine user credentials: No such process
+Mar 20 06:34:01 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=217/USER
+Mar 20 06:34:01 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:34:06 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 196.
+Mar 20 06:34:06 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:06 ip-172-31-41-234 (python3)[3142103]: task-portal-api.service: Failed to determine user credentials: No such process
+Mar 20 06:34:06 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=217/USER
+Mar 20 06:34:06 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:34:12 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 197.
+Mar 20 06:34:12 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:12 ip-172-31-41-234 (python3)[3142145]: task-portal-api.service: Failed to determine user credentials: No such process
+Mar 20 06:34:12 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=217/USER
+Mar 20 06:34:12 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:34:17 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 198.
+Mar 20 06:34:17 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:17 ip-172-31-41-234 python3[3142257]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:34:17 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:34:17 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:34:22 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 199.
+Mar 20 06:34:22 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:22 ip-172-31-41-234 python3[3142324]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:34:22 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:34:22 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:34:25 ip-172-31-41-234 systemd[1]: Stopped task-portal-api.service - Task Portal API.
+Mar 20 06:34:25 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:25 ip-172-31-41-234 python3[3142349]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:34:25 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:34:25 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ 
