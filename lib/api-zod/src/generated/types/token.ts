@@ -5,7 +5,10 @@
  * Task Management Portal API
  * OpenAPI spec version: 1.0.0
  */
+import type { UserOut } from "./userOut";
 
-export interface HealthStatus {
-  status: string;
+export interface Token {
+  access_token: string;
+  token_type: string;
+  user: UserOut;
 }

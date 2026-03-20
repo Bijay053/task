@@ -6,6 +6,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface AssignUpdate {
+  assigned_to_id?: number | null;
 }

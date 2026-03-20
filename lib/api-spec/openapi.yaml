@@ -1,22 +1,27 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.0.0
+  description: Task Management Portal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: users
+  - name: students
+  - name: universities
+  - name: applications
+  - name: dashboard
+  - name: notifications
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +29,943 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserOut"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserOut"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+      responses:
+        "200":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserOut"
+
+  /users/{userId}:
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserOut"
+
+  /students:
+    get:
+      operationId: listStudents
+      tags: [students]
+      summary: List students
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StudentOut"
+    post:
+      operationId: createStudent
+      tags: [students]
+      summary: Create student
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentCreate"
+      responses:
+        "200":
+          description: Created student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentOut"
+
+  /students/{studentId}:
+    put:
+      operationId: updateStudent
+      tags: [students]
+      summary: Update student
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentUpdate"
+      responses:
+        "200":
+          description: Updated student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentOut"
+
+  /universities:
+    get:
+      operationId: listUniversities
+      tags: [universities]
+      summary: List universities
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of universities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UniversityOut"
+    post:
+      operationId: createUniversity
+      tags: [universities]
+      summary: Create university
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UniversityCreate"
+      responses:
+        "200":
+          description: Created university
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UniversityOut"
+
+  /universities/{uniId}:
+    put:
+      operationId: updateUniversity
+      tags: [universities]
+      summary: Update university
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uniId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UniversityUpdate"
+      responses:
+        "200":
+          description: Updated university
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UniversityOut"
+
+  /applications:
+    get:
+      operationId: listApplications
+      tags: [applications]
+      summary: List applications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: assigned_to_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationOut"
+    post:
+      operationId: createApplication
+      tags: [applications]
+      summary: Create application
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationCreate"
+      responses:
+        "200":
+          description: Created application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationOut"
+
+  /applications/my:
+    get:
+      operationId: myApplications
+      tags: [applications]
+      summary: My assigned applications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: My applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationOut"
+
+  /applications/{appId}:
+    get:
+      operationId: getApplication
+      tags: [applications]
+      summary: Get application
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Application detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationOut"
+    put:
+      operationId: updateApplication
+      tags: [applications]
+      summary: Update application
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationUpdate"
+      responses:
+        "200":
+          description: Updated application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationOut"
+    delete:
+      operationId: deleteApplication
+      tags: [applications]
+      summary: Delete application
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /applications/{appId}/status:
+    patch:
+      operationId: updateApplicationStatus
+      tags: [applications]
+      summary: Update application status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationOut"
+
+  /applications/{appId}/assign:
+    patch:
+      operationId: assignApplication
+      tags: [applications]
+      summary: Assign application
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignUpdate"
+      responses:
+        "200":
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationOut"
+
+  /applications/{appId}/logs:
+    get:
+      operationId: getApplicationLogs
+      tags: [applications]
+      summary: Get activity logs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Activity logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityLogOut"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Dashboard summary
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/status-count:
+    get:
+      operationId: getStatusCount
+      tags: [dashboard]
+      summary: Status count
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Status breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StatusCount"
+
+  /dashboard/assignee-count:
+    get:
+      operationId: getAssigneeCount
+      tags: [dashboard]
+      summary: Assignee count
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Assignee breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssigneeCount"
+
+  /dashboard/university-count:
+    get:
+      operationId: getUniversityCount
+      tags: [dashboard]
+      summary: University count
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: University breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UniversityCount"
+
+  /notifications/test-email:
+    post:
+      operationId: testEmail
+      tags: [notifications]
+      summary: Test email
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationTest"
+      responses:
+        "200":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /notifications/test-chat:
+    post:
+      operationId: testChat
+      tags: [notifications]
+      summary: Test Google Chat
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationTest"
+      responses:
+        "200":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+
+    Token:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserOut"
+      required: [access_token, token_type, user]
+
+    UserOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required: [id, email, full_name, role, is_active, created_at]
+
+    UserCreate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          default: agent
+      required: [email, full_name, password]
+
+    UserUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          type: string
+        is_active:
+          type: boolean
+        password:
+          type: string
+
+    StudentOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        passport_no:
+          type: string
+          nullable: true
+        dob:
+          type: string
+          format: date
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id, full_name, created_at]
+
+    StudentCreate:
+      type: object
+      properties:
+        full_name:
+          type: string
+        passport_no:
+          type: string
+        dob:
+          type: string
+          format: date
+        phone:
+          type: string
+        email:
+          type: string
+      required: [full_name]
+
+    StudentUpdate:
+      type: object
+      properties:
+        full_name:
+          type: string
+        passport_no:
+          type: string
+        dob:
+          type: string
+          format: date
+        phone:
+          type: string
+        email:
+          type: string
+
+    UniversityOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        country:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id, name, created_at]
+
+    UniversityCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        country:
+          type: string
+      required: [name]
+
+    UniversityUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        country:
+          type: string
+
+    ApplicationOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        university_id:
+          type: integer
+          nullable: true
+        assigned_to_id:
+          type: integer
+          nullable: true
+        created_by_id:
+          type: integer
+          nullable: true
+        application_status:
+          type: string
+        assigned_date:
+          type: string
+          format: date
+          nullable: true
+        intake:
+          type: string
+          nullable: true
+        course:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+        priority:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        remarks:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        student:
+          $ref: "#/components/schemas/StudentOut"
+          nullable: true
+        university:
+          $ref: "#/components/schemas/UniversityOut"
+          nullable: true
+        assigned_to:
+          $ref: "#/components/schemas/UserOut"
+          nullable: true
+        created_by:
+          $ref: "#/components/schemas/UserOut"
+          nullable: true
+      required: [id, student_id, application_status, created_at, updated_at]
+
+    ApplicationCreate:
+      type: object
+      properties:
+        student_id:
+          type: integer
+        university_id:
+          type: integer
+          nullable: true
+        assigned_to_id:
+          type: integer
+          nullable: true
+        application_status:
+          type: string
+          default: "In Review"
+        intake:
+          type: string
+        course:
+          type: string
+        country:
+          type: string
+        priority:
+          type: string
+          default: normal
+        source:
+          type: string
+        remarks:
+          type: string
+      required: [student_id]
+
+    ApplicationUpdate:
+      type: object
+      properties:
+        university_id:
+          type: integer
+          nullable: true
+        assigned_to_id:
+          type: integer
+          nullable: true
+        application_status:
+          type: string
+        intake:
+          type: string
+        course:
+          type: string
+        country:
+          type: string
+        priority:
+          type: string
+        source:
+          type: string
+        remarks:
+          type: string
+
+    StatusUpdate:
+      type: object
+      properties:
+        application_status:
+          type: string
+      required: [application_status]
+
+    AssignUpdate:
+      type: object
+      properties:
+        assigned_to_id:
+          type: integer
+          nullable: true
+
+    ActivityLogOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        application_id:
+          type: integer
+        field_name:
+          type: string
+        old_value:
+          type: string
+          nullable: true
+        new_value:
+          type: string
+          nullable: true
+        changed_at:
+          type: string
+          format: date-time
+        changed_by_user:
+          $ref: "#/components/schemas/UserOut"
+          nullable: true
+      required: [id, application_id, field_name, changed_at]
+
+    DashboardSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        pending:
+          type: integer
+        approved:
+          type: integer
+        refused:
+          type: integer
+      required: [total, pending, approved, refused]
+
+    StatusCount:
+      type: object
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+        color:
+          type: string
+      required: [status, count, color]
+
+    AssigneeCount:
+      type: object
+      properties:
+        assignee_name:
+          type: string
+        count:
+          type: integer
+      required: [assignee_name, count]
+
+    UniversityCount:
+      type: object
+      properties:
+        university_name:
+          type: string
+        count:
+          type: integer
+      required: [university_name, count]
+
+    NotificationTest:
+      type: object
+      properties:
+        type:
+          type: string
+        target:
+          type: string
+      required: [type, target]

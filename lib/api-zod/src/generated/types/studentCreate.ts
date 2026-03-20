@@ -6,6 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface StudentCreate {
+  full_name: string;
+  passport_no?: string;
+  dob?: Date;
+  phone?: string;
+  email?: string;
 }

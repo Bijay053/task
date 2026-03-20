@@ -6,6 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface HealthStatus {
+export interface StatusCount {
   status: string;
+  count: number;
+  color: string;
 }

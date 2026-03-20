@@ -6,6 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface UserCreate {
+  email: string;
+  full_name: string;
+  password: string;
+  role?: string;
 }

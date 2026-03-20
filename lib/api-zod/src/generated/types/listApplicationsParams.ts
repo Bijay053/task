@@ -6,6 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface HealthStatus {
-  status: string;
-}
+export type ListApplicationsParams = {
+  assigned_to_id?: number;
+  status?: string;
+  search?: string;
+};

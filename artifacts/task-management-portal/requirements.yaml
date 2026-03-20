@@ -1,0 +1,16 @@
+packages:
+  "recharts": "For dashboard analytics charts and data visualization"
+  "react-hook-form": "For robust form state management"
+  "@hookform/resolvers": "Zod validation resolver for react-hook-form"
+  "date-fns": "For formatting assigned dates and created dates nicely"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to merge tailwind classes safely"
+
+images:
+  - path: "artifacts/task-management-portal/public/images/auth-bg.png"
+    description: "Abstract minimal geometric background in deep professional slate blue and clean white gradients, high-end corporate aesthetic"
+    aspect_ratio: "16:9"
+
+notes:
+  - "API uses customFetch which relies on window.fetch. A global interceptor in App.tsx injects the Bearer token."
+  - "Role-based views are handled purely on the frontend based on the user's role (admin/manager vs agent)."

@@ -1,5 +1,5 @@
 kind = "api"
-previewPath = "/api" # TODO - should be excluded from preview in the first place
+previewPath = "/api"
 title = "API Server"
 version = "1.0.0"
 id = "3B4_FFSkEVBkAeYMFRJ2e"
@@ -10,16 +10,13 @@ name = "API Server"
 paths = ["/api"]
 
 [services.development]
-run = "pnpm --filter @workspace/api-server run dev"
+run = "uvicorn backend.main:app --host 0.0.0.0 --port 8080 --reload --app-dir /home/runner/workspace"
 
 [services.production]
-build = "pnpm --filter @workspace/api-server run build"
+build = "echo no-build"
 
 [services.production.run]
-args = ["node", "artifacts/api-server/dist/index.cjs"]
-
-[services.production.run.env]
-PORT = "8080"
+args = ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080", "--app-dir", "/home/runner/workspace"]
 
 [services.production.health.startup]
 path = "/api/healthz"
