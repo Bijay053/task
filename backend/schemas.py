@@ -152,6 +152,7 @@ class DeptSettingOut(BaseModel):
 
 class ApplicationCreate(BaseModel):
     department: Optional[str] = "gs"
+    app_id: Optional[str] = None
     # Directory links (optional — use raw name if not in directory)
     student_id: Optional[int] = None
     university_id: Optional[int] = None
@@ -186,6 +187,7 @@ class ApplicationCreate(BaseModel):
 
 
 class ApplicationUpdate(BaseModel):
+    app_id: Optional[str] = None
     university_id: Optional[int] = None
     university_name: Optional[str] = None
     agent_id: Optional[int] = None
@@ -225,6 +227,7 @@ class AssignUpdate(BaseModel):
 
 class ApplicationOut(BaseModel):
     id: int
+    app_id: Optional[str]
     department: str
     student_id: Optional[int]
     university_id: Optional[int]

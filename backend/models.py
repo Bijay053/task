@@ -147,6 +147,9 @@ class Application(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
+    # User-assigned application reference code (e.g. "GS-001", "REF-2024-001")
+    app_id = Column(String(100), nullable=True)
+
     # Department: 'gs' or 'offer'
     department = Column(String(20), default="gs", nullable=False)
 

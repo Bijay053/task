@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 interface Application {
   id: number;
+  app_id?: string | null;
   application_status: string;
   student?: { full_name: string } | null;
   student_name?: string | null;
@@ -79,12 +80,19 @@ function KanbanCard({
       )}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
-        <span
-          className="text-[10px] font-bold px-2 py-0.5 rounded-full truncate max-w-[160px]"
-          style={{ backgroundColor: color.bg + "33", color: color.text }}
-        >
-          {app.application_status}
-        </span>
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+          <span
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full truncate max-w-[160px]"
+            style={{ backgroundColor: color.bg + "33", color: color.text }}
+          >
+            {app.application_status}
+          </span>
+          {app.app_id && (
+            <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 truncate max-w-[100px]" title={app.app_id}>
+              {app.app_id}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1 shrink-0">
           <PriorityDot priority={app.priority ?? undefined} />
           <GripVertical className="w-3.5 h-3.5 text-muted-foreground/30" />

@@ -127,6 +127,7 @@ export default function OfferApplications() {
     const universityId = fd.get("university_id") ? Number(fd.get("university_id")) : undefined;
     const data: any = {
       department: "offer",
+      app_id: fd.get("app_id") as string || null,
       student_id: studentId || null,
       student_name: fd.get("student_name") as string || null,
       university_id: universityId || null,
@@ -208,6 +209,7 @@ export default function OfferApplications() {
                 <thead>
                   <tr>
                     <th className="w-8 text-center">#</th>
+                    <th className="w-28">App ID</th>
                     <th>Student</th>
                     <th>University</th>
                     <th>Course</th>
@@ -225,13 +227,18 @@ export default function OfferApplications() {
                 </thead>
                 <tbody className="align-top">
                   {isLoading ? (
-                    <tr><td colSpan={14} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
+                    <tr><td colSpan={15} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
                   ) : applications?.length === 0 ? (
-                    <tr><td colSpan={14} className="text-center py-12 text-muted-foreground">No offer applications found.</td></tr>
+                    <tr><td colSpan={15} className="text-center py-12 text-muted-foreground">No offer applications found.</td></tr>
                   ) : (
                     applications?.map(app => (
                       <tr key={app.id} className="group cursor-pointer" onClick={() => handleOpenEdit(app)}>
                         <td className="text-center text-muted-foreground text-xs">{app.id}</td>
+                        <td>
+                          {(app as any).app_id
+                            ? <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">{(app as any).app_id}</span>
+                            : <span className="text-muted-foreground/30">—</span>}
+                        </td>
                         <td className="font-semibold whitespace-nowrap">{displayName(app)}</td>
                         <td className="max-w-[160px]">
                           <div className="font-medium text-primary truncate">{displayUni(app)}</div>
@@ -312,6 +319,12 @@ export default function OfferApplications() {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingApp ? "Edit Offer Application" : "New Offer Application"} maxWidth="max-w-3xl">
         <form onSubmit={onSubmit} className="space-y-5">
+          <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center gap-3">
+            <div className="space-y-1 flex-1">
+              <Label className="text-xs font-bold text-blue-700 uppercase tracking-wide">App ID / Reference Code</Label>
+              <Input name="app_id" defaultValue={(editingApp as any)?.app_id || ""} placeholder="e.g. OFF-001, REF-2024-001" className="font-mono bg-white" />
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <StudentField key={editingApp?.id + "-s"} defaultStudentId={editingApp?.student_id} defaultStudentName={editingApp?.student_name} />
             <UniversityField key={editingApp?.id + "-u"} defaultUniversityId={editingApp?.university_id} defaultUniversityName={editingApp?.university_name} />

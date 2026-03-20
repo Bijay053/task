@@ -1,0 +1,380 @@
+Security Checklist for CRM / Task Management System
+1. User Access & Login
+
+Use strong password policy
+
+Add 2FA / MFA for admin and managers
+
+Lock account after repeated failed login attempts
+
+Add session timeout after inactivity
+
+Force logout from old sessions after password change
+
+Do not allow shared accounts
+
+Keep separate access for:
+
+Admin
+
+Manager
+
+Team Leader
+
+Staff
+
+Agent
+
+2. Role & Permission Security
+
+Apply least privilege access
+
+Users should only see modules they are allowed to access
+
+Users should only see records assigned to them, or allowed by role
+
+Hide sidebar/menu for unauthorized modules
+
+Restrict:
+
+View
+
+Add
+
+Edit
+
+Delete
+
+Upload
+
+Export
+
+Check permission in both:
+
+frontend
+
+backend API
+
+3. Authentication & Session
+
+Use secure authentication tokens/session cookies
+
+Cookies should be:
+
+HttpOnly
+
+Secure
+
+SameSite
+
+Invalidate session on logout
+
+Prevent multiple risky active sessions for sensitive roles
+
+Store passwords only with strong hashing like:
+
+bcrypt
+
+Argon2
+
+4. API Security
+
+Protect every API endpoint with authentication
+
+Validate role/permission on every API request
+
+Never trust frontend only
+
+Use rate limiting for login and sensitive APIs
+
+Block direct access to other user records by ID tampering
+
+Return proper 403/401 for unauthorized access
+
+5. Input Validation
+
+Validate all form inputs on backend
+
+Sanitize text fields to prevent:
+
+XSS
+
+HTML injection
+
+script injection
+
+Validate:
+
+dates
+
+file types
+
+file size
+
+dropdown values
+
+user IDs
+
+Prevent SQL injection by using ORM/parameterized queries
+
+6. File Upload Security
+
+Restrict allowed file types
+
+Block executable uploads like:
+
+.exe
+
+.php
+
+.js
+
+.sh
+
+Rename uploaded files on server
+
+Scan uploads for malware if possible
+
+Store uploads outside public execution path
+
+Use signed/protected file access
+
+Check permission before file download/view
+
+7. Data Access Control
+
+Staff should only view assigned records
+
+Followers/watchers should only view allowed tasks
+
+Managers should only view mapped agent/student data
+
+Separate:
+
+Agent
+
+Internal Assignee
+
+Follow users
+
+Do not expose hidden data in API response
+
+Restrict export access carefully
+
+8. Audit Logs
+
+Log important actions:
+
+login
+
+logout
+
+failed login
+
+add/edit/delete
+
+status change
+
+permission change
+
+role change
+
+file upload/download
+
+Store:
+
+who did it
+
+what changed
+
+when
+
+IP/device if possible
+
+9. Database Security
+
+Use strong DB password
+
+Do not expose DB to public internet if not needed
+
+Restrict DB access by IP/security group
+
+Encrypt backups
+
+Backup regularly
+
+Test restore process
+
+Avoid storing sensitive plain text data
+
+10. Transport Security
+
+Force HTTPS only
+
+Redirect HTTP to HTTPS
+
+Use valid SSL certificate
+
+Disable weak TLS versions if possible
+
+Secure webhook communication with secret validation where possible
+
+11. Google Chat Webhook / External Integrations
+
+Store webhook URLs in secure environment variables
+
+Do not hardcode webhook URLs in frontend
+
+Use separate webhook by department
+
+Restrict who can edit webhook settings
+
+Log webhook changes
+
+Mask sensitive webhook values in UI
+
+12. Admin Panel Security
+
+Restrict admin pages by role
+
+Add MFA for admin
+
+Log every admin action
+
+Protect:
+
+role management
+
+permission management
+
+settings
+
+webhook settings
+
+exports
+
+Add confirmation before delete/reset actions
+
+13. Frontend Security
+
+Escape user-generated content before display
+
+Prevent unsafe HTML rendering
+
+Do not store secrets in frontend code
+
+Do not expose internal IDs unnecessarily
+
+Avoid showing unauthorized actions even if disabled
+
+14. Server & Hosting Security
+
+Keep OS and packages updated
+
+Disable unused ports/services
+
+Restrict SSH access
+
+Use key-based SSH login
+
+Disable root login if possible
+
+Use firewall/security groups properly
+
+Monitor CPU, memory, and suspicious access
+
+15. Backup & Recovery
+
+Daily backup of:
+
+database
+
+uploads
+
+important configs
+
+Keep backup in separate secure location
+
+Test restore regularly
+
+Define who can access backup files
+
+16. Monitoring & Alerts
+
+Alert for:
+
+repeated login failures
+
+unusual file upload activity
+
+permission changes
+
+webhook changes
+
+bulk export/download
+
+Monitor error logs and suspicious API access
+
+17. Sensitive Features to Double Check
+
+Please apply extra review on:
+
+bulk upload
+
+export
+
+delete
+
+role & permission changes
+
+follower visibility
+
+manager-based record access
+
+student/agent mapping
+
+table/report downloads
+
+file attachments
+
+18. Before Go-Live Testing
+
+Test user A cannot see user B data
+
+Test staff cannot access admin API directly
+
+Test hidden menu cannot be opened by URL
+
+Test file download permission
+
+Test role changes work immediately
+
+Test deleted/disabled users cannot login
+
+Test watchers/follow users only see allowed records
+
+Test bulk upload validation
+
+Test audit logs are recording properly
+
+High Priority Must-Have
+
+For your system, these are the most important:
+
+MFA for admin
+
+strong role/permission checks on backend
+
+HTTPS
+
+secure file upload
+
+audit logs
+
+proper assigned-user visibility
+
+secure webhook storage
+
+backup and restore
+
+no frontend-only permission contro
