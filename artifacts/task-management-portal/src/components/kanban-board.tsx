@@ -252,7 +252,7 @@ export function KanbanBoard({
       {/* Sticky status header bar — outside the scroll container so sticky works */}
       <div
         ref={headerRef}
-        className="sticky top-0 z-20 flex gap-3 mb-0"
+        className="sticky top-0 z-20 flex gap-3 mb-0 bg-background pb-0"
         style={{ overflowX: "hidden" }}
       >
         {statusChoices.map((status) => {
