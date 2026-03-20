@@ -168,7 +168,7 @@ export default function GsApplications() {
 
   return (
     <Layout>
-      <div className={cn("flex flex-col gap-4", viewMode === "table" && "h-full")}>
+      <div className="h-full flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div>
             <h1 className="text-3xl font-display font-bold tracking-tight">GS Applications</h1>
@@ -341,7 +341,7 @@ export default function GsApplications() {
             </div>
           </Card>
         ) : (
-          <div className="relative">
+          <div className="flex-1 min-h-0">
             {isLoading ? (
               <div className="flex items-center justify-center py-20 text-muted-foreground">Loading board...</div>
             ) : (

@@ -92,11 +92,13 @@
   }
 }
 
-/* Kanban board horizontal scrollbar — Jira style */
+/* Kanban board scrollbar — Jira style, always visible horizontal bar */
 .kanban-scroll {
   overflow-x: scroll;
+  overflow-y: auto;
   display: flex;
   flex-wrap: nowrap;
+  align-items: flex-start;
   scrollbar-width: thin;
   scrollbar-color: #c1c7d0 #f1f2f4;
 }

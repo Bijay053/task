@@ -248,11 +248,11 @@ export function KanbanBoard({
   }, {});
 
   return (
-    <div>
-      {/* Sticky status header bar — outside the scroll container so sticky works */}
+    <div className="flex flex-col h-full">
+      {/* Status header bar — pinned at top */}
       <div
         ref={headerRef}
-        className="sticky top-0 z-20 flex gap-3 mb-0 bg-background pb-0"
+        className="flex gap-3 shrink-0 bg-background"
         style={{ overflowX: "hidden" }}
       >
         {statusChoices.map((status) => {
@@ -276,10 +276,10 @@ export function KanbanBoard({
         })}
       </div>
 
-      {/* Card columns — scrolls horizontally, grows vertically */}
+      {/* Card columns — fills remaining height, scrolls both axes */}
       <div
         ref={cardRef}
-        className="gap-3 pb-2 items-start kanban-scroll"
+        className="flex-1 min-h-0 gap-3 items-start kanban-scroll"
         onScroll={onCardScroll}
         onDragEnd={handleDragEnd}
       >
