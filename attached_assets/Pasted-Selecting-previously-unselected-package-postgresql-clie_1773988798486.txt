@@ -1,0 +1,281 @@
+Selecting previously unselected package postgresql-client-16.
+Preparing to unpack .../09-postgresql-client-16_16.13-0ubuntu0.24.04.1_amd64.deb ...
+Unpacking postgresql-client-16 (16.13-0ubuntu0.24.04.1) ...
+Selecting previously unselected package postgresql-16.
+Preparing to unpack .../10-postgresql-16_16.13-0ubuntu0.24.04.1_amd64.deb ...
+Unpacking postgresql-16 (16.13-0ubuntu0.24.04.1) ...
+Selecting previously unselected package postgresql.
+Preparing to unpack .../11-postgresql_16+257build1.1_all.deb ...
+Unpacking postgresql (16+257build1.1) ...
+Selecting previously unselected package postgresql-contrib.
+Preparing to unpack .../12-postgresql-contrib_16+257build1.1_all.deb ...
+Unpacking postgresql-contrib (16+257build1.1) ...
+Setting up postgresql-client-common (257build1.1) ...
+Setting up libpq5:amd64 (16.13-0ubuntu0.24.04.1) ...
+Setting up libcommon-sense-perl:amd64 (3.75-3build3) ...
+Setting up libllvm17t64:amd64 (1:17.0.6-9ubuntu1) ...
+Setting up ssl-cert (1.1.2ubuntu1) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/ssl-cert.service → /usr/lib/systemd/system/ssl-cert.service.
+Setting up libtypes-serialiser-perl (1.01-1) ...
+Setting up libjson-perl (4.10000-1) ...
+Setting up libjson-xs-perl (4.040-0ubuntu0.24.04.1) ...
+Setting up postgresql-client-16 (16.13-0ubuntu0.24.04.1) ...
+update-alternatives: using /usr/share/postgresql/16/man/man1/psql.1.gz to provide /usr/share/man/man1/psql.1.gz (psql.1.gz) in auto mode
+Setting up postgresql-common (257build1.1) ...
+
+Creating config file /etc/postgresql-common/createcluster.conf with new version
+Building PostgreSQL dictionaries from installed myspell/hunspell packages...
+Removing obsolete dictionary files:
+Created symlink /etc/systemd/system/multi-user.target.wants/postgresql.service → /usr/lib/systemd/system/postgresql.service.
+Setting up postgresql-16 (16.13-0ubuntu0.24.04.1) ...
+Creating new PostgreSQL cluster 16/main ...
+/usr/lib/postgresql/16/bin/initdb -D /var/lib/postgresql/16/main --auth-local peer --auth-host scram-sha-256 --no-instructions
+The files belonging to this database system will be owned by user "postgres".
+This user must also own the server process.
+
+The database cluster will be initialized with locale "C.UTF-8".
+The default database encoding has accordingly been set to "UTF8".
+The default text search configuration will be set to "english".
+
+Data page checksums are disabled.
+
+fixing permissions on existing directory /var/lib/postgresql/16/main ... ok
+creating subdirectories ... ok
+selecting dynamic shared memory implementation ... posix
+selecting default max_connections ... 100
+selecting default shared_buffers ... 128MB
+selecting default time zone ... Etc/UTC
+creating configuration files ... ok
+running bootstrap script ... ok
+performing post-bootstrap initialization ... ok
+syncing data to disk ... ok
+Setting up postgresql-contrib (16+257build1.1) ...
+Setting up postgresql (16+257build1.1) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+Scanning processes...                                                                                                                                                                                              
+Scanning candidates...                                                                                                                                                                                             
+Scanning linux images...                                                                                                                                                                                           
+
+Pending kernel upgrade!
+Running kernel version:
+  6.14.0-1018-aws
+Diagnostics:
+  The currently running kernel version is not the expected kernel version 6.17.0-1009-aws.
+
+Restarting the system to load the new kernel will not be handled automatically, so you should consider rebooting.
+
+Restarting services...
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart docker.service
+ systemctl restart getty@tty1.service
+ systemctl restart networkd-dispatcher.service
+ systemctl restart serial-getty@ttyS0.service
+ systemctl restart systemd-logind.service
+ systemctl restart unattended-upgrades.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+Synchronizing state of postgresql.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install enable postgresql
+CREATE DATABASE
+CREATE ROLE
+GRANT
+ALTER DATABASE
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo nano /etc/task-portal.env
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo systemctl restart task-portal-api
+sleep 3
+sudo systemctl status task-portal-api
+sudo journalctl -u task-portal-api -n 20
+● task-portal-api.service - Task Portal API
+     Loaded: loaded (/etc/systemd/system/task-portal-api.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Fri 2026-03-20 06:39:36 UTC; 3s ago
+    Process: 3148529 ExecStart=/usr/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 (code=exited, status=1/FAILURE)
+   Main PID: 3148529 (code=exited, status=1/FAILURE)
+        CPU: 25ms
+Mar 20 06:39:23 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 255.
+Mar 20 06:39:23 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:39:23 ip-172-31-41-234 python3[3148422]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:39:23 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:39:23 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:39:29 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 256.
+Mar 20 06:39:29 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:39:29 ip-172-31-41-234 python3[3148463]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:39:29 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:39:29 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:39:34 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 257.
+Mar 20 06:39:34 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:39:34 ip-172-31-41-234 python3[3148502]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:39:34 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:39:34 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:39:36 ip-172-31-41-234 systemd[1]: Stopped task-portal-api.service - Task Portal API.
+Mar 20 06:39:36 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:39:36 ip-172-31-41-234 python3[3148529]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:39:36 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:39:36 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo systemctl status task-portal-api
+sudo journalctl -u task-portal-api -n 30
+● task-portal-api.service - Task Portal API
+     Loaded: loaded (/etc/systemd/system/task-portal-api.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Fri 2026-03-20 06:40:38 UTC; 4s ago
+    Process: 3149060 ExecStart=/usr/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 (code=exited, status=1/FAILURE)
+   Main PID: 3149060 (code=exited, status=1/FAILURE)
+        CPU: 23ms
+Mar 20 06:40:12 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 264.
+Mar 20 06:40:12 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:40:12 ip-172-31-41-234 python3[3148834]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:40:12 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:40:12 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:40:17 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 265.
+Mar 20 06:40:17 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:40:17 ip-172-31-41-234 python3[3148877]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:40:17 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:40:17 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:40:23 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 266.
+Mar 20 06:40:23 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:40:23 ip-172-31-41-234 python3[3148919]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:40:23 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:40:23 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:40:28 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 267.
+Mar 20 06:40:28 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:40:28 ip-172-31-41-234 python3[3148962]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:40:28 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:40:28 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:40:33 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 268.
+Mar 20 06:40:33 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:40:33 ip-172-31-41-234 python3[3149002]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:40:33 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:40:33 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:40:38 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 269.
+Mar 20 06:40:38 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:40:38 ip-172-31-41-234 python3[3149060]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:40:38 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:40:38 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ which python3
+sudo pip3 install uvicorn fastapi sqlalchemy psycopg2-binary "pydantic[email]" python-jose passlib bcrypt python-multipart openpyxl httpx cryptography aiofiles watchfiles --break-system-packages --force-reinstall
+/usr/bin/python3
+Collecting uvicorn
+  Using cached uvicorn-0.42.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting fastapi
+  Using cached fastapi-0.135.1-py3-none-any.whl.metadata (30 kB)
+Collecting sqlalchemy
+  Using cached sqlalchemy-2.0.48-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (9.5 kB)
+Collecting psycopg2-binary
+  Using cached psycopg2_binary-2.9.11-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.9 kB)
+Collecting python-jose
+  Using cached python_jose-3.5.0-py2.py3-none-any.whl.metadata (5.5 kB)
+Collecting passlib
+  Using cached passlib-1.7.4-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting bcrypt
+  Using cached bcrypt-5.0.0-cp39-abi3-manylinux_2_34_x86_64.whl.metadata (10 kB)
+Collecting python-multipart
+  Using cached python_multipart-0.0.22-py3-none-any.whl.metadata (1.8 kB)
+Collecting openpyxl
+  Using cached openpyxl-3.1.5-py2.py3-none-any.whl.metadata (2.5 kB)
+Collecting httpx
+  Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting cryptography
+  Using cached cryptography-46.0.5-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Collecting aiofiles
+  Using cached aiofiles-25.1.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting watchfiles
+  Using cached watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting pydantic[email]
+  Using cached pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+Collecting click>=7.0 (from uvicorn)
+  Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting h11>=0.8 (from uvicorn)
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting starlette>=0.46.0 (from fastapi)
+  Using cached starlette-0.52.1-py3-none-any.whl.metadata (6.3 kB)
+Collecting typing-extensions>=4.8.0 (from fastapi)
+  Using cached typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting typing-inspection>=0.4.2 (from fastapi)
+  Using cached typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi)
+  Using cached annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Collecting greenlet>=1 (from sqlalchemy)
+  Using cached greenlet-3.3.2-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (3.7 kB)
+Collecting annotated-types>=0.6.0 (from pydantic[email])
+  Using cached annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.41.5 (from pydantic[email])
+  Using cached pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting email-validator>=2.0.0 (from pydantic[email])
+  Using cached email_validator-2.3.0-py3-none-any.whl.metadata (26 kB)
+Collecting ecdsa!=0.15 (from python-jose)
+  Using cached ecdsa-0.19.1-py2.py3-none-any.whl.metadata (29 kB)
+Collecting rsa!=4.1.1,!=4.4,<5.0,>=4.0 (from python-jose)
+  Using cached rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
+Collecting pyasn1>=0.5.0 (from python-jose)
+  Using cached pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+Collecting et-xmlfile (from openpyxl)
+  Using cached et_xmlfile-2.0.0-py3-none-any.whl.metadata (2.7 kB)
+Collecting anyio (from httpx)
+  Using cached anyio-4.12.1-py3-none-any.whl.metadata (4.3 kB)
+Collecting certifi (from httpx)
+  Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+Collecting httpcore==1.* (from httpx)
+  Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna (from httpx)
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting cffi>=2.0.0 (from cryptography)
+  Using cached cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography)
+  Using cached pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Collecting six>=1.9.0 (from ecdsa!=0.15->python-jose)
+  Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting dnspython>=2.0.0 (from email-validator>=2.0.0->pydantic[email])
+  Using cached dnspython-2.8.0-py3-none-any.whl.metadata (5.7 kB)
+Using cached uvicorn-0.42.0-py3-none-any.whl (68 kB)
+Using cached fastapi-0.135.1-py3-none-any.whl (116 kB)
+Using cached sqlalchemy-2.0.48-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.3 MB)
+Using cached psycopg2_binary-2.9.11-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (4.2 MB)
+Using cached pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+Using cached python_jose-3.5.0-py2.py3-none-any.whl (34 kB)
+Using cached passlib-1.7.4-py2.py3-none-any.whl (525 kB)
+Using cached bcrypt-5.0.0-cp39-abi3-manylinux_2_34_x86_64.whl (278 kB)
+Using cached python_multipart-0.0.22-py3-none-any.whl (24 kB)
+Using cached openpyxl-3.1.5-py2.py3-none-any.whl (250 kB)
+Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+Using cached cryptography-46.0.5-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+Using cached aiofiles-25.1.0-py3-none-any.whl (14 kB)
+Using cached watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (456 kB)
+Using cached annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Using cached annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Using cached anyio-4.12.1-py3-none-any.whl (113 kB)
+Using cached cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+Downloading click-8.3.1-py3-none-any.whl (108 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 108.3/108.3 kB 5.8 MB/s eta 0:00:00
+Using cached ecdsa-0.19.1-py2.py3-none-any.whl (150 kB)
+Using cached email_validator-2.3.0-py3-none-any.whl (35 kB)
+Using cached greenlet-3.3.2-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (613 kB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 71.0/71.0 kB 7.0 MB/s eta 0:00:00
+Using cached pyasn1-0.6.3-py3-none-any.whl (83 kB)
+Using cached pydantic-2.12.5-py3-none-any.whl (463 kB)
+Using cached rsa-4.9.1-py3-none-any.whl (34 kB)
+Using cached starlette-0.52.1-py3-none-any.whl (74 kB)
+Using cached typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Using cached typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 153.7/153.7 kB 12.7 MB/s eta 0:00:00
+Using cached et_xmlfile-2.0.0-py3-none-any.whl (18 kB)
+Using cached dnspython-2.8.0-py3-none-any.whl (331 kB)
+Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+Using cached pycparser-3.0-py3-none-any.whl (48 kB)
+Installing collected packages: passlib, typing-extensions, six, python-multipart, pycparser, pyasn1, psycopg2-binary, idna, h11, greenlet, et-xmlfile, dnspython, click, certifi, bcrypt, annotated-types, annotated-doc, aiofiles, uvicorn, typing-inspection, sqlalchemy, rsa, pydantic-core, openpyxl, httpcore, email-validator, ecdsa, cffi, anyio, watchfiles, starlette, python-jose, pydantic, httpx, cryptography, fastapi
+  Attempting uninstall: passlib
+    Found existing installation: passlib 1.7.4
+    Uninstalling passlib-1.7.4:
+      Successfully uninstalled passlib-1.7.4
+  Attempting uninstall: typing-extensions
+    Found existing installation: typing_extensions 4.10.0
+ERROR: Cannot uninstall typing_extensions 4.10.0, RECORD file not found. Hint: The package was installed by debian.
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ 
