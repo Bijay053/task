@@ -196,6 +196,21 @@ async def bulk_upload(
                 return v.strftime("%Y-%m-%d")
             return str(v).strip()
 
+        def cell_month_year(name):
+            """Read a cell that may be a date, returning 'Month YYYY' display format."""
+            idx = col(name)
+            if idx < 0 or idx >= len(row):
+                return None
+            v = row[idx]
+            if v is None:
+                return None
+            from datetime import datetime as _dt, date as _d
+            if isinstance(v, _dt):
+                return v.strftime("%B %Y")
+            if isinstance(v, _d):
+                return v.strftime("%B %Y")
+            return str(v).strip() if str(v).strip() else None
+
         student_name_val = cell("student")
         if not student_name_val:
             skipped += 1
@@ -247,7 +262,7 @@ async def bulk_upload(
                 "university_id": university.id if university else None,
                 "university_name": uni_name,
                 "course": cell("course"),
-                "intake": cell("intake"),
+                "intake": cell_month_year("intake"),
                 "country": cell("country"),
                 "remarks": cell("remark") or cell("note"),
                 "application_status": status,
