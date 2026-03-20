@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 
 from backend.database import get_db
@@ -19,25 +19,50 @@ PENDING_STATUSES = {
 }
 
 
+def _scoped_query(db: Session, current_user: models.User):
+    """Return a base Application query scoped to the current user's visibility."""
+    q = db.query(models.Application)
+    role = current_user.role
+
+    if role in ("agent", "team_leader"):
+        # Only see their own assigned applications
+        q = q.filter(models.Application.assigned_to_id == current_user.id)
+    elif role == "manager":
+        # If manager has specific agent mappings, limit to those agents
+        mappings = (
+            db.query(models.ManagerAgentMapping)
+            .filter(models.ManagerAgentMapping.manager_id == current_user.id)
+            .all()
+        )
+        if mappings:
+            agent_ids = [m.agent_id for m in mappings]
+            q = q.filter(models.Application.agent_id.in_(agent_ids))
+    # admin: no filter — sees everything
+
+    return q
+
+
 @router.get("/summary", response_model=schemas.DashboardSummary)
 def summary(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    total = db.query(func.count(models.Application.id)).scalar()
-    pending = db.query(func.count(models.Application.id)).filter(
+    base = _scoped_query(db, current_user)
+    total = base.with_entities(func.count(models.Application.id)).scalar()
+    pending = base.filter(
         models.Application.application_status.in_(PENDING_STATUSES)
-    ).scalar()
-    approved = db.query(func.count(models.Application.id)).filter(
+    ).with_entities(func.count(models.Application.id)).scalar()
+    approved = base.filter(
         models.Application.application_status.in_(APPROVED_STATUSES)
-    ).scalar()
-    refused = db.query(func.count(models.Application.id)).filter(
+    ).with_entities(func.count(models.Application.id)).scalar()
+    refused = base.filter(
         models.Application.application_status.in_(REFUSED_STATUSES)
-    ).scalar()
+    ).with_entities(func.count(models.Application.id)).scalar()
     return {"total": total, "pending": pending, "approved": approved, "refused": refused}
 
 
 @router.get("/status-count", response_model=List[schemas.StatusCount])
 def status_count(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    base = _scoped_query(db, current_user)
     rows = (
-        db.query(models.Application.application_status, func.count(models.Application.id))
+        base.with_entities(models.Application.application_status, func.count(models.Application.id))
         .group_by(models.Application.application_status)
         .all()
     )
@@ -53,9 +78,16 @@ def status_count(db: Session = Depends(get_db), current_user: models.User = Depe
 
 @router.get("/assignee-count", response_model=List[schemas.AssigneeCount])
 def assignee_count(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # For non-admins, only show their own workload — show their own name + count
+    if current_user.role in ("agent", "team_leader"):
+        base = _scoped_query(db, current_user)
+        count = base.with_entities(func.count(models.Application.id)).scalar()
+        return [{"assignee_name": current_user.full_name, "count": count}]
+
+    base = _scoped_query(db, current_user)
     rows = (
-        db.query(models.User.full_name, func.count(models.Application.id))
-        .join(models.Application, models.Application.assigned_to_id == models.User.id)
+        base.join(models.User, models.Application.assigned_to_id == models.User.id)
+        .with_entities(models.User.full_name, func.count(models.Application.id))
         .group_by(models.User.full_name)
         .order_by(func.count(models.Application.id).desc())
         .all()
@@ -65,9 +97,10 @@ def assignee_count(db: Session = Depends(get_db), current_user: models.User = De
 
 @router.get("/university-count", response_model=List[schemas.UniversityCount])
 def university_count(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    base = _scoped_query(db, current_user)
     rows = (
-        db.query(models.University.name, func.count(models.Application.id))
-        .join(models.Application, models.Application.university_id == models.University.id)
+        base.join(models.University, models.Application.university_id == models.University.id)
+        .with_entities(models.University.name, func.count(models.Application.id))
         .group_by(models.University.name)
         .order_by(func.count(models.Application.id).desc())
         .limit(10)

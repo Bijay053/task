@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useUpdateApplication } from "@workspace/api-client-react";
 import { GS_STATUS_COLORS, GS_STATUS_CHOICES } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -162,7 +162,7 @@ function KanbanColumn({
   const color = colorMap[status] || { bg: "#f1f5f9", text: "#64748b" };
 
   return (
-    <div className="flex flex-col min-w-[280px] max-w-[280px] h-full">
+    <div className="flex flex-col w-[290px] min-w-[290px] shrink-0 h-full">
       <div
         className="flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide shrink-0"
         style={{ backgroundColor: color.bg, color: color.text }}
@@ -218,6 +218,7 @@ export function KanbanBoard({
   const updateMut = useUpdateApplication();
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const dragAppRef = useRef<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleDragStart = (e: React.DragEvent, appId: number) => {
     e.dataTransfer.effectAllowed = "move";
@@ -244,13 +245,34 @@ export function KanbanBoard({
     );
   };
 
+  const handleWheel = useCallback((e: WheelEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      e.preventDefault();
+      el.scrollLeft += e.shiftKey ? e.deltaY : e.deltaX;
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [handleWheel]);
+
   const columnMap = statusChoices.reduce<Record<string, Application[]>>((acc, status) => {
     acc[status] = applications.filter((a) => a.application_status === status);
     return acc;
   }, {});
 
   return (
-    <div className="flex gap-3 h-full overflow-x-auto pb-4 select-none" onDragEnd={handleDragEnd}>
+    <div
+      ref={scrollRef}
+      className="flex gap-3 h-full pb-3 select-none kanban-scroll"
+      style={{ overflowX: "auto", overflowY: "hidden" }}
+      onDragEnd={handleDragEnd}
+    >
       {statusChoices.map((status) => (
         <KanbanColumn
           key={status}
@@ -263,6 +285,7 @@ export function KanbanBoard({
           onCardClick={onCardClick}
         />
       ))}
+      <div className="shrink-0 w-2" aria-hidden />
     </div>
   );
 }

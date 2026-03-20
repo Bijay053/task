@@ -90,3 +90,25 @@
     @apply bg-muted/30;
   }
 }
+
+/* Kanban board horizontal scrollbar */
+.kanban-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+.kanban-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.kanban-scroll::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 99px;
+  margin: 0 4px;
+}
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 99px;
+  border: 2px solid hsl(var(--muted) / 0.5);
+}
+.kanban-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
