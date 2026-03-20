@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import { cn, STATUS_COLORS } from "@/lib/utils";
+import { cn, STATUS_COLORS, OFFER_STATUS_COLORS } from "@/lib/utils";
 import { Loader2, X } from "lucide-react";
 
 export const Button = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive', size?: 'sm' | 'md' | 'lg', isLoading?: boolean }>(
@@ -105,8 +105,9 @@ export function Card({ className, children }: { className?: string, children: Re
   );
 }
 
-export function StatusBadge({ status, className }: { status: string, className?: string }) {
-  const colors = STATUS_COLORS[status] || { bg: "#f1f5f9", text: "#475569" };
+export function StatusBadge({ status, department, className }: { status: string, department?: string, className?: string }) {
+  const colorMap = department === "offer" ? OFFER_STATUS_COLORS : STATUS_COLORS;
+  const colors = colorMap[status] || { bg: "#f1f5f9", text: "#475569" };
   return (
     <span 
       className={cn("inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold tracking-tight", className)}

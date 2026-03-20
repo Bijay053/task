@@ -93,6 +93,7 @@ export interface UniversityUpdate {
 
 export interface ApplicationOut {
   id: number;
+  department: string;
   student_id: number;
   university_id?: number | null;
   assigned_to_id?: number | null;
@@ -102,9 +103,16 @@ export interface ApplicationOut {
   intake?: string | null;
   course?: string | null;
   country?: string | null;
+  remarks?: string | null;
+  /** GS-specific */
   priority?: string | null;
   source?: string | null;
-  remarks?: string | null;
+  submitted_date?: string | null;
+  verification?: string | null;
+  /** Offer-specific */
+  channel?: string | null;
+  offer_applied_date?: string | null;
+  offer_received_date?: string | null;
   created_at: string;
   updated_at: string;
   student?: StudentOut | null;
@@ -114,6 +122,7 @@ export interface ApplicationOut {
 }
 
 export interface ApplicationCreate {
+  department?: string;
   student_id: number;
   university_id?: number | null;
   assigned_to_id?: number | null;
@@ -121,9 +130,16 @@ export interface ApplicationCreate {
   intake?: string;
   course?: string;
   country?: string;
+  remarks?: string;
+  /** GS-specific */
   priority?: string;
   source?: string;
-  remarks?: string;
+  submitted_date?: string | null;
+  verification?: string | null;
+  /** Offer-specific */
+  channel?: string | null;
+  offer_applied_date?: string | null;
+  offer_received_date?: string | null;
 }
 
 export interface ApplicationUpdate {
@@ -133,9 +149,16 @@ export interface ApplicationUpdate {
   intake?: string;
   course?: string;
   country?: string;
+  remarks?: string;
+  /** GS-specific */
   priority?: string;
   source?: string;
-  remarks?: string;
+  submitted_date?: string | null;
+  verification?: string | null;
+  /** Offer-specific */
+  channel?: string | null;
+  offer_applied_date?: string | null;
+  offer_received_date?: string | null;
 }
 
 export interface StatusUpdate {
@@ -193,7 +216,12 @@ export type ListUniversitiesParams = {
 };
 
 export type ListApplicationsParams = {
+  department?: string;
   assigned_to_id?: number;
   status?: string;
   search?: string;
+};
+
+export type MyApplicationsParams = {
+  department?: string;
 };

@@ -6,30 +6,53 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
-STATUS_CHOICES = [
+# ─── GS Department ────────────────────────────────────────────────────────────
+GS_STATUS_CHOICES = [
     "GS Rejected", "GS approved", "GS document pending", "GS onhold",
     "GS submitted", "GS additional document request", "In Review",
     "Refund Requested", "Visa Refused", "Visa Granted", "Visa Lodged",
     "CoE Requested", "CoE Approved"
 ]
 
-STATUS_COLORS = {
-    "GS Rejected": "#F8D7DA",
-    "GS approved": "#D1E7DD",
-    "GS document pending": "#FFF3CD",
-    "GS onhold": "#E2E3E5",
-    "GS submitted": "#CFE2FF",
+GS_STATUS_COLORS = {
+    "GS Rejected":                    "#F8D7DA",
+    "GS approved":                    "#D1E7DD",
+    "GS document pending":            "#FFF3CD",
+    "GS onhold":                      "#E2E3E5",
+    "GS submitted":                   "#CFE2FF",
     "GS additional document request": "#FAD7F0",
-    "In Review": "#E7D9FF",
-    "Refund Requested": "#FCE5CD",
-    "Visa Refused": "#F4CCCC",
-    "Visa Granted": "#D9EAD3",
-    "Visa Lodged": "#D0E0E3",
-    "CoE Requested": "#FFF2CC",
-    "CoE Approved": "#D9D2E9",
+    "In Review":                      "#E7D9FF",
+    "Refund Requested":               "#FCE5CD",
+    "Visa Refused":                   "#F4CCCC",
+    "Visa Granted":                   "#D9EAD3",
+    "Visa Lodged":                    "#D0E0E3",
+    "CoE Requested":                  "#FFF2CC",
+    "CoE Approved":                   "#D9D2E9",
 }
 
+# ─── Offer Department ──────────────────────────────────────────────────────────
+OFFER_STATUS_CHOICES = [
+    "On Hold", "Not Eligible", "Offer Request",
+    "Offer Received", "Offer Rejected", "Document Requested"
+]
+
+OFFER_STATUS_COLORS = {
+    "On Hold":           "#E2E3E5",
+    "Not Eligible":      "#F8D7DA",
+    "Offer Request":     "#FFF3CD",
+    "Offer Received":    "#D1E7DD",
+    "Offer Rejected":    "#F5C2C7",
+    "Document Requested": "#CFE2FF",
+}
+
+OFFER_CHANNEL_CHOICES = ["Direct", "Expert", "KC overseas", "SIUK"]
+
+# Keep legacy alias for existing code
+STATUS_CHOICES = GS_STATUS_CHOICES
+STATUS_COLORS = GS_STATUS_COLORS
+
 ROLE_CHOICES = ["admin", "manager", "agent"]
+DEPARTMENT_CHOICES = ["gs", "offer"]
 
 
 class User(Base):
@@ -81,18 +104,35 @@ class Application(Base):
     __tablename__ = "task_applications"
 
     id = Column(Integer, primary_key=True, index=True)
+
+    # Department: 'gs' or 'offer'
+    department = Column(String(20), default="gs", nullable=False)
+
     student_id = Column(Integer, ForeignKey("task_students.id"), nullable=False)
     university_id = Column(Integer, ForeignKey("task_universities.id"), nullable=True)
     assigned_to_id = Column(Integer, ForeignKey("task_users.id"), nullable=True)
     created_by_id = Column(Integer, ForeignKey("task_users.id"), nullable=True)
+
     application_status = Column(String(100), default="In Review")
     assigned_date = Column(Date, nullable=True)
+
+    # Shared fields
     intake = Column(String(100), nullable=True)
     course = Column(String(255), nullable=True)
     country = Column(String(100), nullable=True)
+    remarks = Column(Text, nullable=True)
+
+    # GS-specific fields
     priority = Column(String(50), default="normal")
     source = Column(String(100), nullable=True)
-    remarks = Column(Text, nullable=True)
+    submitted_date = Column(Date, nullable=True)
+    verification = Column(String(255), nullable=True)
+
+    # Offer-specific fields
+    channel = Column(String(100), nullable=True)       # Direct / Expert / KC overseas / SIUK
+    offer_applied_date = Column(Date, nullable=True)
+    offer_received_date = Column(Date, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

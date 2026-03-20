@@ -8,7 +8,8 @@ import NotFound from "@/pages/not-found";
 
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
-import Applications from "@/pages/applications";
+import GsApplications from "@/pages/applications";
+import OfferApplications from "@/pages/offer-applications";
 import MyTasks from "@/pages/my-tasks";
 import Approved from "@/pages/approved";
 import Students from "@/pages/students";
@@ -16,7 +17,6 @@ import Universities from "@/pages/universities";
 import Users from "@/pages/users";
 import Settings from "@/pages/settings";
 
-// Register token getter so all API calls include the JWT Bearer token
 setAuthTokenGetter(() => localStorage.getItem("access_token"));
 
 const queryClient = new QueryClient({
@@ -30,15 +30,12 @@ const queryClient = new QueryClient({
 
 function ProtectedRoute({ component: Component, ...rest }: { component: any, [key: string]: any }) {
   const { isAuthenticated, isLoading } = useAuth();
-  
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50">Loading...</div>;
   }
-  
   if (!isAuthenticated) {
     return <Redirect to="/login" />;
   }
-  
   return <Component {...rest} />;
 }
 
@@ -50,7 +47,10 @@ function Router() {
         {() => <ProtectedRoute component={Dashboard} />}
       </Route>
       <Route path="/applications">
-        {() => <ProtectedRoute component={Applications} />}
+        {() => <ProtectedRoute component={GsApplications} />}
+      </Route>
+      <Route path="/offer-applications">
+        {() => <ProtectedRoute component={OfferApplications} />}
       </Route>
       <Route path="/my-tasks">
         {() => <ProtectedRoute component={MyTasks} />}

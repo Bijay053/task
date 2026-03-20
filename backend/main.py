@@ -19,6 +19,8 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(bind=engine)
+    from backend.migrations import run_migrations
+    run_migrations()
     from backend.seed import seed
     seed()
 

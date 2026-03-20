@@ -1,4 +1,4 @@
-"""Seed initial data: admin user + sample data"""
+"""Seed initial data: admin user + sample data for both departments"""
 from backend.database import SessionLocal
 from backend.auth import get_password_hash
 import backend.models as models
@@ -48,20 +48,139 @@ def seed():
         db.flush()
 
         from datetime import date
-        apps = [
-            models.Application(student_id=s1.id, university_id=uni1.id, assigned_to_id=agent1.id, assigned_date=date.today(), application_status="GS submitted", intake="Feb 2025", course="Master of Engineering", country="Australia", priority="high", created_by_id=admin.id),
-            models.Application(student_id=s2.id, university_id=uni2.id, assigned_to_id=agent1.id, assigned_date=date.today(), application_status="GS approved", intake="Jul 2025", course="Bachelor of Commerce", country="Australia", priority="normal", created_by_id=admin.id),
-            models.Application(student_id=s3.id, university_id=uni3.id, assigned_to_id=agent2.id, assigned_date=date.today(), application_status="In Review", intake="Sep 2025", course="PhD Computer Science", country="Canada", priority="normal", created_by_id=admin.id),
-            models.Application(student_id=s4.id, university_id=uni4.id, assigned_to_id=agent2.id, assigned_date=date.today(), application_status="Visa Granted", intake="Feb 2025", course="Master of Business", country="New Zealand", priority="high", created_by_id=admin.id),
-            models.Application(student_id=s5.id, university_id=uni1.id, assigned_to_id=agent1.id, assigned_date=date.today(), application_status="CoE Approved", intake="Jul 2025", course="Bachelor of Science", country="Australia", priority="normal", created_by_id=admin.id),
-            models.Application(student_id=s1.id, university_id=uni3.id, assigned_to_id=agent2.id, assigned_date=date.today(), application_status="GS document pending", intake="Sep 2025", course="Master of Data Science", country="Canada", priority="low", created_by_id=admin.id),
-            models.Application(student_id=s2.id, university_id=uni4.id, application_status="GS Rejected", intake="Feb 2025", course="Bachelor of Law", country="New Zealand", priority="normal", created_by_id=admin.id),
+        gs_apps = [
+            models.Application(
+                department="gs",
+                student_id=s1.id, university_id=uni1.id,
+                assigned_to_id=agent1.id, assigned_date=date.today(),
+                application_status="GS submitted",
+                intake="Feb 2025", course="Master of Engineering",
+                country="Australia", priority="high",
+                submitted_date=date(2025, 1, 15), verification="Pending",
+                created_by_id=admin.id,
+            ),
+            models.Application(
+                department="gs",
+                student_id=s2.id, university_id=uni2.id,
+                assigned_to_id=agent1.id, assigned_date=date.today(),
+                application_status="GS approved",
+                intake="Jul 2025", course="Bachelor of Commerce",
+                country="Australia", priority="normal",
+                submitted_date=date(2025, 1, 20), verification="Verified",
+                created_by_id=admin.id,
+            ),
+            models.Application(
+                department="gs",
+                student_id=s3.id, university_id=uni3.id,
+                assigned_to_id=agent2.id, assigned_date=date.today(),
+                application_status="In Review",
+                intake="Sep 2025", course="PhD Computer Science",
+                country="Canada", priority="normal",
+                created_by_id=admin.id,
+            ),
+            models.Application(
+                department="gs",
+                student_id=s4.id, university_id=uni4.id,
+                assigned_to_id=agent2.id, assigned_date=date.today(),
+                application_status="Visa Granted",
+                intake="Feb 2025", course="Master of Business",
+                country="New Zealand", priority="high",
+                submitted_date=date(2025, 1, 5), verification="Verified",
+                created_by_id=admin.id,
+            ),
+            models.Application(
+                department="gs",
+                student_id=s5.id, university_id=uni1.id,
+                assigned_to_id=agent1.id, assigned_date=date.today(),
+                application_status="CoE Approved",
+                intake="Jul 2025", course="Bachelor of Science",
+                country="Australia", priority="normal",
+                submitted_date=date(2025, 1, 10), verification="Verified",
+                created_by_id=admin.id,
+            ),
+            models.Application(
+                department="gs",
+                student_id=s1.id, university_id=uni3.id,
+                assigned_to_id=agent2.id, assigned_date=date.today(),
+                application_status="GS document pending",
+                intake="Sep 2025", course="Master of Data Science",
+                country="Canada", priority="low",
+                created_by_id=admin.id,
+            ),
+            models.Application(
+                department="gs",
+                student_id=s2.id, university_id=uni4.id,
+                application_status="GS Rejected",
+                intake="Feb 2025", course="Bachelor of Law",
+                country="New Zealand", priority="normal",
+                created_by_id=admin.id,
+            ),
         ]
-        db.add_all(apps)
+        db.add_all(gs_apps)
+
+        offer_apps = [
+            models.Application(
+                department="offer",
+                student_id=s1.id, university_id=uni1.id,
+                assigned_to_id=agent1.id, assigned_date=date.today(),
+                application_status="Offer Request",
+                intake="Feb 2025", course="Master of Engineering",
+                country="Australia", channel="Direct",
+                offer_applied_date=date(2025, 1, 12),
+                remarks="Awaiting offer letter from university",
+                created_by_id=admin.id,
+            ),
+            models.Application(
+                department="offer",
+                student_id=s3.id, university_id=uni2.id,
+                assigned_to_id=agent2.id, assigned_date=date.today(),
+                application_status="Offer Received",
+                intake="Jul 2025", course="Bachelor of Science",
+                country="Australia", channel="Expert",
+                offer_applied_date=date(2025, 1, 8),
+                offer_received_date=date(2025, 1, 25),
+                remarks="Offer received, student reviewing",
+                created_by_id=admin.id,
+            ),
+            models.Application(
+                department="offer",
+                student_id=s4.id, university_id=uni3.id,
+                assigned_to_id=agent1.id, assigned_date=date.today(),
+                application_status="Document Requested",
+                intake="Sep 2025", course="Master of Business",
+                country="Canada", channel="KC overseas",
+                offer_applied_date=date(2025, 1, 20),
+                remarks="University requested additional transcripts",
+                created_by_id=admin.id,
+            ),
+            models.Application(
+                department="offer",
+                student_id=s5.id, university_id=uni4.id,
+                application_status="On Hold",
+                intake="Feb 2026", course="PhD in Economics",
+                country="New Zealand", channel="SIUK",
+                offer_applied_date=date(2025, 2, 1),
+                remarks="Student needs to submit IELTS",
+                created_by_id=admin.id,
+            ),
+            models.Application(
+                department="offer",
+                student_id=s2.id, university_id=uni1.id,
+                assigned_to_id=agent2.id, assigned_date=date.today(),
+                application_status="Offer Rejected",
+                intake="Jul 2025", course="Bachelor of Commerce",
+                country="Australia", channel="Direct",
+                offer_applied_date=date(2025, 1, 5),
+                offer_received_date=date(2025, 1, 18),
+                remarks="Student GPA below requirement",
+                created_by_id=admin.id,
+            ),
+        ]
+        db.add_all(offer_apps)
         db.commit()
         print("Database seeded successfully!")
-        print("Admin login: admin@taskportal.com / admin123")
-        print("Agent login: agent1@taskportal.com / agent123")
+        print("Admin login:  admin@taskportal.com / admin123")
+        print("Agent login:  agent1@taskportal.com / agent123")
     except Exception as e:
         db.rollback()
         print(f"Seed failed: {e}")

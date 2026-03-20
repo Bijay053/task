@@ -4,14 +4,14 @@ import { Layout } from "@/components/layout";
 import { Card, Button, Input, Select, StatusBadge, Modal, Label, Textarea } from "@/components/ui-elements";
 import { KanbanBoard } from "@/components/kanban-board";
 import { Search, Plus, FileEdit, LayoutGrid, List } from "lucide-react";
-import { GS_STATUS_CHOICES, GS_STATUS_COLORS } from "@/lib/utils";
+import { OFFER_STATUS_CHOICES, OFFER_STATUS_COLORS, OFFER_CHANNEL_CHOICES } from "@/lib/utils";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "table" | "kanban";
 
-export default function GsApplications() {
+export default function OfferApplications() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -21,7 +21,7 @@ export default function GsApplications() {
   const [viewMode, setViewMode] = useState<ViewMode>("table");
 
   const { data: applications, isLoading } = useListApplications({
-    department: "gs",
+    department: "offer",
     search: search || undefined,
     status: statusFilter || undefined,
     assigned_to_id: assigneeFilter ? Number(assigneeFilter) : undefined,
@@ -41,18 +41,16 @@ export default function GsApplications() {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const data = {
-      department: "gs",
+      department: "offer",
       student_id: Number(fd.get("student_id")),
       university_id: fd.get("university_id") ? Number(fd.get("university_id")) : undefined,
       assigned_to_id: fd.get("assigned_to_id") ? Number(fd.get("assigned_to_id")) : undefined,
       application_status: fd.get("application_status") as string,
       intake: fd.get("intake") as string,
       course: fd.get("course") as string,
-      country: fd.get("country") as string,
-      priority: fd.get("priority") as string,
-      source: fd.get("source") as string,
-      submitted_date: fd.get("submitted_date") as string || undefined,
-      verification: fd.get("verification") as string,
+      channel: fd.get("channel") as string,
+      offer_applied_date: fd.get("offer_applied_date") as string || undefined,
+      offer_received_date: fd.get("offer_received_date") as string || undefined,
       remarks: fd.get("remarks") as string,
     };
     if (editingApp) {
@@ -70,8 +68,8 @@ export default function GsApplications() {
       <div className="h-full flex flex-col space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div>
-            <h1 className="text-3xl font-display font-bold tracking-tight">GS Applications</h1>
-            <p className="text-muted-foreground mt-1">Global Study applications — visa & university tracking.</p>
+            <h1 className="text-3xl font-display font-bold tracking-tight">Offer Applications</h1>
+            <p className="text-muted-foreground mt-1">Track university offer requests and received offers.</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex rounded-xl border border-border overflow-hidden bg-muted/40">
@@ -82,7 +80,7 @@ export default function GsApplications() {
                 <LayoutGrid className="w-4 h-4" />Board
               </button>
             </div>
-            <Button size="lg" onClick={handleOpenCreate}><Plus className="w-5 h-5 mr-2" />New GS App</Button>
+            <Button size="lg" onClick={handleOpenCreate}><Plus className="w-5 h-5 mr-2" />New Offer App</Button>
           </div>
         </div>
 
@@ -96,13 +94,13 @@ export default function GsApplications() {
               <div className="min-w-[180px]">
                 <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-card">
                   <option value="">All Statuses</option>
-                  {GS_STATUS_CHOICES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {OFFER_STATUS_CHOICES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </Select>
               </div>
             )}
             <div className="min-w-[180px]">
               <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="bg-card">
-                <option value="">All Assignees</option>
+                <option value="">All Agents</option>
                 {users?.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
               </Select>
             </div>
@@ -119,11 +117,11 @@ export default function GsApplications() {
                     <th>Student</th>
                     <th>University / Course</th>
                     <th>Intake</th>
-                    <th>Submitted</th>
-                    <th>Verification</th>
+                    <th>Channel</th>
+                    <th>Applied Date</th>
                     <th>Status</th>
+                    <th>Received Date</th>
                     <th>Agent</th>
-                    <th>Priority</th>
                     <th className="w-10"></th>
                   </tr>
                 </thead>
@@ -131,7 +129,7 @@ export default function GsApplications() {
                   {isLoading ? (
                     <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
                   ) : applications?.length === 0 ? (
-                    <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">No GS applications found.</td></tr>
+                    <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">No offer applications found.</td></tr>
                   ) : (
                     applications?.map((app) => (
                       <tr key={app.id} className="group cursor-pointer" onClick={() => handleOpenEdit(app)}>
@@ -142,15 +140,14 @@ export default function GsApplications() {
                           <div className="text-xs text-muted-foreground">{app.course || "-"}</div>
                         </td>
                         <td>{app.intake || "-"}</td>
-                        <td className="text-sm text-muted-foreground">{app.submitted_date ? format(new Date(app.submitted_date), "MMM d, yyyy") : "-"}</td>
                         <td>
-                          {app.verification ? (
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${app.verification === "Verified" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                              {app.verification}
-                            </span>
+                          {app.channel ? (
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-700">{app.channel}</span>
                           ) : "-"}
                         </td>
-                        <td><StatusBadge status={app.application_status} department="gs" /></td>
+                        <td className="text-sm text-muted-foreground">{app.offer_applied_date ? format(new Date(app.offer_applied_date), "MMM d, yyyy") : "-"}</td>
+                        <td><StatusBadge status={app.application_status} department="offer" /></td>
+                        <td className="text-sm text-muted-foreground">{app.offer_received_date ? format(new Date(app.offer_received_date), "MMM d, yyyy") : "-"}</td>
                         <td>
                           {app.assigned_to ? (
                             <div className="flex items-center">
@@ -160,11 +157,6 @@ export default function GsApplications() {
                               <span className="text-sm">{app.assigned_to.full_name}</span>
                             </div>
                           ) : <span className="text-muted-foreground text-sm italic">Unassigned</span>}
-                        </td>
-                        <td>
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${app.priority === "high" ? "bg-red-100 text-red-700" : app.priority === "low" ? "bg-slate-100 text-slate-600" : "bg-blue-100 text-blue-700"}`}>
-                            {app.priority || "normal"}
-                          </span>
                         </td>
                         <td>
                           <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleOpenEdit(app); }}>
@@ -185,15 +177,16 @@ export default function GsApplications() {
             ) : (
               <KanbanBoard
                 applications={applications || []}
-                statusChoices={GS_STATUS_CHOICES}
-                statusColors={GS_STATUS_COLORS}
+                statusChoices={OFFER_STATUS_CHOICES}
+                statusColors={OFFER_STATUS_COLORS}
+                queryInvalidateKeys={["/api/applications?department=offer"]}
               />
             )}
           </div>
         )}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingApp ? "Edit GS Application" : "New GS Application"} maxWidth="max-w-3xl">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingApp ? "Edit Offer Application" : "New Offer Application"} maxWidth="max-w-3xl">
         <form onSubmit={onSubmit} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-2">
@@ -204,10 +197,6 @@ export default function GsApplications() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Country</Label>
-              <Input name="country" defaultValue={editingApp?.country || ""} placeholder="e.g. Australia" />
-            </div>
-            <div className="space-y-2">
               <Label>University</Label>
               <Select name="university_id" defaultValue={editingApp?.university_id || ""}>
                 <option value="">Select University...</option>
@@ -216,44 +205,38 @@ export default function GsApplications() {
             </div>
             <div className="space-y-2">
               <Label>Course</Label>
-              <Input name="course" defaultValue={editingApp?.course || ""} placeholder="e.g. Master of Data Science" />
+              <Input name="course" defaultValue={editingApp?.course || ""} placeholder="e.g. Bachelor of Science" />
             </div>
             <div className="space-y-2">
               <Label>Intake</Label>
               <Input name="intake" defaultValue={editingApp?.intake || ""} placeholder="e.g. Feb 2025" />
             </div>
             <div className="space-y-2">
-              <Label>Submitted Date</Label>
-              <Input type="date" name="submitted_date" defaultValue={editingApp?.submitted_date || ""} />
-            </div>
-            <div className="space-y-2">
-              <Label>Verification</Label>
-              <Select name="verification" defaultValue={editingApp?.verification || ""}>
-                <option value="">Not set</option>
-                <option value="Pending">Pending</option>
-                <option value="Verified">Verified</option>
-                <option value="Failed">Failed</option>
+              <Label>Channel</Label>
+              <Select name="channel" defaultValue={editingApp?.channel || ""}>
+                <option value="">Select Channel...</option>
+                {OFFER_CHANNEL_CHOICES.map((c) => <option key={c} value={c}>{c}</option>)}
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Application Status</Label>
-              <Select name="application_status" defaultValue={editingApp?.application_status || "In Review"}>
-                {GS_STATUS_CHOICES.map((s) => <option key={s} value={s}>{s}</option>)}
+              <Label>Status</Label>
+              <Select name="application_status" defaultValue={editingApp?.application_status || "On Hold"}>
+                {OFFER_STATUS_CHOICES.map((s) => <option key={s} value={s}>{s}</option>)}
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Offer Applied Date</Label>
+              <Input type="date" name="offer_applied_date" defaultValue={editingApp?.offer_applied_date || ""} />
+            </div>
+            <div className="space-y-2">
+              <Label>Offer Received Date</Label>
+              <Input type="date" name="offer_received_date" defaultValue={editingApp?.offer_received_date || ""} />
             </div>
             <div className="space-y-2">
               <Label>Agent (Assignee)</Label>
               <Select name="assigned_to_id" defaultValue={editingApp?.assigned_to_id || ""}>
                 <option value="">Unassigned</option>
                 {users?.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Priority</Label>
-              <Select name="priority" defaultValue={editingApp?.priority || "normal"}>
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
               </Select>
             </div>
           </div>

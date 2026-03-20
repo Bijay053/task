@@ -26,6 +26,7 @@ import type {
   DashboardSummary,
   HealthStatus,
   ListApplicationsParams,
+  MyApplicationsParams,
   ListStudentsParams,
   ListUniversitiesParams,
   LoginRequest,
@@ -1321,41 +1322,50 @@ export const useCreateApplication = <
 /**
  * @summary My assigned applications
  */
-export const getMyApplicationsUrl = () => {
-  return `/api/applications/my`;
+export const getMyApplicationsUrl = (params?: MyApplicationsParams) => {
+  const normalizedParams = new URLSearchParams();
+  if (params?.department !== undefined) normalizedParams.append("department", params.department);
+  const stringifiedParams = normalizedParams.toString();
+  return stringifiedParams.length > 0
+    ? `/api/applications/my?${stringifiedParams}`
+    : `/api/applications/my`;
 };
 
 export const myApplications = async (
+  params?: MyApplicationsParams,
   options?: RequestInit,
 ): Promise<ApplicationOut[]> => {
-  return customFetch<ApplicationOut[]>(getMyApplicationsUrl(), {
+  return customFetch<ApplicationOut[]>(getMyApplicationsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getMyApplicationsQueryKey = () => {
-  return [`/api/applications/my`] as const;
+export const getMyApplicationsQueryKey = (params?: MyApplicationsParams) => {
+  return [`/api/applications/my`, ...(params ? [params] : [])] as const;
 };
 
 export const getMyApplicationsQueryOptions = <
   TData = Awaited<ReturnType<typeof myApplications>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof myApplications>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: MyApplicationsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof myApplications>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getMyApplicationsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getMyApplicationsQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof myApplications>>> = ({
     signal,
-  }) => myApplications({ signal, ...requestOptions });
+  }) => myApplications(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof myApplications>>,
@@ -1376,15 +1386,18 @@ export type MyApplicationsQueryError = ErrorType<unknown>;
 export function useMyApplications<
   TData = Awaited<ReturnType<typeof myApplications>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof myApplications>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getMyApplicationsQueryOptions(options);
+>(
+  params?: MyApplicationsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof myApplications>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getMyApplicationsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -91,16 +91,26 @@ class UniversityOut(BaseModel):
 
 
 class ApplicationCreate(BaseModel):
+    department: Optional[str] = "gs"           # 'gs' or 'offer'
     student_id: int
     university_id: Optional[int] = None
     assigned_to_id: Optional[int] = None
-    application_status: Optional[str] = "In Review"
+    application_status: Optional[str] = None   # defaults set per-department in router
     intake: Optional[str] = None
     course: Optional[str] = None
     country: Optional[str] = None
+    remarks: Optional[str] = None
+
+    # GS-specific
     priority: Optional[str] = "normal"
     source: Optional[str] = None
-    remarks: Optional[str] = None
+    submitted_date: Optional[date] = None
+    verification: Optional[str] = None
+
+    # Offer-specific
+    channel: Optional[str] = None
+    offer_applied_date: Optional[date] = None
+    offer_received_date: Optional[date] = None
 
 
 class ApplicationUpdate(BaseModel):
@@ -110,9 +120,18 @@ class ApplicationUpdate(BaseModel):
     intake: Optional[str] = None
     course: Optional[str] = None
     country: Optional[str] = None
+    remarks: Optional[str] = None
+
+    # GS-specific
     priority: Optional[str] = None
     source: Optional[str] = None
-    remarks: Optional[str] = None
+    submitted_date: Optional[date] = None
+    verification: Optional[str] = None
+
+    # Offer-specific
+    channel: Optional[str] = None
+    offer_applied_date: Optional[date] = None
+    offer_received_date: Optional[date] = None
 
 
 class StatusUpdate(BaseModel):
@@ -125,6 +144,7 @@ class AssignUpdate(BaseModel):
 
 class ApplicationOut(BaseModel):
     id: int
+    department: str
     student_id: int
     university_id: Optional[int]
     assigned_to_id: Optional[int]
@@ -134,9 +154,19 @@ class ApplicationOut(BaseModel):
     intake: Optional[str]
     course: Optional[str]
     country: Optional[str]
+    remarks: Optional[str]
+
+    # GS-specific
     priority: Optional[str]
     source: Optional[str]
-    remarks: Optional[str]
+    submitted_date: Optional[date]
+    verification: Optional[str]
+
+    # Offer-specific
+    channel: Optional[str]
+    offer_applied_date: Optional[date]
+    offer_received_date: Optional[date]
+
     created_at: datetime
     updated_at: datetime
     student: Optional[StudentOut]
