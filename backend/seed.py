@@ -55,7 +55,7 @@ def seed():
         # Always ensure primary admin exists
         seed_admin_user(db)
 
-        if db.query(models.User).count() > 1:
+        if db.query(models.User).count() > 1 or db.query(models.University).count() > 0:
             print("Database already seeded, skipping.")
             return
 

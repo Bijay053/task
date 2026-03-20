@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useListUniversities, useCreateUniversity, useUpdateUniversity } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Modal, Label } from "@/components/ui-elements";
-import { Search, Plus, Building, Edit2 } from "lucide-react";
+import { Search, Plus, Building, Edit2, AlertCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function Universities() {
@@ -11,26 +11,45 @@ export default function Universities() {
   const { data: universities, isLoading } = useListUniversities({ search: search || undefined });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const createMut = useCreateUniversity();
   const updateMut = useUpdateUniversity();
 
+  const openModal = (item: any = null) => {
+    setEditingItem(item);
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setFormError(null);
+    setIsSaving(true);
     const fd = new FormData(e.currentTarget);
     const data = {
-      name: fd.get("name") as string,
-      country: fd.get("country") as string,
+      name: (fd.get("name") as string).trim(),
+      country: (fd.get("country") as string).trim() || undefined,
     };
 
-    if (editingItem) {
-      await updateMut.mutateAsync({ uniId: editingItem.id, data });
-    } else {
-      await createMut.mutateAsync({ data });
+    try {
+      if (editingItem) {
+        await updateMut.mutateAsync({ uniId: editingItem.id, data });
+      } else {
+        await createMut.mutateAsync({ data });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/universities"] });
+      setIsModalOpen(false);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Failed to save. Please try again.";
+      setFormError(msg);
+    } finally {
+      setIsSaving(false);
     }
-    
-    queryClient.invalidateQueries({ queryKey: ["/api/universities"] });
-    setIsModalOpen(false);
   };
 
   return (
@@ -40,7 +59,7 @@ export default function Universities() {
           <div>
             <h1 className="text-3xl font-display font-bold tracking-tight">Universities</h1>
           </div>
-          <Button onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
+          <Button onClick={() => openModal(null)}>
             <Plus className="w-5 h-5 mr-2" />
             Add University
           </Button>
@@ -49,8 +68,8 @@ export default function Universities() {
         <Card className="p-4 bg-muted/30 max-w-md">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
-            <Input 
-              placeholder="Search by name..." 
+            <Input
+              placeholder="Search by name..."
               className="pl-10 bg-card"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -82,7 +101,7 @@ export default function Universities() {
                     <td className="font-semibold text-foreground">{u.name}</td>
                     <td className="text-muted-foreground font-medium">{u.country || '-'}</td>
                     <td className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => { setEditingItem(u); setIsModalOpen(true); }}>
+                      <Button variant="ghost" size="sm" onClick={() => openModal(u)}>
                         <Edit2 className="w-4 h-4 mr-2" /> Edit
                       </Button>
                     </td>
@@ -94,19 +113,33 @@ export default function Universities() {
         </Card>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? "Edit University" : "New University"}>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingItem ? "Edit University" : "New University"}
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>University Name *</Label>
-            <Input name="name" required defaultValue={editingItem?.name || ""} />
+            <Input name="name" required defaultValue={editingItem?.name || ""} key={editingItem?.id ?? "new"} />
           </div>
           <div className="space-y-2">
             <Label>Country</Label>
-            <Input name="country" defaultValue={editingItem?.country || ""} />
+            <Input name="country" defaultValue={editingItem?.country || ""} key={(editingItem?.id ?? "new") + "-country"} />
           </div>
+
+          {formError && (
+            <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
           <div className="flex justify-end space-x-3 pt-4">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" isLoading={createMut.isPending || updateMut.isPending}>Save</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving…" : "Save"}
+            </Button>
           </div>
         </form>
       </Modal>
