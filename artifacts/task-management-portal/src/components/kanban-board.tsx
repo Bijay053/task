@@ -162,7 +162,7 @@ function KanbanColumn({
   const color = colorMap[status] || { bg: "#f1f5f9", text: "#64748b" };
 
   return (
-    <div className="flex flex-col w-[290px] min-w-[290px] shrink-0 h-full">
+    <div className="flex flex-col w-[290px] min-w-[290px] max-w-[290px] shrink-0 h-full overflow-x-hidden">
       <div
         className="flex items-center justify-between px-3 py-2.5 rounded-t-xl font-semibold text-xs uppercase tracking-wide shrink-0"
         style={{ backgroundColor: color.bg, color: color.text }}
@@ -177,7 +177,7 @@ function KanbanColumn({
       </div>
       <div
         className={cn(
-          "flex-1 rounded-b-xl p-2 space-y-2 overflow-y-auto transition-colors min-h-[120px]",
+          "flex-1 rounded-b-xl p-2 space-y-2 overflow-y-auto overflow-x-hidden transition-colors min-h-[120px]",
           isOver ? "bg-primary/5 ring-2 ring-primary/30 ring-inset" : "bg-muted/40"
         )}
         onDragOver={(e) => { e.preventDefault(); setIsOver(true); }}

@@ -92,24 +92,25 @@
   }
 }
 
-/* Kanban board horizontal scrollbar */
+/* Kanban board horizontal scrollbar — Jira-style: always visible, easy to drag */
 .kanban-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--border)) transparent;
+  scrollbar-width: auto;
+  scrollbar-color: hsl(var(--border)) hsl(var(--muted));
+  scrollbar-gutter: stable;
 }
 .kanban-scroll::-webkit-scrollbar {
-  height: 8px;
+  height: 12px;
 }
 .kanban-scroll::-webkit-scrollbar-track {
-  background: hsl(var(--muted) / 0.5);
-  border-radius: 99px;
-  margin: 0 4px;
+  background: hsl(var(--muted));
+  border-top: 1px solid hsl(var(--border));
 }
 .kanban-scroll::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
+  background: hsl(var(--muted-foreground) / 0.35);
   border-radius: 99px;
-  border: 2px solid hsl(var(--muted) / 0.5);
+  border: 3px solid hsl(var(--muted));
+  min-width: 60px;
 }
 .kanban-scroll::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: hsl(var(--muted-foreground) / 0.6);
 }

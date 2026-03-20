@@ -1,0 +1,211 @@
+23. Role Management Must Allow Creating Custom Roles
+
+The system should not be limited to only fixed roles like:
+
+Admin
+
+Manager
+
+Team Leader
+
+Agent
+
+I should be able to create new custom roles manually from the Role & Permission Management page.
+
+Required Role Features
+
+Add new role
+
+Edit role name
+
+Delete role
+
+Activate/deactivate role
+
+Assign permissions to each custom role
+
+Apply role to users
+
+Example Custom Roles
+
+Admin
+
+Manager
+
+Team Leader
+
+GS Staff
+
+Offer Staff
+
+Country Manager
+
+Admission Officer
+
+Compliance Officer
+
+Report Viewer
+
+HR / Leave Manager
+
+Super Admin
+
+24. Module Permission Must Include All System Modules
+
+In Module Permission, currently only:
+
+GS Department
+
+Offer Department
+
+are showing.
+
+This is not enough.
+
+I need all important modules/features to be available in permission management.
+
+Required Modules to Show in Permission Matrix
+
+Please add permission control for all of these modules:
+
+Dashboard
+
+My Tasks
+
+GS Applications
+
+Offer Applications
+
+Performance Reports
+
+External Agents
+
+Students Directory
+
+Universities
+
+Team Directory
+
+Leave & Availability
+
+Settings
+
+If needed, also add:
+
+Role & Permissions
+
+Bulk Upload
+
+Reports Export
+
+Status Management
+
+Department Webhook Settings
+
+25. Permission Matrix Must Be Module-Wise for Full System
+
+Each module should have permission options like:
+
+View
+
+Add
+
+Edit
+
+Delete
+
+Upload
+
+Export
+
+All
+
+Example
+Module	View	Add	Edit	Delete	Upload	Export	All
+GS Applications	✅	✅	✅	❌	✅	✅	⬜
+Offer Applications	✅	✅	✅	❌	✅	✅	⬜
+Leave & Availability	✅	✅	✅	❌	❌	✅	⬜
+Performance Reports	✅	❌	❌	❌	❌	✅	⬜
+Settings	✅	✅	✅	✅	❌	❌	⬜
+26. Role Permission Should Work for All Sidebar Menus
+
+Permissions should control visibility and access for all sidebar menus and their pages.
+
+If a user does not have permission for a module, that menu should be hidden or restricted.
+
+If they have view only, they can open it but cannot add/edit/delete.
+
+Example Logic
+
+User with permission for Performance Reports can see and open that page
+
+User without permission for Settings should not see Settings in sidebar
+
+User with only View permission for Students Directory can open and see records but cannot edit
+
+Developer Task Update
+Role Management
+
+Allow admin to create unlimited custom roles
+
+Allow edit/delete of roles
+
+Allow assigning module permissions to each role
+
+Module Permission Expansion
+
+Add all system modules into permission management, not only GS Department and Offer Department
+
+Modules to include
+
+Dashboard
+
+My Tasks
+
+GS Applications
+
+Offer Applications
+
+Performance Reports
+
+External Agents
+
+Students Directory
+
+Universities
+
+Team Directory
+
+Leave & Availability
+
+Settings
+
+Permission Types
+
+View
+
+Add
+
+Edit
+
+Delete
+
+Upload
+
+Export
+
+All
+
+Acceptance Criteria
+
+Admin can create new custom roles
+
+Admin can update and delete roles
+
+Permission matrix includes all major modules
+
+Sidebar visibility changes based on permission
+
+Users can access only modules allowed by role
+
+View/Add/Edit/Delete/Upload/Export permissions work correctly per module
