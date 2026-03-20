@@ -1,0 +1,432 @@
+Welcome to Ubuntu 24.04.3 LTS (GNU/Linux 6.14.0-1018-aws x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Fri Mar 20 06:33:26 UTC 2026
+
+  System load:  0.08               Temperature:           -273.1 C
+  Usage of /:   69.1% of 18.33GB   Processes:             141
+  Memory usage: 58%                Users logged in:       0
+  Swap usage:   46%                IPv4 address for ens5: 172.31.41.234
+
+ * Ubuntu Pro delivers the most comprehensive open source security and
+   compliance features.
+
+   https://ubuntu.com/aws/pro
+
+Expanded Security Maintenance for Applications is not enabled.
+
+42 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+*** System restart required ***
+Last login: Fri Mar 20 05:58:28 2026 from 13.233.177.3
+ubuntu@ip-172-31-41-234:~$ # Check if the build output exists
+ls /var/www/task-portal/artifacts/task-management-portal/dist/public/
+
+# Check Nginx error log
+sudo tail -20 /var/log/nginx/error.log
+
+# Check API service status
+sudo systemctl status task-portal-api
+ls: cannot access '/var/www/task-portal/artifacts/task-management-portal/dist/public/': No such file or directory
+2026/03/20 06:26:31 [error] 3132979#3132979: *40230 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /.env HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:31 [error] 3132979#3132979: *40227 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /billing HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:32 [error] 3132979#3132979: *40232 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /.env.prod HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:32 [error] 3132979#3132979: *40233 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /.env.staging HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:32 [error] 3132979#3132979: *40234 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /.env.stage HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:32 [error] 3132979#3132979: *40235 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /.env.dev HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:32 [error] 3132979#3132979: *40237 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /robots.txt HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:33 [error] 3132979#3132979: *40239 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /shop HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:26:33 [error] 3132979#3132979: *40238 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.50, server: task.studyinfocentre.com, request: "GET /order HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:30:00 [error] 3132979#3132979: *40240 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 54.159.70.42, server: task.studyinfocentre.com, request: "GET / HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:30:00 [error] 3132979#3132979: *40241 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 54.159.70.42, server: task.studyinfocentre.com, request: "GET /favicon.ico HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:30:01 [error] 3132979#3132979: *40242 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 54.159.70.42, server: task.studyinfocentre.com, request: "GET /favicon.png HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:32:35 [error] 3132978#3132978: *40243 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 27.33.30.70, server: task.studyinfocentre.com, request: "GET / HTTP/1.1", host: "task.studyinfocentre.com", referrer: "https://replit.com/"
+2026/03/20 06:32:36 [error] 3132978#3132978: *40244 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 27.33.30.70, server: task.studyinfocentre.com, request: "GET /favicon.ico HTTP/1.1", host: "task.studyinfocentre.com", referrer: "https://task.studyinfocentre.com/"
+2026/03/20 06:32:38 [error] 3132978#3132978: *40245 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 27.33.30.70, server: task.studyinfocentre.com, request: "GET / HTTP/1.1", host: "task.studyinfocentre.com", referrer: "https://replit.com/"
+2026/03/20 06:32:39 [error] 3132978#3132978: *40246 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 27.33.30.70, server: task.studyinfocentre.com, request: "GET /favicon.ico HTTP/1.1", host: "task.studyinfocentre.com", referrer: "https://task.studyinfocentre.com/"
+2026/03/20 06:33:31 [error] 3132978#3132978: *40255 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.60, server: task.studyinfocentre.com, request: "GET / HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:33:31 [error] 3132978#3132978: *40256 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.60, server: task.studyinfocentre.com, request: "GET /admin HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:33:31 [error] 3132978#3132978: *40259 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.60, server: task.studyinfocentre.com, request: "GET /payment HTTP/1.1", host: "task.studyinfocentre.com"
+2026/03/20 06:33:31 [error] 3132978#3132978: *40262 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 185.177.72.60, server: task.studyinfocentre.com, request: "GET /robots.txt HTTP/1.1", host: "task.studyinfocentre.com"
+● task-portal-api.service - Task Portal API
+     Loaded: loaded (/etc/systemd/system/task-portal-api.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Fri 2026-03-20 06:33:30 UTC; 2s ago
+    Process: 3141810 ExecStart=/usr/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 (code=exited, status=217/USER)
+   Main PID: 3141810 (code=exited, status=217/USER)
+        CPU: 2ms
+ubuntu@ip-172-31-41-234:~$ ^C
+ubuntu@ip-172-31-41-234:~$ sudo sed -i 's/User=ec2-user/User=ubuntu/' /etc/systemd/system/task-portal-api.service
+sudo systemctl daemon-reload
+ubuntu@ip-172-31-41-234:~$ sudo npm install -g pnpm
+cd /var/www/task-portal
+pnpm install --frozen-lockfile
+BASE_PATH=/ PORT=3000 pnpm --filter @workspace/task-management-portal run build
+sudo: npm: command not found
+Command 'pnpm' not found, did you mean:
+  command 'npm' from deb npm (9.2.0~ds1-2)
+Try: sudo apt install <deb name>
+Command 'pnpm' not found, did you mean:
+  command 'npm' from deb npm (9.2.0~ds1-2)
+Try: sudo apt install <deb name>
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo systemctl restart task-portal-api
+sleep 3
+sudo systemctl status task-portal-api
+sudo journalctl -u task-portal-api -n 30
+● task-portal-api.service - Task Portal API
+     Loaded: loaded (/etc/systemd/system/task-portal-api.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Fri 2026-03-20 06:34:25 UTC; 3s ago
+    Process: 3142349 ExecStart=/usr/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 (code=exited, status=1/FAILURE)
+   Main PID: 3142349 (code=exited, status=1/FAILURE)
+        CPU: 25ms
+Mar 20 06:34:01 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 195.
+Mar 20 06:34:01 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:01 ip-172-31-41-234 (python3)[3142063]: task-portal-api.service: Failed to determine user credentials: No such process
+Mar 20 06:34:01 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=217/USER
+Mar 20 06:34:01 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:34:06 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 196.
+Mar 20 06:34:06 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:06 ip-172-31-41-234 (python3)[3142103]: task-portal-api.service: Failed to determine user credentials: No such process
+Mar 20 06:34:06 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=217/USER
+Mar 20 06:34:06 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:34:12 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 197.
+Mar 20 06:34:12 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:12 ip-172-31-41-234 (python3)[3142145]: task-portal-api.service: Failed to determine user credentials: No such process
+Mar 20 06:34:12 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=217/USER
+Mar 20 06:34:12 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:34:17 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 198.
+Mar 20 06:34:17 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:17 ip-172-31-41-234 python3[3142257]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:34:17 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:34:17 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:34:22 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 199.
+Mar 20 06:34:22 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:22 ip-172-31-41-234 python3[3142324]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:34:22 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:34:22 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:34:25 ip-172-31-41-234 systemd[1]: Stopped task-portal-api.service - Task Portal API.
+Mar 20 06:34:25 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:34:25 ip-172-31-41-234 python3[3142349]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:34:25 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:34:25 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+sudo npm install -g pnpm
+2026-03-20 06:35:12 - Installing pre-requisites
+Hit:1 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble InRelease
+Get:2 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]                
+Get:3 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]              
+Hit:4 https://download.docker.com/linux/ubuntu noble InRelease                                        
+Get:5 http://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]                             
+Get:6 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1839 kB]
+Get:7 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/main Translation-en [338 kB]
+Get:8 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/main amd64 Components [177 kB]
+Get:9 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/main amd64 c-n-f Metadata [16.9 kB]
+Get:10 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages [1567 kB]
+Get:11 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/universe Translation-en [320 kB]
+Get:12 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Components [386 kB]
+Get:13 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/universe amd64 c-n-f Metadata [33.1 kB]
+Get:14 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Components [212 B]
+Get:15 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Components [940 B]
+Get:16 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-backports/main amd64 Components [7364 B]
+Get:17 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-backports/universe amd64 Components [13.2 kB]
+Get:18 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-backports/restricted amd64 Components [216 B]
+Get:19 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-backports/multiverse amd64 Components [212 B]
+Get:20 http://security.ubuntu.com/ubuntu noble-security/main amd64 Packages [1542 kB]            
+Get:21 http://security.ubuntu.com/ubuntu noble-security/main amd64 Components [21.5 kB]
+Get:22 http://security.ubuntu.com/ubuntu noble-security/main amd64 c-n-f Metadata [10.7 kB]
+Get:23 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Packages [977 kB]
+Get:24 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Components [74.2 kB]
+Get:25 http://security.ubuntu.com/ubuntu noble-security/universe amd64 c-n-f Metadata [20.8 kB]
+Get:26 http://security.ubuntu.com/ubuntu noble-security/restricted amd64 Components [212 B]
+Get:27 http://security.ubuntu.com/ubuntu noble-security/multiverse amd64 Components [212 B]
+Fetched 7725 kB in 2s (3638 kB/s)                                 
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+51 packages can be upgraded. Run 'apt list --upgradable' to see them.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+ca-certificates is already the newest version (20240203).
+curl is already the newest version (8.5.0-2ubuntu10.8).
+curl set to manually installed.
+gnupg is already the newest version (2.4.4-2ubuntu17.4).
+gnupg set to manually installed.
+The following NEW packages will be installed:
+  apt-transport-https
+0 upgraded, 1 newly installed, 0 to remove and 51 not upgraded.
+Need to get 3970 B of archives.
+After this operation, 36.9 kB of additional disk space will be used.
+Get:1 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates/universe amd64 apt-transport-https all 2.8.3 [3970 B]
+Fetched 3970 B in 0s (221 kB/s)               
+Selecting previously unselected package apt-transport-https.
+(Reading database ... 112145 files and directories currently installed.)
+Preparing to unpack .../apt-transport-https_2.8.3_all.deb ...
+Unpacking apt-transport-https (2.8.3) ...
+Setting up apt-transport-https (2.8.3) ...
+Scanning processes...                                                                                                                                                                                              
+Scanning candidates...                                                                                                                                                                                             
+Scanning linux images...                                                                                                                                                                                           
+
+Pending kernel upgrade!
+Running kernel version:
+  6.14.0-1018-aws
+Diagnostics:
+  The currently running kernel version is not the expected kernel version 6.17.0-1009-aws.
+
+Restarting the system to load the new kernel will not be handled automatically, so you should consider rebooting.
+
+Restarting services...
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart docker.service
+ systemctl restart getty@tty1.service
+ systemctl restart networkd-dispatcher.service
+ systemctl restart serial-getty@ttyS0.service
+ systemctl restart systemd-logind.service
+ systemctl restart unattended-upgrades.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+Hit:1 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble InRelease
+Hit:2 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-updates InRelease                                                                                                  
+Hit:3 http://ap-south-1.ec2.archive.ubuntu.com/ubuntu noble-backports InRelease                                                                                                
+Hit:4 https://download.docker.com/linux/ubuntu noble InRelease                                                                                                                 
+Get:5 https://deb.nodesource.com/node_20.x nodistro InRelease [12.1 kB]                                                                                  
+Hit:6 http://security.ubuntu.com/ubuntu noble-security InRelease                        
+Get:7 https://deb.nodesource.com/node_20.x nodistro/main amd64 Packages [13.7 kB]
+Fetched 25.8 kB in 1s (38.9 kB/s)
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+51 packages can be upgraded. Run 'apt list --upgradable' to see them.
+2026-03-20 06:35:31 - Repository configured successfully.
+2026-03-20 06:35:31 - To install Node.js, run: apt install nodejs -y
+2026-03-20 06:35:31 - You can use N|solid Runtime as a node.js alternative
+2026-03-20 06:35:31 - To install N|solid Runtime, run: apt install nsolid -y 
+
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following NEW packages will be installed:
+  nodejs
+0 upgraded, 1 newly installed, 0 to remove and 51 not upgraded.
+Need to get 32.2 MB of archives.
+After this operation, 196 MB of additional disk space will be used.
+Get:1 https://deb.nodesource.com/node_20.x nodistro/main amd64 nodejs amd64 20.20.1-1nodesource1 [32.2 MB]
+Fetched 32.2 MB in 0s (71.6 MB/s)
+Selecting previously unselected package nodejs.
+(Reading database ... 112149 files and directories currently installed.)
+Preparing to unpack .../nodejs_20.20.1-1nodesource1_amd64.deb ...
+Unpacking nodejs (20.20.1-1nodesource1) ...
+Setting up nodejs (20.20.1-1nodesource1) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Scanning processes...                                                                                                                                                                                              
+Scanning candidates...                                                                                                                                                                                             
+Scanning linux images...                                                                                                                                                                                           
+
+Pending kernel upgrade!
+Running kernel version:
+  6.14.0-1018-aws
+Diagnostics:
+  The currently running kernel version is not the expected kernel version 6.17.0-1009-aws.
+
+Restarting the system to load the new kernel will not be handled automatically, so you should consider rebooting.
+
+Restarting services...
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart docker.service
+ systemctl restart getty@tty1.service
+ systemctl restart networkd-dispatcher.service
+ systemctl restart serial-getty@ttyS0.service
+ systemctl restart systemd-logind.service
+ systemctl restart unattended-upgrades.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+
+added 1 package in 2s
+
+1 package is looking for funding
+  run `npm fund` for details
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.12.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.12.0
+npm notice To update run: npm install -g npm@11.12.0
+npm notice
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo pip3 install fastapi uvicorn sqlalchemy psycopg2-binary "pydantic[email]" python-jose passlib bcrypt python-multipart openpyxl httpx cryptography aiofiles watchfiles --break-system-packages
+Collecting fastapi
+  Using cached fastapi-0.135.1-py3-none-any.whl.metadata (30 kB)
+Collecting uvicorn
+  Using cached uvicorn-0.42.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting sqlalchemy
+  Using cached sqlalchemy-2.0.48-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (9.5 kB)
+Collecting psycopg2-binary
+  Using cached psycopg2_binary-2.9.11-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.9 kB)
+Collecting python-jose
+  Using cached python_jose-3.5.0-py2.py3-none-any.whl.metadata (5.5 kB)
+Requirement already satisfied: passlib in /usr/local/lib/python3.12/dist-packages (1.7.4)
+Requirement already satisfied: bcrypt in /usr/lib/python3/dist-packages (3.2.2)
+Collecting python-multipart
+  Using cached python_multipart-0.0.22-py3-none-any.whl.metadata (1.8 kB)
+Collecting openpyxl
+  Using cached openpyxl-3.1.5-py2.py3-none-any.whl.metadata (2.5 kB)
+Collecting httpx
+  Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Requirement already satisfied: cryptography in /usr/lib/python3/dist-packages (41.0.7)
+Collecting aiofiles
+  Downloading aiofiles-25.1.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting watchfiles
+  Using cached watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting pydantic[email]
+  Using cached pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+Collecting starlette>=0.46.0 (from fastapi)
+  Using cached starlette-0.52.1-py3-none-any.whl.metadata (6.3 kB)
+Requirement already satisfied: typing-extensions>=4.8.0 in /usr/lib/python3/dist-packages (from fastapi) (4.10.0)
+Collecting typing-inspection>=0.4.2 (from fastapi)
+  Using cached typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi)
+  Using cached annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Requirement already satisfied: click>=7.0 in /usr/lib/python3/dist-packages (from uvicorn) (8.1.6)
+Collecting h11>=0.8 (from uvicorn)
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting greenlet>=1 (from sqlalchemy)
+  Using cached greenlet-3.3.2-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (3.7 kB)
+Collecting annotated-types>=0.6.0 (from pydantic[email])
+  Using cached annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.41.5 (from pydantic[email])
+  Using cached pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting typing-extensions>=4.8.0 (from fastapi)
+  Using cached typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting email-validator>=2.0.0 (from pydantic[email])
+  Using cached email_validator-2.3.0-py3-none-any.whl.metadata (26 kB)
+Collecting ecdsa!=0.15 (from python-jose)
+  Using cached ecdsa-0.19.1-py2.py3-none-any.whl.metadata (29 kB)
+Collecting rsa!=4.1.1,!=4.4,<5.0,>=4.0 (from python-jose)
+  Using cached rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
+Collecting pyasn1>=0.5.0 (from python-jose)
+  Using cached pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+Collecting et-xmlfile (from openpyxl)
+  Using cached et_xmlfile-2.0.0-py3-none-any.whl.metadata (2.7 kB)
+Collecting anyio (from httpx)
+  Using cached anyio-4.12.1-py3-none-any.whl.metadata (4.3 kB)
+Requirement already satisfied: certifi in /usr/lib/python3/dist-packages (from httpx) (2023.11.17)
+Collecting httpcore==1.* (from httpx)
+  Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Requirement already satisfied: idna in /usr/lib/python3/dist-packages (from httpx) (3.6)
+Requirement already satisfied: six>=1.9.0 in /usr/lib/python3/dist-packages (from ecdsa!=0.15->python-jose) (1.16.0)
+Collecting dnspython>=2.0.0 (from email-validator>=2.0.0->pydantic[email])
+  Using cached dnspython-2.8.0-py3-none-any.whl.metadata (5.7 kB)
+Using cached fastapi-0.135.1-py3-none-any.whl (116 kB)
+Using cached uvicorn-0.42.0-py3-none-any.whl (68 kB)
+Using cached sqlalchemy-2.0.48-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.3 MB)
+Using cached psycopg2_binary-2.9.11-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (4.2 MB)
+Using cached pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+Using cached python_jose-3.5.0-py2.py3-none-any.whl (34 kB)
+Using cached python_multipart-0.0.22-py3-none-any.whl (24 kB)
+Using cached openpyxl-3.1.5-py2.py3-none-any.whl (250 kB)
+Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+Downloading aiofiles-25.1.0-py3-none-any.whl (14 kB)
+Using cached watchfiles-1.1.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (456 kB)
+Using cached annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Using cached annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Using cached anyio-4.12.1-py3-none-any.whl (113 kB)
+Using cached ecdsa-0.19.1-py2.py3-none-any.whl (150 kB)
+Using cached email_validator-2.3.0-py3-none-any.whl (35 kB)
+Using cached greenlet-3.3.2-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (613 kB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Using cached pyasn1-0.6.3-py3-none-any.whl (83 kB)
+Using cached pydantic-2.12.5-py3-none-any.whl (463 kB)
+Using cached rsa-4.9.1-py3-none-any.whl (34 kB)
+Using cached starlette-0.52.1-py3-none-any.whl (74 kB)
+Using cached typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Using cached typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Using cached et_xmlfile-2.0.0-py3-none-any.whl (18 kB)
+Using cached dnspython-2.8.0-py3-none-any.whl (331 kB)
+Installing collected packages: typing-extensions, python-multipart, pyasn1, psycopg2-binary, h11, greenlet, et-xmlfile, ecdsa, dnspython, annotated-types, annotated-doc, aiofiles, uvicorn, typing-inspection, sqlalchemy, rsa, pydantic-core, openpyxl, httpcore, email-validator, anyio, watchfiles, starlette, python-jose, pydantic, httpx, fastapi
+  Attempting uninstall: typing-extensions
+    Found existing installation: typing_extensions 4.10.0
+ERROR: Cannot uninstall typing_extensions 4.10.0, RECORD file not found. Hint: The package was installed by debian.
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ cd /var/www/task-portal
+pnpm install --frozen-lockfile
+BASE_PATH=/ PORT=3000 pnpm --filter @workspace/task-management-portal run build
+Scope: all 9 workspace projects
+Lockfile is up to date, resolution step is skipped
+Packages: +485
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Downloading react-icons@5.6.0: 22.42 MB/22.42 MB, done
+Progress: resolved 485, reused 0, downloaded 485, added 485, done
+node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild: Running postinstall script, done in 338ms
+
+devDependencies:
++ prettier 3.8.1
++ typescript 5.9.3
+
+. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+└─ Done in 33ms
+Done in 12.4s using pnpm v10.32.1
+
+> @workspace/task-management-portal@0.0.0 build /var/www/task-portal/artifacts/task-management-portal
+> vite build --config vite.config.ts
+
+vite v7.3.1 building client environment for production...
+src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+✓ 2091 modules transformed.
+dist/public/index.html                   0.74 kB │ gzip:   0.42 kB
+dist/public/assets/index-BGhbADlx.css  105.97 kB │ gzip:  18.16 kB
+dist/public/assets/index-RShzGeGB.js   525.30 kB │ gzip: 146.52 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 8.87s
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ sudo systemctl restart task-portal-api
+sleep 3
+sudo systemctl status task-portal-api
+sudo journalctl -u task-portal-api -n 20
+● task-portal-api.service - Task Portal API
+     Loaded: loaded (/etc/systemd/system/task-portal-api.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Fri 2026-03-20 06:37:02 UTC; 3s ago
+    Process: 3144693 ExecStart=/usr/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8080 (code=exited, status=1/FAILURE)
+   Main PID: 3144693 (code=exited, status=1/FAILURE)
+        CPU: 27ms
+Mar 20 06:36:46 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 226.
+Mar 20 06:36:46 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:36:47 ip-172-31-41-234 python3[3144564]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:36:47 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:36:47 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:36:52 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 227.
+Mar 20 06:36:52 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:36:52 ip-172-31-41-234 python3[3144603]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:36:52 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:36:52 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:36:57 ip-172-31-41-234 systemd[1]: task-portal-api.service: Scheduled restart job, restart counter is at 228.
+Mar 20 06:36:57 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:36:57 ip-172-31-41-234 python3[3144647]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:36:57 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:36:57 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+Mar 20 06:37:02 ip-172-31-41-234 systemd[1]: Stopped task-portal-api.service - Task Portal API.
+Mar 20 06:37:02 ip-172-31-41-234 systemd[1]: Started task-portal-api.service - Task Portal API.
+Mar 20 06:37:02 ip-172-31-41-234 python3[3144693]: /usr/bin/python3: No module named uvicorn
+Mar 20 06:37:02 ip-172-31-41-234 systemd[1]: task-portal-api.service: Main process exited, code=exited, status=1/FAILURE
+Mar 20 06:37:02 ip-172-31-41-234 systemd[1]: task-portal-api.service: Failed with result 'exit-code'.
+ubuntu@ip-172-31-41-234:/var/www/task-portal$ 
