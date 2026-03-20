@@ -463,7 +463,7 @@ export function useListUsers<
  * @summary Create user
  */
 export const getCreateUserUrl = () => {
-  return `/api/users`;
+  return `/api/users/`;
 };
 
 export const createUser = async (
@@ -730,7 +730,7 @@ export function useListStudents<
  * @summary Create student
  */
 export const getCreateStudentUrl = () => {
-  return `/api/students`;
+  return `/api/students/`;
 };
 
 export const createStudent = async (
@@ -1000,7 +1000,7 @@ export function useListUniversities<
  * @summary Create university
  */
 export const getCreateUniversityUrl = () => {
-  return `/api/universities`;
+  return `/api/universities/`;
 };
 
 export const createUniversity = async (
@@ -1270,7 +1270,7 @@ export function useListApplications<
  * @summary Create application
  */
 export const getCreateApplicationUrl = () => {
-  return `/api/applications`;
+  return `/api/applications/`;
 };
 
 export const createApplication = async (
