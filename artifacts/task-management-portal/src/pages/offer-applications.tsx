@@ -83,6 +83,7 @@ export default function OfferApplications() {
   const [assigneeFilter, setAssigneeFilter] = useState<number | "">("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<any>(null);
+  const [formError, setFormError] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const p = new URLSearchParams(window.location.search).get("view");
     return p === "kanban" ? "kanban" : "table";
@@ -119,12 +120,14 @@ export default function OfferApplications() {
     setEditingApp(app);
     setSelectedFollowers(app.follower_ids || []);
     setDeleteConfirm(false);
+    setFormError("");
     setIsModalOpen(true);
   };
   const handleOpenCreate = () => {
     setEditingApp(null);
     setSelectedFollowers([]);
     setDeleteConfirm(false);
+    setFormError("");
     setIsModalOpen(true);
   };
 
@@ -167,6 +170,7 @@ export default function OfferApplications() {
       remarks: fd.get("remarks") as string,
       follower_ids: selectedFollowers,
     };
+    setFormError("");
     try {
       if (editingApp) {
         await updateMut.mutateAsync({ appId: editingApp.id, data });
@@ -179,7 +183,7 @@ export default function OfferApplications() {
       setIsModalOpen(false);
     } catch (err: any) {
       const detail = err?.response?.data?.detail || err?.message || "Something went wrong.";
-      toast({ variant: "destructive", title: "Could not save application", description: detail });
+      setFormError(detail);
     }
   };
 
@@ -436,13 +440,21 @@ export default function OfferApplications() {
             <Label>Remarks</Label>
             <Textarea name="remarks" defaultValue={editingApp?.remarks || ""} placeholder="Internal notes..." />
           </div>
+          {formError && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-destructive/40 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+              <svg className="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+              <span>{formError}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-4 border-t">
             <div>
               {editingApp && (
                 deleteConfirm ? (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-destructive font-medium">Delete this application?</span>
-                    <Button type="button" variant="destructive" size="sm" onClick={handleDelete} isLoading={deleteMut.isPending}>Yes, delete</Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleteMut.isPending}>
+                      {deleteMut.isPending ? "Deleting…" : "Yes, delete"}
+                    </Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => setDeleteConfirm(false)}>Cancel</Button>
                   </div>
                 ) : (
@@ -453,8 +465,12 @@ export default function OfferApplications() {
               )}
             </div>
             <div className="flex gap-3">
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-              <Button type="submit" isLoading={createMut.isPending || updateMut.isPending}>Save</Button>
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={createMut.isPending || updateMut.isPending}>Cancel</Button>
+              <Button type="submit" disabled={createMut.isPending || updateMut.isPending}>
+                {(createMut.isPending || updateMut.isPending) ? (
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />Saving…</>
+                ) : "Save"}
+              </Button>
             </div>
           </div>
         </form>
