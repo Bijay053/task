@@ -67,6 +67,28 @@ def _ensure_university(db: Session, university_id: Optional[int], university_nam
     return new_uni.id
 
 
+def _check_duplicate(
+    db: Session,
+    department: str,
+    app_id_val: Optional[str],
+    student_name: Optional[str],
+    university_id: Optional[int],
+    exclude_id: Optional[int] = None,
+) -> bool:
+    """Return True if a duplicate application exists (all three fields match)."""
+    if not app_id_val or not student_name or not university_id:
+        return False
+    q = db.query(models.Application).filter(
+        models.Application.department == department,
+        models.Application.app_id == app_id_val,
+        models.Application.student_name.ilike(student_name),
+        models.Application.university_id == university_id,
+    )
+    if exclude_id:
+        q = q.filter(models.Application.id != exclude_id)
+    return q.first() is not None
+
+
 def get_manager_agent_ids(db: Session, manager_id: int) -> Optional[list]:
     """Get agent IDs a manager is responsible for. None = no restriction (see all)."""
     mappings = db.query(models.ManagerAgentMapping).filter(
@@ -165,6 +187,12 @@ def create_application(
     resolved_uni_id = _ensure_university(db, app_data.get("university_id"), app_data.get("university_name"))
     if resolved_uni_id:
         app_data["university_id"] = resolved_uni_id
+
+    if _check_duplicate(db, dept, app_data.get("app_id"), app_data.get("student_name"), app_data.get("university_id")):
+        raise HTTPException(
+            status_code=409,
+            detail="A duplicate application already exists with the same App ID, Student, and University in this department.",
+        )
 
     app = models.Application(**app_data)
     db.add(app)

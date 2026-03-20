@@ -259,6 +259,16 @@ async def bulk_upload(
                 app_data["offer_applied_date"] = _parse_date(cell("offer applied") or cell("applied date"))
                 app_data["offer_received_date"] = _parse_date(cell("offer received") or cell("received date"))
 
+            if app_id_val and student_name_val and university and db.query(models.Application).filter(
+                models.Application.department == department,
+                models.Application.app_id == app_id_val,
+                models.Application.student_name.ilike(student_name_val),
+                models.Application.university_id == university.id,
+            ).first():
+                skipped += 1
+                errors.append(f"Row {row_idx}: Duplicate — same App ID, Student, and University already exists.")
+                continue
+
             app = models.Application(**app_data)
             db.add(app)
 

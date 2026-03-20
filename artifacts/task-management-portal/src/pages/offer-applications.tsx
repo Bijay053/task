@@ -13,6 +13,7 @@ import { OFFER_CHANNEL_CHOICES } from "@/lib/utils";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 type ViewMode = "table" | "kanban";
 
@@ -76,6 +77,7 @@ function UniversityField({ defaultUniversityId, defaultUniversityName }: { defau
 
 export default function OfferApplications() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState<number | "">("");
@@ -144,15 +146,20 @@ export default function OfferApplications() {
       remarks: fd.get("remarks") as string,
       follower_ids: selectedFollowers,
     };
-    if (editingApp) {
-      await updateMut.mutateAsync({ appId: editingApp.id, data });
-    } else {
-      await createMut.mutateAsync({ data });
+    try {
+      if (editingApp) {
+        await updateMut.mutateAsync({ appId: editingApp.id, data });
+      } else {
+        await createMut.mutateAsync({ data });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/universities"] });
+      setIsModalOpen(false);
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || err?.message || "Something went wrong.";
+      toast({ variant: "destructive", title: "Could not save application", description: detail });
     }
-    queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/universities"] });
-    setIsModalOpen(false);
   };
 
   const displayName = (app: any) => app.student?.full_name || app.student_name || "Unknown Student";
