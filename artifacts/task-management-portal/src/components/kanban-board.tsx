@@ -248,8 +248,8 @@ export function KanbanBoard({
   }, {});
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Status header bar — pinned at top */}
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Status header bar — always visible at top, never scrolls */}
       <div
         ref={headerRef}
         className="flex gap-3 shrink-0 bg-background"
