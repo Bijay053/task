@@ -422,6 +422,9 @@ def delete_application(
     # Agents cannot delete
     if current_user.role == "agent":
         raise HTTPException(status_code=403, detail="Agents cannot delete applications")
+    # Delete related records first to avoid FK constraint errors
+    db.query(models.ActivityLog).filter(models.ActivityLog.application_id == app_id).delete(synchronize_session=False)
+    db.query(models.ApplicationFollower).filter(models.ApplicationFollower.application_id == app_id).delete(synchronize_session=False)
     db.delete(app)
     db.commit()
     return {"message": "Deleted"}

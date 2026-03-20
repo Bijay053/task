@@ -203,7 +203,7 @@ class Application(Base):
     created_by = relationship(
         "User", foreign_keys=[created_by_id], back_populates="created_applications"
     )
-    activity_logs = relationship("ActivityLog", back_populates="application")
+    activity_logs = relationship("ActivityLog", back_populates="application", cascade="all, delete-orphan")
     followers = relationship("ApplicationFollower", back_populates="application", cascade="all, delete-orphan")
 
     @property
@@ -219,7 +219,7 @@ class ActivityLog(Base):
     __tablename__ = "task_activity_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    application_id = Column(Integer, ForeignKey("task_applications.id"), nullable=False)
+    application_id = Column(Integer, ForeignKey("task_applications.id", ondelete="CASCADE"), nullable=False)
     changed_by_id = Column(Integer, ForeignKey("task_users.id"), nullable=True)
     field_name = Column(String(100), nullable=False)
     old_value = Column(Text, nullable=True)
