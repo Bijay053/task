@@ -6,6 +6,7 @@ import {
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Select, Modal, Label, Textarea } from "@/components/ui-elements";
 import { KanbanBoard } from "@/components/kanban-board";
+import { TableScrollWrapper } from "@/components/table-scroll-wrapper";
 import { BulkUploadButton } from "@/components/bulk-upload-button";
 import { Search, Plus, FileEdit, LayoutGrid, List, Users } from "lucide-react";
 import { OFFER_CHANNEL_CHOICES } from "@/lib/utils";
@@ -204,7 +205,7 @@ export default function OfferApplications() {
 
         {viewMode === "table" ? (
           <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="table-container flex-1 h-full border-0 rounded-none">
+            <TableScrollWrapper>
               <table className="spreadsheet-table w-full h-full">
                 <thead>
                   <tr>
@@ -299,7 +300,7 @@ export default function OfferApplications() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </TableScrollWrapper>
           </Card>
         ) : (
           <div className="flex-1 min-h-0 flex flex-col">

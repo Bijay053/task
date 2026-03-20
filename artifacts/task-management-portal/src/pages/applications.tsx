@@ -8,6 +8,7 @@ import { Users } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Select, StatusBadge, Modal, Label, Textarea } from "@/components/ui-elements";
 import { KanbanBoard } from "@/components/kanban-board";
+import { TableScrollWrapper } from "@/components/table-scroll-wrapper";
 import { BulkUploadButton } from "@/components/bulk-upload-button";
 import { Search, Plus, FileEdit, LayoutGrid, List } from "lucide-react";
 import { format } from "date-fns";
@@ -241,7 +242,7 @@ export default function GsApplications() {
 
         {viewMode === "table" ? (
           <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="table-container flex-1 h-full border-0 rounded-none">
+            <TableScrollWrapper>
               <table className="spreadsheet-table w-full h-full">
                 <thead>
                   <tr>
@@ -338,7 +339,7 @@ export default function GsApplications() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </TableScrollWrapper>
           </Card>
         ) : (
           <div className="flex-1 min-h-0 flex flex-col">
