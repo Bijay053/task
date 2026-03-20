@@ -394,7 +394,7 @@ export default function GsApplications() {
           <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center gap-3">
             <div className="space-y-1 flex-1">
               <Label className="text-xs font-bold text-blue-700 uppercase tracking-wide">App ID / Reference Code</Label>
-              <Input name="app_id" defaultValue={(editingApp as any)?.app_id || ""} placeholder="e.g. GS-001, REF-2024-001" className="font-mono bg-white" />
+              <Input name="app_id" required defaultValue={(editingApp as any)?.app_id || ""} placeholder="e.g. GS-001, REF-2024-001" className="font-mono bg-white" />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -427,7 +427,8 @@ export default function GsApplications() {
             </div>
             <div className="space-y-2">
               <Label>Application Status</Label>
-              <Select name="application_status" defaultValue={editingApp?.application_status || statusChoices[0] || "In Review"}>
+              <Select name="application_status" defaultValue={editingApp?.application_status || ""}>
+                {!editingApp && <option value="">— Select Status —</option>}
                 {statusChoices.map(s => <option key={s} value={s}>{s}</option>)}
               </Select>
             </div>
