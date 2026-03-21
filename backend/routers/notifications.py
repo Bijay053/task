@@ -192,6 +192,25 @@ def send_status_change_notification(
 
 # ─── API endpoints ────────────────────────────────────────────────────────────
 
+@router.get("/email-status")
+def email_status(current_user: models.User = Depends(require_admin)):
+    """Return whether email is configured and which transport is active."""
+    import os
+    has_ses = bool(
+        os.environ.get("AWS_ACCESS_KEY_ID")
+        and os.environ.get("AWS_SECRET_ACCESS_KEY")
+        and os.environ.get("SES_FROM_EMAIL")
+    )
+    has_smtp = bool(
+        os.environ.get("SMTP_HOST")
+        and os.environ.get("SMTP_USER")
+        and os.environ.get("SMTP_PASS")
+    )
+    configured = has_ses or has_smtp
+    transport = "ses" if has_ses else ("smtp" if has_smtp else "none")
+    return {"configured": configured, "transport": transport}
+
+
 @router.post("/test-email")
 def test_email(
     data: schemas.NotificationTest,

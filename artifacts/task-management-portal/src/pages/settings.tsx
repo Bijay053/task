@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Label, Modal, Select, StatusBadge } from "@/components/ui-elements";
-import { BellRing, ShieldAlert, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown, Layers, Webhook, Save, Pin, Check } from "lucide-react";
+import { BellRing, ShieldAlert, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown, Layers, Webhook, Save, Pin, Check, CheckCircle2, XCircle, Mail } from "lucide-react";
 import {
   useTestEmail, useTestChat, useListStatuses, useCreateStatus,
   useUpdateStatus, useDeleteStatus, useReorderStatuses,
@@ -10,10 +10,73 @@ import {
 import type { AppStatusOut } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 type SettingsTab = "notifications" | "gs-statuses" | "offer-statuses" | "webhooks";
+
+function EmailStatusCard({ onTestEmail, testEmailPending }: { onTestEmail: (e: React.FormEvent<HTMLFormElement>) => void; testEmailPending: boolean }) {
+  const { data: status } = useQuery<{ configured: boolean; transport: string }>({
+    queryKey: ["/api/notifications/email-status"],
+    queryFn: async () => {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch("/api/notifications/email-status", { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+  });
+
+  const configured = status?.configured ?? false;
+  const transport = status?.transport ?? "none";
+
+  return (
+    <Card className="p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Mail className="w-5 h-5 text-primary" />
+        <h3 className="font-display font-semibold text-lg">Email Notifications</h3>
+        {status && (
+          configured
+            ? <span className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full"><CheckCircle2 className="w-3.5 h-3.5" /> Configured ({transport.toUpperCase()})</span>
+            : <span className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full"><XCircle className="w-3.5 h-3.5" /> Not configured</span>
+        )}
+      </div>
+
+      {!configured && status && (
+        <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900 space-y-2">
+          <p className="font-semibold">Add one of these to <code className="bg-amber-100 px-1 rounded">/etc/task-portal.env</code> on your server, then restart the API:</p>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-amber-700 mb-1">Option A — Gmail / SMTP</p>
+              <pre className="bg-white border border-amber-200 rounded p-2 text-xs overflow-x-auto whitespace-pre-wrap">{`SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=your@gmail.com`}</pre>
+              <p className="text-xs text-amber-700 mt-1">For Gmail, use an <strong>App Password</strong> (not your normal password). Enable 2FA first, then generate at myaccount.google.com → Security → App Passwords.</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-amber-700 mb-1">Option B — AWS SES</p>
+              <pre className="bg-white border border-amber-200 rounded p-2 text-xs overflow-x-auto whitespace-pre-wrap">{`AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=ap-southeast-1
+SES_FROM_EMAIL=noreply@yourdomain.com`}</pre>
+            </div>
+          </div>
+          <p className="text-xs font-mono text-amber-800">sudo systemctl restart task-portal-api</p>
+        </div>
+      )}
+
+      <form onSubmit={onTestEmail} className="space-y-3">
+        <p className="text-sm text-muted-foreground">Send a test email to verify your configuration is working:</p>
+        <div className="flex gap-2">
+          <Input name="target" placeholder="admin@example.com" type="email" required className="flex-1" disabled={!configured} />
+          <Button type="submit" isLoading={testEmailPending} variant="secondary" disabled={!configured}>Send Test</Button>
+        </div>
+        {!configured && <p className="text-xs text-muted-foreground italic">Configure email above first, then test here.</p>}
+      </form>
+    </Card>
+  );
+}
 
 function DeptWebhooksPanel({ department, label }: { department: string; label: string }) {
   const { data: settings } = useGetDeptSettings(department);
@@ -366,30 +429,24 @@ export default function Settings() {
         </div>
 
         {activeTab === "notifications" && (
-          <Card className="p-6 max-w-lg">
-            <div className="flex items-center mb-6">
-              <BellRing className="w-5 h-5 text-primary mr-2" />
-              <h3 className="font-display font-semibold text-lg">Test Integrations</h3>
-            </div>
-            <form onSubmit={handleTestEmail} className="space-y-4 mb-8">
-              <h4 className="text-sm font-semibold text-slate-700">Email (AWS SES)</h4>
-              <div className="flex gap-2">
-                <Input name="target" placeholder="admin@example.com" type="email" required className="flex-1" />
-                <Button type="submit" isLoading={testEmail.isPending} variant="secondary">Send Test</Button>
+          <div className="space-y-6 max-w-xl">
+            <EmailStatusCard onTestEmail={handleTestEmail} testEmailPending={testEmail.isPending} />
+            <Card className="p-6">
+              <div className="flex items-center mb-4">
+                <span className="text-lg mr-2">💬</span>
+                <h3 className="font-display font-semibold text-lg">Google Chat Webhook</h3>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Requires <code className="bg-slate-100 px-1 rounded">AWS_ACCESS_KEY_ID</code>, <code className="bg-slate-100 px-1 rounded">AWS_SECRET_ACCESS_KEY</code>, <code className="bg-slate-100 px-1 rounded">AWS_REGION</code>, and <code className="bg-slate-100 px-1 rounded">SES_FROM_EMAIL</code> in <code className="bg-slate-100 px-1 rounded">/etc/task-portal.env</code>.
-              </p>
-            </form>
-            <div className="w-full h-px bg-border my-6" />
-            <form onSubmit={handleTestChat} className="space-y-4">
-              <h4 className="text-sm font-semibold text-slate-700">Google Chat Webhook</h4>
-              <div className="flex gap-2">
-                <Input name="target" placeholder="https://chat.googleapis.com/v1/spaces/..." required className="flex-1" />
-                <Button type="submit" isLoading={testChat.isPending} variant="secondary">Send Test</Button>
-              </div>
-            </form>
-          </Card>
+              <form onSubmit={handleTestChat} className="space-y-3">
+                <div className="flex gap-2">
+                  <Input name="target" placeholder="https://chat.googleapis.com/v1/spaces/..." required className="flex-1" />
+                  <Button type="submit" isLoading={testChat.isPending} variant="secondary">Send Test</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Configure per-department webhooks in the <strong>Webhooks</strong> tab.
+                </p>
+              </form>
+            </Card>
+          </div>
         )}
 
         {activeTab === "gs-statuses" && (

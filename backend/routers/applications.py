@@ -275,13 +275,17 @@ def update_application(
             new_value=str(new_assignee_id),
         ))
 
+    status_old = app.application_status
+    status_changed = (
+        "application_status" in update_data
+        and update_data["application_status"] != status_old
+    )
     if "application_status" in update_data:
-        old_status = app.application_status
         db.add(models.ActivityLog(
             application_id=app.id,
             changed_by_id=current_user.id,
             field_name="application_status",
-            old_value=old_status,
+            old_value=status_old,
             new_value=update_data["application_status"],
         ))
 
@@ -306,6 +310,15 @@ def update_application(
     if assignee_changed and app.assigned_to:
         try:
             send_assignment_notification(db, app, app.assigned_to, current_user.full_name)
+        except Exception:
+            pass
+
+    # Notify followers when status changed via edit form
+    if status_changed:
+        try:
+            send_status_change_notification(
+                db, app, status_old, app.application_status, current_user.full_name
+            )
         except Exception:
             pass
 
