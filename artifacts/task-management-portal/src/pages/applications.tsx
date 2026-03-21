@@ -97,6 +97,7 @@ export default function GsApplications() {
     window.history.replaceState(null, "", `${window.location.pathname}?view=${mode}`);
   };
   const [selectedFollowers, setSelectedFollowers] = useState<number[]>([]);
+  const [followerSearch, setFollowerSearch] = useState("");
 
   const { data: applications, isLoading } = useListApplications({
     department: "gs",
@@ -165,6 +166,7 @@ export default function GsApplications() {
   const handleOpenCreate = () => {
     setEditingApp(null);
     setSelectedFollowers([]);
+    setFollowerSearch("");
     setDeleteConfirm(false);
     setFormError("");
     setOfferAutofillApps([]);
@@ -520,21 +522,42 @@ export default function GsApplications() {
                   })}
                 </div>
               )}
-              <div className="border border-border rounded-lg max-h-[130px] overflow-y-auto divide-y divide-border/50">
-                {users?.map(u => (
-                  <label key={u.id} className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-muted/50 cursor-pointer text-sm">
-                    <input
-                      type="checkbox"
-                      className="rounded accent-violet-600"
-                      checked={selectedFollowers.includes(u.id)}
-                      onChange={e => setSelectedFollowers(f => e.target.checked ? [...f, u.id] : f.filter(id => id !== u.id))}
-                    />
-                    <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold border border-border shrink-0">{u.full_name.charAt(0)}</div>
-                    <span>{u.full_name}</span>
-                    <span className="text-muted-foreground text-xs ml-auto">{u.role}</span>
-                  </label>
-                ))}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search users to add..."
+                  className="pl-8 h-8 text-sm"
+                  value={followerSearch}
+                  onChange={e => setFollowerSearch(e.target.value)}
+                />
               </div>
+              {followerSearch.trim() && (
+                <div className="border border-border rounded-lg max-h-[130px] overflow-y-auto divide-y divide-border/50">
+                  {(users?.filter(u =>
+                    u.full_name.toLowerCase().includes(followerSearch.toLowerCase()) &&
+                    !selectedFollowers.includes(u.id)
+                  ) ?? []).length === 0 ? (
+                    <div className="px-3 py-3 text-xs text-muted-foreground italic text-center">No users found</div>
+                  ) : (
+                    users?.filter(u =>
+                      u.full_name.toLowerCase().includes(followerSearch.toLowerCase()) &&
+                      !selectedFollowers.includes(u.id)
+                    ).map(u => (
+                      <label key={u.id} className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-muted/50 cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          className="rounded accent-violet-600"
+                          checked={false}
+                          onChange={() => { setSelectedFollowers(f => [...f, u.id]); setFollowerSearch(""); }}
+                        />
+                        <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold border border-border shrink-0">{u.full_name.charAt(0)}</div>
+                        <span>{u.full_name}</span>
+                        <span className="text-muted-foreground text-xs ml-auto">{u.role}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Priority</Label>
