@@ -219,6 +219,13 @@ def create_application(
     db.add(app)
     db.flush()  # get app.id before adding followers
     _sync_followers(db, app.id, follower_ids)
+    db.add(models.ActivityLog(
+        application_id=app.id,
+        changed_by_id=current_user.id,
+        field_name="application_created",
+        old_value=None,
+        new_value=app.application_status,
+    ))
     db.commit()
     db.refresh(app, attribute_names=["student", "university", "assigned_to", "created_by", "followers"])
 

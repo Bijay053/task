@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Select, Modal, Label, Textarea } from "@/components/ui-elements";
+import { ApplicationHistory } from "@/components/application-history";
 import { KanbanBoard } from "@/components/kanban-board";
 import { TableScrollWrapper } from "@/components/table-scroll-wrapper";
 import { BulkUploadButton } from "@/components/bulk-upload-button";
@@ -517,6 +518,9 @@ export default function OfferApplications() {
               <svg className="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
               <span>{formError}</span>
             </div>
+          )}
+          {editingApp && (
+            <ApplicationHistory appId={editingApp.id} users={users} />
           )}
           <div className="flex items-center justify-between pt-4 border-t">
             <div>
