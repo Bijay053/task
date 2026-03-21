@@ -319,8 +319,9 @@ def update_application(
             send_status_change_notification(
                 db, app, status_old, app.application_status, current_user.full_name
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error(f"[notify] Status-change notification error: {exc}", exc_info=True)
 
     return app
 
@@ -382,8 +383,9 @@ def update_status(
     if old_status != app.application_status:
         try:
             send_status_change_notification(db, app, old_status, app.application_status, current_user.full_name)
-        except Exception:
-            pass
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error(f"[notify] Status-change notification error: {exc}", exc_info=True)
 
     return app
 

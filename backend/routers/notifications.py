@@ -156,21 +156,46 @@ def send_status_change_notification(
     changed_by_name: str,
 ):
     """Email all followers (and the assignee) when status changes."""
-    if not app.followers:
+    from sqlalchemy.orm import joinedload
+
+    # Re-query with full eager loading so followers + their users are always available
+    app_full = (
+        db.query(models.Application)
+        .options(
+            joinedload(models.Application.student),
+            joinedload(models.Application.university),
+            joinedload(models.Application.assigned_to),
+            joinedload(models.Application.followers).joinedload(models.ApplicationFollower.user),
+        )
+        .filter(models.Application.id == app.id)
+        .first()
+    )
+    if not app_full:
+        logger.warning(f"[notify] Application {app.id} not found for status-change notification")
         return
 
-    student, university, course = _app_info(app)
-    recipients: list[models.User] = []
+    logger.info(f"[notify] Status change {old_status} → {new_status} for app {app.id}, "
+                f"followers: {[f.user_id for f in app_full.followers]}")
 
-    for f in app.followers:
-        if f.user:
+    if not app_full.followers and not app_full.assigned_to:
+        logger.info(f"[notify] App {app.id} has no followers and no assignee — skipping notification")
+        return
+
+    student, university, course = _app_info(app_full)
+    recipients: list[models.User] = []
+    seen_ids: set[int] = set()
+
+    for f in app_full.followers:
+        if f.user and f.user.id not in seen_ids:
             recipients.append(f.user)
+            seen_ids.add(f.user.id)
 
     # Also notify the assignee if they're not already a follower
-    if app.assigned_to:
-        follower_ids = {f.user_id for f in app.followers}
-        if app.assigned_to.id not in follower_ids:
-            recipients.append(app.assigned_to)
+    if app_full.assigned_to and app_full.assigned_to.id not in seen_ids:
+        recipients.append(app_full.assigned_to)
+        seen_ids.add(app_full.assigned_to.id)
+
+    logger.info(f"[notify] Sending status-change emails to: {[u.email for u in recipients]}")
 
     for user in recipients:
         try:
@@ -183,11 +208,12 @@ def send_status_change_notification(
                 course=course,
                 old_status=old_status,
                 new_status=new_status,
-                department=app.department,
-                app_id=app.id,
+                department=app_full.department,
+                app_id=app_full.id,
             )
+            logger.info(f"[notify] Status-change email sent to {user.email}")
         except Exception as exc:
-            logger.error(f"[notify] Status-change email failed for {user.email}: {exc}")
+            logger.error(f"[notify] Status-change email FAILED for {user.email}: {exc}", exc_info=True)
 
 
 # ─── API endpoints ────────────────────────────────────────────────────────────
