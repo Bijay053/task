@@ -212,13 +212,12 @@ function StatusManager({ department }: { department: "gs" | "offer" }) {
       </div>
 
       {/* Quick Filter Tabs section — admin can pin statuses as tabs in the applications page */}
-      {department === "gs" && (
-        <div className="border-t pt-6 space-y-3">
+      <div className="border-t pt-6 space-y-3">
           <div className="flex items-center gap-2">
             <Pin className="w-4 h-4 text-primary" />
             <h4 className="font-semibold text-sm">Quick Filter Tabs</h4>
           </div>
-          <p className="text-xs text-muted-foreground">Select which statuses appear as pinned quick-filter tabs at the top of the GS Applications page.</p>
+          <p className="text-xs text-muted-foreground">Select which statuses appear as pinned quick-filter tabs at the top of the {department === "gs" ? "GS" : "Offer"} Applications page.</p>
           <div className="flex flex-wrap gap-2">
             {statuses?.map(s => {
               const isPinned = pinnedSet.has(s.name);
@@ -248,7 +247,6 @@ function StatusManager({ department }: { department: "gs" | "offer" }) {
             <p className="text-xs text-primary">{pinnedSet.size} status{pinnedSet.size !== 1 ? "es" : ""} pinned as tabs.</p>
           )}
         </div>
-      )}
     </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingStatus ? "Edit Status" : "Add New Status"}>
