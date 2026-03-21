@@ -639,8 +639,17 @@ export default function Users() {
             </div>
           )}
           <div className="space-y-2">
-            <Label>{editingItem ? "New Password (leave blank to keep)" : "Password *"}</Label>
-            <Input name="password" type="password" required={!editingItem} placeholder="••••••••" />
+            <Label>{editingItem ? "New Password" : "Password *"}</Label>
+            <Input
+              name="password"
+              type="password"
+              required={!editingItem}
+              autoComplete="new-password"
+              placeholder={editingItem ? "Leave blank to keep current password" : "Enter password"}
+            />
+            {editingItem && (
+              <p className="text-xs text-muted-foreground">Only fill this in if you want to change the password.</p>
+            )}
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
