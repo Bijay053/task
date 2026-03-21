@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePermissions } from "@/lib/permission-context";
 import {
   useListApplications, useCreateApplication, useUpdateApplication, useDeleteApplication,
   useListStudents, useListUniversities, useListUsers, useListStatuses, useListAgents
@@ -78,6 +79,7 @@ function UniversityField({ defaultUniversityId, defaultUniversityName }: { defau
 export default function OfferApplications() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { canEdit, canDelete } = usePermissions();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState<number | "">("");
@@ -208,7 +210,7 @@ export default function OfferApplications() {
               </button>
             </div>
             <BulkUploadButton department="offer" />
-            <Button size="lg" onClick={handleOpenCreate}><Plus className="w-5 h-5 mr-2" />New Offer App</Button>
+            {canEdit("offer") && <Button size="lg" onClick={handleOpenCreate}><Plus className="w-5 h-5 mr-2" />New Offer App</Button>}
           </div>
         </div>
 
@@ -265,7 +267,7 @@ export default function OfferApplications() {
                     <tr><td colSpan={15} className="text-center py-12 text-muted-foreground">No offer applications found.</td></tr>
                   ) : (
                     applications?.map(app => (
-                      <tr key={app.id} className="group cursor-pointer" onClick={() => handleOpenEdit(app)}>
+                      <tr key={app.id} className={`group ${canEdit("offer") ? "cursor-pointer" : "cursor-default"}`} onClick={() => canEdit("offer") && handleOpenEdit(app)}>
                         <td className="text-center text-muted-foreground text-xs">{app.id}</td>
                         <td>
                           {(app as any).app_id
@@ -449,7 +451,7 @@ export default function OfferApplications() {
           )}
           <div className="flex items-center justify-between pt-4 border-t">
             <div>
-              {editingApp && (
+              {editingApp && canDelete("offer") && (
                 deleteConfirm ? (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-destructive font-medium">Delete this application?</span>

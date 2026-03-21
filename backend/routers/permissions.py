@@ -20,6 +20,17 @@ def require_admin(current_user: models.User = Depends(get_current_user)):
     return current_user
 
 
+@router.get("/my", response_model=List[schemas.RolePermOut])
+def get_my_permissions(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Return stored permissions for the current user's role."""
+    return db.query(models.RolePermission).filter(
+        models.RolePermission.role == current_user.role
+    ).all()
+
+
 @router.get("/role/{role}", response_model=List[schemas.RolePermOut])
 def get_role_permissions(
     role: str,

@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useChangePassword } from "@workspace/api-client-react";
+import { usePermissions } from "@/lib/permission-context";
 import {
   LayoutDashboard, Files, CheckCircle, Users, GraduationCap,
   Building2, Settings, LogOut, Menu, Briefcase, FileCheck2,
@@ -25,7 +26,7 @@ const SIDEBAR_COLLAPSED_KEY = "sidebar_collapsed";
 
 interface NavGroup {
   label: string;
-  items: { href: string; label: string; icon: any; roles: string[] }[];
+  items: { href: string; label: string; icon: any; roles: string[]; permKey?: string }[];
 }
 
 // ─── Inactivity guard ────────────────────────────────────────────────────────
@@ -260,24 +261,26 @@ export function Layout({ children }: { children: ReactNode }) {
 
   const { warnVisible, secondsLeft, stayLoggedIn } = useInactivityLogout(logout);
 
+  const { isCustomRole, canView } = usePermissions();
+
   const navGroups: NavGroup[] = [
     {
       label: "Overview",
       items: [
-        { href: "/",         label: "Dashboard",       icon: LayoutDashboard, roles: ["admin", "manager", "agent"] },
-        { href: "/my-tasks", label: "My Tasks",         icon: Briefcase,       roles: ["admin", "manager", "agent"] },
+        { href: "/",         label: "Dashboard",       icon: LayoutDashboard, roles: ["admin", "manager", "agent"], permKey: "dashboard" },
+        { href: "/my-tasks", label: "My Tasks",         icon: Briefcase,       roles: ["admin", "manager", "agent"], permKey: "my_tasks" },
       ],
     },
     {
       label: "GS Department",
       items: [
-        { href: "/applications", label: "GS Applications", icon: Files, roles: ["admin", "manager", "agent"] },
+        { href: "/applications", label: "GS Applications", icon: Files, roles: ["admin", "manager", "agent"], permKey: "gs" },
       ],
     },
     {
       label: "Offer Department",
       items: [
-        { href: "/offer-applications", label: "Offer Applications", icon: FileCheck2, roles: ["admin", "manager", "agent"] },
+        { href: "/offer-applications", label: "Offer Applications", icon: FileCheck2, roles: ["admin", "manager", "agent"], permKey: "offer" },
       ],
     },
     {
@@ -285,11 +288,11 @@ export function Layout({ children }: { children: ReactNode }) {
       items: [
         { href: "/reports",      label: "Performance Reports",  icon: BarChart3,     roles: ["admin", "manager"] },
         { href: "/agents",       label: "External Agents",      icon: UserCheck,     roles: ["admin", "manager"] },
-        { href: "/students",     label: "Students Directory",   icon: GraduationCap, roles: ["admin", "manager", "agent"] },
-        { href: "/universities", label: "Universities",         icon: Building2,     roles: ["admin", "manager", "agent"] },
+        { href: "/students",     label: "Students Directory",   icon: GraduationCap, roles: ["admin", "manager", "agent"], permKey: "gs" },
+        { href: "/universities", label: "Universities",         icon: Building2,     roles: ["admin", "manager", "agent"], permKey: "gs" },
         { href: "/users",        label: "Team Directory",       icon: Users,         roles: ["admin", "manager"] },
         { href: "/leave",        label: "Leave & Availability", icon: Calendar,      roles: ["admin", "manager"] },
-        { href: "/settings",     label: "Settings",             icon: Settings,      roles: ["admin", "manager"] },
+        { href: "/settings",     label: "Settings",             icon: Settings,      roles: ["admin", "manager"], permKey: "settings" },
       ],
     },
   ];
@@ -345,7 +348,13 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Nav */}
         <nav className={cn("flex-1 py-5 overflow-y-auto space-y-5", collapsed ? "px-2" : "px-4")}>
           {navGroups.map(group => {
-            const visible = group.items.filter(item => user && item.roles.includes(user.role));
+            const visible = group.items.filter(item => {
+              if (!user) return false;
+              if (!isCustomRole) return item.roles.includes(user.role);
+              if (!item.permKey) return false;
+              if (item.permKey === "dashboard") return true;
+              return canView(item.permKey);
+            });
             if (!visible.length) return null;
             return (
               <div key={group.label}>
