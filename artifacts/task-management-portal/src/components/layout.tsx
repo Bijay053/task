@@ -286,13 +286,13 @@ export function Layout({ children }: { children: ReactNode }) {
     {
       label: "Management",
       items: [
-        { href: "/reports",      label: "Performance Reports",  icon: BarChart3,     roles: ["admin", "manager"] },
-        { href: "/agents",       label: "External Agents",      icon: UserCheck,     roles: ["admin", "manager"] },
-        { href: "/students",     label: "Students Directory",   icon: GraduationCap, roles: ["admin", "manager", "agent"], permKey: "gs" },
+        { href: "/reports",      label: "Performance Reports",  icon: BarChart3,     roles: ["admin", "manager"], permKey: "reports"   },
+        { href: "/agents",       label: "External Agents",      icon: UserCheck,     roles: ["admin", "manager"], permKey: "agents"    },
+        { href: "/students",     label: "Students Directory",   icon: GraduationCap, roles: ["admin", "manager", "agent"], permKey: "students" },
         { href: "/universities", label: "Universities",         icon: Building2,     roles: ["admin", "manager", "agent"], permKey: "gs" },
-        { href: "/users",        label: "Team Directory",       icon: Users,         roles: ["admin", "manager"] },
-        { href: "/leave",        label: "Leave & Availability", icon: Calendar,      roles: ["admin", "manager"] },
-        { href: "/settings",     label: "Settings",             icon: Settings,      roles: ["admin", "manager"], permKey: "settings" },
+        { href: "/users",        label: "Team Directory",       icon: Users,         roles: ["admin", "manager"], permKey: "users"     },
+        { href: "/leave",        label: "Leave & Availability", icon: Calendar,      roles: ["admin", "manager"], permKey: "leave"     },
+        { href: "/settings",     label: "Settings",             icon: Settings,      roles: ["admin", "manager"], permKey: "settings"  },
       ],
     },
   ];
