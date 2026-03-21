@@ -137,3 +137,11 @@ def run_migrations():
         _add_column(conn, "task_users", "token_version",          "INTEGER NOT NULL DEFAULT 0")
         _add_column(conn, "task_users", "failed_login_attempts",  "INTEGER NOT NULL DEFAULT 0")
         _add_column(conn, "task_users", "locked_until",           "TIMESTAMP")
+
+        # Manager FK on task_users (MY TEAM feature)
+        _add_column(conn, "task_users", "manager_id",
+                    "INTEGER REFERENCES task_users(id) ON DELETE SET NULL")
+
+        # Permission columns on task_role_permissions
+        _add_column(conn, "task_role_permissions", "can_view_all_users",    "BOOLEAN DEFAULT FALSE")
+        _add_column(conn, "task_role_permissions", "can_view_mapped_users", "BOOLEAN DEFAULT FALSE")
