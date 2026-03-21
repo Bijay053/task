@@ -155,7 +155,7 @@ def send_status_change_notification(
     new_status: str,
     changed_by_name: str,
 ):
-    """Email all followers (and the assignee) when status changes."""
+    """Email only explicitly added followers when status changes."""
     from sqlalchemy.orm import joinedload
 
     # Re-query with full eager loading so followers + their users are always available
@@ -164,7 +164,6 @@ def send_status_change_notification(
         .options(
             joinedload(models.Application.student),
             joinedload(models.Application.university),
-            joinedload(models.Application.assigned_to),
             joinedload(models.Application.followers).joinedload(models.ApplicationFollower.user),
         )
         .filter(models.Application.id == app.id)
@@ -177,8 +176,8 @@ def send_status_change_notification(
     logger.info(f"[notify] Status change {old_status} → {new_status} for app {app.id}, "
                 f"followers: {[f.user_id for f in app_full.followers]}")
 
-    if not app_full.followers and not app_full.assigned_to:
-        logger.info(f"[notify] App {app.id} has no followers and no assignee — skipping notification")
+    if not app_full.followers:
+        logger.info(f"[notify] App {app.id} has no followers — skipping notification")
         return
 
     student, university, course = _app_info(app_full)
@@ -189,11 +188,6 @@ def send_status_change_notification(
         if f.user and f.user.id not in seen_ids:
             recipients.append(f.user)
             seen_ids.add(f.user.id)
-
-    # Also notify the assignee if they're not already a follower
-    if app_full.assigned_to and app_full.assigned_to.id not in seen_ids:
-        recipients.append(app_full.assigned_to)
-        seen_ids.add(app_full.assigned_to.id)
 
     logger.info(f"[notify] Sending status-change emails to: {[u.email for u in recipients]}")
 
