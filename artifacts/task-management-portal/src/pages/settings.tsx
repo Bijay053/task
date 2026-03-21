@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import type { AppStatusOut } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/lib/permission-context";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -362,7 +363,8 @@ export default function Settings() {
   const testChat = useTestChat();
   const [activeTab, setActiveTab] = useState<SettingsTab>("notifications");
 
-  const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
+  const { isCustomRole, canView } = usePermissions();
+  const isAdminOrManager = user?.role === "admin" || user?.role === "manager" || (isCustomRole && canView("settings"));
 
   if (!isAdminOrManager) {
     return (

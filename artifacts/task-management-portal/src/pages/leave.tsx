@@ -4,6 +4,7 @@ import { Card } from "@/components/ui-elements";
 import { Select } from "@/components/ui-elements";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/lib/permission-context";
 import { ShieldAlert, Calendar, Wifi, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,8 +36,9 @@ export default function LeavePage() {
   const { data: users, isLoading } = useListUsers();
   const availMut = useUpdateAvailability();
 
-  const canEdit = user?.role === "admin" || user?.role === "manager" || user?.role === "team_leader";
-  const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
+  const { isCustomRole, canView } = usePermissions();
+  const canEdit = user?.role === "admin" || user?.role === "manager" || user?.role === "team_leader" || (isCustomRole && canView("leave"));
+  const isAdminOrManager = user?.role === "admin" || user?.role === "manager" || (isCustomRole && canView("leave"));
 
   if (!isAdminOrManager) {
     return (

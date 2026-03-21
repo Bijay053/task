@@ -10,6 +10,7 @@ import { Card, Button, Input, Label, Modal, Select } from "@/components/ui-eleme
 import { Plus, Edit2, Users, Globe, X, Check, ShieldAlert, Upload, Download } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/lib/permission-context";
 import { cn } from "@/lib/utils";
 
 type AgentTab = "directory" | "manager-mapping";
@@ -90,7 +91,8 @@ export default function Agents() {
   const unassignMut = useUnassignAgentFromManager();
   const bulkUploadMut = useBulkUploadAgents();
 
-  const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
+  const { isCustomRole, canView } = usePermissions();
+  const isAdminOrManager = user?.role === "admin" || user?.role === "manager" || (isCustomRole && canView("agents"));
 
   const managers = users?.filter(u => ["admin", "manager"].includes(u.role)) || [];
 

@@ -9,6 +9,7 @@ import { Card, Button, Input, Modal, Label, Select } from "@/components/ui-eleme
 import { Plus, Edit2, ShieldAlert, Shield, Users as UsersIcon, Trash2, Pencil, Check, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/lib/permission-context";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -402,7 +403,8 @@ export default function Users() {
     }
   };
 
-  const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
+  const { isCustomRole, canView } = usePermissions();
+  const isAdminOrManager = user?.role === "admin" || user?.role === "manager" || (isCustomRole && canView("users"));
   const isAdmin = user?.role === "admin";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

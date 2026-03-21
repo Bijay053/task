@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui-elements";
 import { useListUsers } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/lib/permission-context";
 import {
   BarChart3, ShieldAlert, Users, FileText, TrendingUp, Award,
   Clock, AlertTriangle, CheckCircle2, Timer, Layers, CalendarRange, X
@@ -62,7 +63,8 @@ async function fetchReport(path: string, params: Record<string, string | undefin
 
 export default function Reports() {
   const { user } = useAuth();
-  const isManager = user?.role === "admin" || user?.role === "manager";
+  const { isCustomRole, canView } = usePermissions();
+  const isManager = user?.role === "admin" || user?.role === "manager" || (isCustomRole && canView("reports"));
   const [deptFilter, setDeptFilter] = useState<"" | "gs" | "offer">("");
   const [reportTab, setReportTab] = useState<ReportTab>(() => {
     const p = new URLSearchParams(window.location.search).get("tab");

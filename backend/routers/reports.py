@@ -15,11 +15,20 @@ import backend.schemas as schemas
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 
-def require_manager(current_user: models.User = Depends(get_current_user)):
+def require_manager(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     from fastapi import HTTPException
-    if current_user.role not in ("admin", "manager"):
-        raise HTTPException(status_code=403, detail="Manager role required")
-    return current_user
+    if current_user.role in ("admin", "manager"):
+        return current_user
+    # Allow custom roles that have can_view on the "reports" department
+    BASE_ROLES = {"admin", "manager", "team_leader", "agent"}
+    if current_user.role not in BASE_ROLES:
+        perm = db.query(models.RolePermission).filter(
+            models.RolePermission.role == current_user.role,
+            models.RolePermission.department == "reports",
+        ).first()
+        if perm and perm.can_view:
+            return current_user
+    raise HTTPException(status_code=403, detail="Manager role required")
 
 
 def _parse_date(d: Optional[str]) -> Optional[datetime]:
