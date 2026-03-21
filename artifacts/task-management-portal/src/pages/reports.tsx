@@ -77,8 +77,12 @@ export default function Reports() {
   };
   const [stagesDept, setStagesDept] = useState<"gs" | "offer">("gs");
   const [stagesUserId, setStagesUserId] = useState<string>("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  });
+  const [dateTo, setDateTo] = useState(() => new Date().toISOString().split("T")[0]);
 
   const { data: allUsers } = useListUsers({ query: { enabled: isManager } });
 

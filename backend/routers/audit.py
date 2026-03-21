@@ -18,6 +18,7 @@ class AuditLogOut(BaseModel):
     action: str
     detail: Optional[str]
     ip_address: Optional[str]
+    user_agent: Optional[str] = None
     created_at: datetime
 
     class Config:

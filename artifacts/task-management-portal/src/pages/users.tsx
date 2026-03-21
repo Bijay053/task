@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   useListUsers, useCreateUser, useUpdateUser, useDeleteUser,
   useGetRolePermissions, useSetRolePermission,
@@ -6,14 +6,14 @@ import {
 } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Modal, Label, Select } from "@/components/ui-elements";
-import { Plus, Edit2, ShieldAlert, Shield, Users as UsersIcon, Trash2, Pencil, Check, X } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Plus, Edit2, ShieldAlert, Shield, Users as UsersIcon, Trash2, Pencil, Check, X, LogIn, LogOut, Monitor, AlertTriangle, Lock, Clock } from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/lib/permission-context";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-type UsersTab = "team" | "permissions";
+type UsersTab = "team" | "permissions" | "audit";
 
 const DEPARTMENTS: { key: string; label: string; group?: string }[] = [
   { key: "gs",           label: "GS Applications",      group: "Departments" },
@@ -374,6 +374,141 @@ function RoleManager() {
   );
 }
 
+function parseDevice(ua: string | null | undefined): string {
+  if (!ua) return "Unknown device";
+  const s = ua.toLowerCase();
+  let os = "Unknown OS";
+  if (s.includes("windows"))     os = "Windows";
+  else if (s.includes("mac os")) os = "macOS";
+  else if (s.includes("iphone")) os = "iPhone";
+  else if (s.includes("ipad"))   os = "iPad";
+  else if (s.includes("android")) os = "Android";
+  else if (s.includes("linux"))  os = "Linux";
+  let browser = "Unknown Browser";
+  if (s.includes("edg/"))        browser = "Edge";
+  else if (s.includes("chrome")) browser = "Chrome";
+  else if (s.includes("firefox")) browser = "Firefox";
+  else if (s.includes("safari")) browser = "Safari";
+  else if (s.includes("opera"))  browser = "Opera";
+  return `${browser} on ${os}`;
+}
+
+const ACTION_META: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
+  login:          { label: "Login",          icon: <LogIn className="w-3.5 h-3.5" />,       cls: "bg-green-100 text-green-700"  },
+  logout:         { label: "Logout",         icon: <LogOut className="w-3.5 h-3.5" />,      cls: "bg-slate-100 text-slate-600"  },
+  login_failed:   { label: "Failed Login",   icon: <AlertTriangle className="w-3.5 h-3.5" />, cls: "bg-red-100 text-red-700"   },
+  login_blocked:  { label: "Blocked",        icon: <Lock className="w-3.5 h-3.5" />,        cls: "bg-orange-100 text-orange-700"},
+  account_locked: { label: "Account Locked", icon: <Lock className="w-3.5 h-3.5" />,        cls: "bg-red-100 text-red-700"     },
+  otp_sent:       { label: "OTP Sent",       icon: <Clock className="w-3.5 h-3.5" />,       cls: "bg-blue-100 text-blue-700"   },
+  change_password:{ label: "Password Changed", icon: <Shield className="w-3.5 h-3.5" />,   cls: "bg-purple-100 text-purple-700"},
+};
+
+function LoginAuditPanel({ users }: { users: any[] }) {
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(users[0]?.id ?? null);
+  const token = localStorage.getItem("access_token");
+
+  const { data: logs, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/audit/logs", selectedUserId],
+    enabled: selectedUserId !== null,
+    queryFn: async () => {
+      const url = selectedUserId
+        ? `/api/audit/logs?user_id=${selectedUserId}&limit=200`
+        : `/api/audit/logs?limit=200`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error("Failed to fetch audit logs");
+      return res.json();
+    },
+  });
+
+  const selectedUser = users.find(u => u.id === selectedUserId);
+
+  return (
+    <div className="flex flex-1 gap-4 min-h-0">
+      {/* User list */}
+      <Card className="w-56 shrink-0 flex flex-col overflow-hidden">
+        <div className="px-3 py-2.5 border-b border-border shrink-0">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Team Members</p>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {users.map(u => (
+            <button
+              key={u.id}
+              onClick={() => setSelectedUserId(u.id)}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors border-b border-border/40 last:border-0",
+                selectedUserId === u.id
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "hover:bg-accent text-foreground"
+              )}
+            >
+              <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">
+                {u.full_name.charAt(0)}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate font-medium">{u.full_name}</div>
+                <div className="truncate text-[11px] text-muted-foreground capitalize">{u.role.replace("_", " ")}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Logs area */}
+      <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="px-5 py-3 border-b border-border shrink-0 flex items-center gap-2">
+          <Monitor className="w-4 h-4 text-muted-foreground" />
+          <span className="font-semibold text-sm">
+            {selectedUser ? `Login & Device Audit — ${selectedUser.full_name}` : "Login & Device Audit"}
+          </span>
+        </div>
+        <div className="flex-1 overflow-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading...</div>
+          ) : !logs || logs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+              <Monitor className="w-10 h-10 opacity-20" />
+              <p className="text-sm">No login activity recorded yet.</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-border">
+                  <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-slate-500">Date & Time</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-slate-500">Event</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-slate-500">IP Address</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-slate-500">Device / Browser</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-slate-500">Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log: any, i: number) => {
+                  const meta = ACTION_META[log.action] || { label: log.action, icon: <Clock className="w-3.5 h-3.5" />, cls: "bg-slate-100 text-slate-600" };
+                  const dt = new Date(log.created_at + "Z");
+                  return (
+                    <tr key={log.id} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
+                      <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
+                        {dt.toLocaleDateString()} {dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold", meta.cls)}>
+                          {meta.icon}{meta.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{log.ip_address || "—"}</td>
+                      <td className="px-4 py-2.5 text-muted-foreground text-xs">{parseDevice(log.user_agent)}</td>
+                      <td className="px-4 py-2.5 text-muted-foreground text-xs">{log.detail || "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export default function Users() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -473,6 +608,7 @@ export default function Users() {
           {[
             { id: "team" as UsersTab, label: "Team Members" },
             { id: "permissions" as UsersTab, label: "Role & Permissions" },
+            ...(isAdmin ? [{ id: "audit" as UsersTab, label: "Login Audit" }] : []),
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={cn(
@@ -602,6 +738,10 @@ export default function Users() {
               </Card>
             )}
           </div>
+        )}
+
+        {activeTab === "audit" && isAdmin && (
+          <LoginAuditPanel users={users || []} />
         )}
       </div>
 

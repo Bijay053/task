@@ -301,6 +301,7 @@ class SystemAuditLog(Base):
     action = Column(String(100), nullable=False)      # e.g. "login", "logout", "change_password"
     detail = Column(Text, nullable=True)
     ip_address = Column(String(60), nullable=True)
+    user_agent = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", foreign_keys=[user_id], passive_deletes=True)

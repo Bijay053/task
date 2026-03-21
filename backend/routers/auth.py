@@ -81,15 +81,18 @@ def _is_password_expired(user: models.User) -> bool:
 def _log(db: Session, user: Optional[models.User], action: str,
          detail: str = "", request: Optional[Request] = None):
     ip = None
+    ua = None
     if request:
         forwarded = request.headers.get("x-forwarded-for")
         ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else None)
+        ua = request.headers.get("user-agent")
     db.add(models.SystemAuditLog(
         user_id    = user.id    if user else None,
         user_email = user.email if user else None,
         action     = action,
         detail     = detail or None,
         ip_address = ip,
+        user_agent = ua,
     ))
     db.commit()
 

@@ -145,3 +145,6 @@ def run_migrations():
         # Permission columns on task_role_permissions
         _add_column(conn, "task_role_permissions", "can_view_all_users",    "BOOLEAN DEFAULT FALSE")
         _add_column(conn, "task_role_permissions", "can_view_mapped_users", "BOOLEAN DEFAULT FALSE")
+
+        # User agent column for audit logs
+        _add_column(conn, "task_system_audit_logs", "user_agent", "TEXT")
