@@ -44,12 +44,14 @@ function KanbanCard({
   app,
   colorMap,
   onDragStart,
+  onDragEnd,
   isDragging,
   onCardClick,
 }: {
   app: Application;
   colorMap: Record<string, { bg: string; text: string }>;
   onDragStart: (e: React.DragEvent, id: number) => void;
+  onDragEnd: () => void;
   isDragging: boolean;
   onCardClick?: (app: Application) => void;
 }) {
@@ -66,6 +68,7 @@ function KanbanCard({
     <div
       draggable
       onDragStart={(e) => onDragStart(e, app.id)}
+      onDragEnd={onDragEnd}
       onClick={handleClick}
       className={cn(
         "bg-card border border-border rounded-xl p-3 shadow-sm select-none transition-all",
@@ -153,6 +156,7 @@ function KanbanCardColumn({
   colorMap,
   draggingId,
   onDragStart,
+  onDragEnd,
   onDrop,
   onCardClick,
 }: {
@@ -161,6 +165,7 @@ function KanbanCardColumn({
   colorMap: Record<string, { bg: string; text: string }>;
   draggingId: number | null;
   onDragStart: (e: React.DragEvent, id: number) => void;
+  onDragEnd: () => void;
   onDrop: (status: string) => void;
   onCardClick?: (app: Application) => void;
 }) {
@@ -176,15 +181,20 @@ function KanbanCardColumn({
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     dragCounter.current -= 1;
-    if (dragCounter.current === 0) setIsOver(false);
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setIsOver(false);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounter.current = 0;
     setIsOver(false);
     onDrop(status);
@@ -215,15 +225,13 @@ function KanbanCardColumn({
           app={app}
           colorMap={colorMap}
           onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
           isDragging={draggingId === app.id}
           onCardClick={onCardClick}
         />
       ))}
-      {/* Sticky drop target — always visible at the bottom of the viewport even in long columns */}
       {isOver && cards.length > 0 && (
-        <div
-          className="sticky bottom-2 mx-1 rounded-lg bg-primary/10 border-2 border-dashed border-primary/50 flex items-center justify-center py-2 text-xs font-semibold text-primary/80 gap-1.5 select-none z-10"
-        >
+        <div className="sticky bottom-2 mx-1 rounded-lg bg-primary/10 border-2 border-dashed border-primary/50 flex items-center justify-center py-2 text-xs font-semibold text-primary/80 gap-1.5 select-none z-10">
           <span>Drop here</span>
         </div>
       )}
@@ -276,28 +284,39 @@ export function KanbanBoard({
     updateArrows();
   }, [updateArrows]);
 
-  const handleDragStart = (e: React.DragEvent, appId: number) => {
+  const handleDragStart = useCallback((e: React.DragEvent, appId: number) => {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", String(appId));
     dragAppRef.current = appId;
-    setDraggingId(appId);
-  };
+    // Use setTimeout so the drag ghost renders before opacity change
+    setTimeout(() => setDraggingId(appId), 0);
+  }, []);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     setDraggingId(null);
     dragAppRef.current = null;
-  };
+  }, []);
 
-  const handleDrop = async (newStatus: string) => {
+  const handleDrop = useCallback(async (newStatus: string) => {
     const appId = dragAppRef.current;
     if (!appId) return;
+
+    // Clear dragging state immediately — don't wait for the refetch
+    setDraggingId(null);
+    dragAppRef.current = null;
+
     const app = applications.find((a) => a.id === appId);
     if (!app || app.application_status === newStatus) return;
-    await updateMut.mutateAsync({ appId, data: { application_status: newStatus } });
-    ["/api/applications", "/api/dashboard", ...queryInvalidateKeys].forEach((key) =>
-      queryClient.invalidateQueries({ queryKey: [key] })
-    );
-  };
+
+    try {
+      await updateMut.mutateAsync({ appId, data: { application_status: newStatus } });
+      ["/api/applications", "/api/dashboard", ...queryInvalidateKeys].forEach((key) =>
+        queryClient.invalidateQueries({ queryKey: [key] })
+      );
+    } catch {
+      // mutation error is handled by the hook
+    }
+  }, [applications, updateMut, queryClient, queryInvalidateKeys]);
 
   const columnMap = statusChoices.reduce<Record<string, Application[]>>((acc, status) => {
     acc[status] = applications.filter((a) => a.application_status === status);
@@ -361,7 +380,6 @@ export function KanbanBoard({
           ref={cardRef}
           className="flex-1 min-h-0 gap-3 items-start kanban-scroll"
           onScroll={onCardScroll}
-          onDragEnd={handleDragEnd}
         >
           {statusChoices.map((status) => (
             <KanbanCardColumn
@@ -371,6 +389,7 @@ export function KanbanBoard({
               colorMap={statusColors}
               draggingId={draggingId}
               onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
               onDrop={handleDrop}
               onCardClick={onCardClick}
             />
