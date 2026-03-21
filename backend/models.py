@@ -283,6 +283,7 @@ class RolePermission(Base):
     can_edit = Column(Boolean, default=False)
     can_delete = Column(Boolean, default=False)
     can_upload = Column(Boolean, default=False)
+    can_view_all_users = Column(Boolean, default=False)
 
     __table_args__ = (UniqueConstraint("role", "department", name="uq_role_dept_perm"),)
 

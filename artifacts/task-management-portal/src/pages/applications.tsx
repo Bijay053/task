@@ -300,12 +300,14 @@ export default function GsApplications() {
                 </Select>
               </div>
             )}
-            <div className="min-w-[180px]">
-              <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="bg-card">
-                <option value="">All Assignees</option>
-                {users?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
-              </Select>
-            </div>
+            {canViewAllUsers("gs") && (
+              <div className="min-w-[180px]">
+                <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="bg-card">
+                  <option value="">All Assignees</option>
+                  {users?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                </Select>
+              </div>
+            )}
           </div>
         </Card>
 

@@ -392,6 +392,7 @@ class RolePermOut(BaseModel):
     can_edit: bool
     can_delete: bool
     can_upload: bool
+    can_view_all_users: bool = False
 
     class Config:
         from_attributes = True
@@ -402,6 +403,7 @@ class RolePermUpdate(BaseModel):
     can_edit: bool = False
     can_delete: bool = False
     can_upload: bool = False
+    can_view_all_users: bool = False
 
 
 # ─── Reports ───────────────────────────────────────────────────────────────────

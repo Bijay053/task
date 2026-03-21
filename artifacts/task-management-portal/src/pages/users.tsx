@@ -26,11 +26,12 @@ const DEPARTMENTS: { key: string; label: string; group?: string }[] = [
   { key: "settings",     label: "System Settings",       group: "Modules" },
 ];
 
-const PERM_COLS: { key: "can_view" | "can_edit" | "can_upload" | "can_delete"; label: string }[] = [
-  { key: "can_view",   label: "VIEW"   },
-  { key: "can_edit",   label: "EDIT"   },
-  { key: "can_upload", label: "UPLOAD" },
-  { key: "can_delete", label: "DELETE" },
+const PERM_COLS: { key: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users"; label: string; title?: string }[] = [
+  { key: "can_view",          label: "VIEW"      },
+  { key: "can_edit",          label: "EDIT"      },
+  { key: "can_upload",        label: "UPLOAD"    },
+  { key: "can_delete",        label: "DELETE"    },
+  { key: "can_view_all_users", label: "ALL USERS", title: "Can see all users in the Assigned To filter" },
 ];
 
 function MatrixCheckbox({ checked, onChange }: { checked: boolean; onChange: () => void }) {
@@ -61,17 +62,17 @@ function PermMatrix({
   isLoading,
 }: {
   perms: any[] | undefined;
-  onToggle: (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete") => void;
+  onToggle: (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users") => void;
   isLoading: boolean;
 }) {
   const getPerm = (dept: string) =>
     perms?.find((p: any) => p.department === dept) ||
-    { can_view: false, can_edit: false, can_delete: false, can_upload: false };
+    { can_view: false, can_edit: false, can_delete: false, can_upload: false, can_view_all_users: false };
 
-  const colAllChecked = (field: "can_view" | "can_edit" | "can_upload" | "can_delete") =>
+  const colAllChecked = (field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users") =>
     DEPARTMENTS.every(d => getPerm(d.key)[field]);
 
-  const toggleAll = (field: "can_view" | "can_edit" | "can_upload" | "can_delete") => {
+  const toggleAll = (field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users") => {
     const allOn = colAllChecked(field);
     DEPARTMENTS.forEach(d => {
       const p = getPerm(d.key);
@@ -151,9 +152,9 @@ function RolePermissionsPanel({ roles }: { roles: any[] }) {
 
   const getPerm = (dept: string) =>
     perms?.find((p: any) => p.department === dept) ||
-    { can_view: false, can_edit: false, can_delete: false, can_upload: false };
+    { can_view: false, can_edit: false, can_delete: false, can_upload: false, can_view_all_users: false };
 
-  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete") => {
+  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users") => {
     const p = getPerm(dept);
     try {
       await setRolePermMut.mutateAsync({
@@ -164,6 +165,7 @@ function RolePermissionsPanel({ roles }: { roles: any[] }) {
           can_edit: p.can_edit,
           can_delete: p.can_delete,
           can_upload: p.can_upload ?? false,
+          can_view_all_users: p.can_view_all_users ?? false,
           [field]: !p[field],
         },
       });
