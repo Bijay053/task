@@ -380,6 +380,7 @@ export default function Users() {
   const { data: roles } = useListRoles();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [activeTab, setActiveTab] = useState<UsersTab>("team");
   const [permSection, setPermSection] = useState<"matrix" | "roles">("matrix");
 
@@ -460,7 +461,7 @@ export default function Users() {
             <p className="text-muted-foreground mt-1">Manage portal access, roles, and department permissions.</p>
           </div>
           {activeTab === "team" && (
-            <Button onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
+            <Button onClick={() => { setEditingItem(null); setShowPasswordReset(false); setIsModalOpen(true); }}>
               <Plus className="w-5 h-5 mr-2" />Add Team Member
             </Button>
           )}
@@ -531,7 +532,7 @@ export default function Users() {
                           </div>
                         ) : (
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => { setEditingItem(u); setIsModalOpen(true); }}>
+                            <Button variant="ghost" size="sm" onClick={() => { setEditingItem(u); setShowPasswordReset(false); setIsModalOpen(true); }}>
                               <Edit2 className="w-4 h-4 mr-1" />Edit
                             </Button>
                             {isAdmin && user?.id !== u.id && (
@@ -638,19 +639,48 @@ export default function Users() {
               </Select>
             </div>
           )}
-          <div className="space-y-2">
-            <Label>{editingItem ? "New Password" : "Password *"}</Label>
-            <Input
-              name="password"
-              type="password"
-              required={!editingItem}
-              autoComplete="new-password"
-              placeholder={editingItem ? "Leave blank to keep current password" : "Enter password"}
-            />
-            {editingItem && (
-              <p className="text-xs text-muted-foreground">Only fill this in if you want to change the password.</p>
-            )}
-          </div>
+          {editingItem ? (
+            <div className="space-y-2">
+              {!showPasswordReset ? (
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordReset(true)}
+                  className="text-sm text-primary underline underline-offset-2 hover:opacity-75"
+                >
+                  Change password
+                </button>
+              ) : (
+                <>
+                  <Label>New Password *</Label>
+                  <Input
+                    name="password"
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                    placeholder="Enter new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordReset(false)}
+                    className="text-xs text-muted-foreground underline underline-offset-2 hover:opacity-75"
+                  >
+                    Cancel password change
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Password *</Label>
+              <Input
+                name="password"
+                type="password"
+                required
+                autoComplete="new-password"
+                placeholder="Enter password"
+              />
+            </div>
+          )}
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
             <Button type="submit" isLoading={createMut.isPending || updateMut.isPending}>Save</Button>
