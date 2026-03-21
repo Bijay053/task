@@ -98,7 +98,7 @@
   overflow-y: auto;
   display: flex;
   flex-wrap: nowrap;
-  align-items: flex-start;
+  align-items: stretch;
   scrollbar-width: thin;
   scrollbar-color: #c1c7d0 #f1f2f4;
 }

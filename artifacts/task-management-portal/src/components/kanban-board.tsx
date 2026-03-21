@@ -203,7 +203,7 @@ function KanbanCardColumn({
   return (
     <div
       className={cn(
-        "w-[290px] min-w-[290px] max-w-[290px] shrink-0 rounded-b-xl p-2 space-y-2 transition-colors relative",
+        "w-[290px] min-w-[290px] max-w-[290px] shrink-0 rounded-b-xl p-2 transition-colors relative flex flex-col gap-2",
         isOver ? "bg-primary/5 ring-2 ring-primary/30 ring-inset" : "bg-muted/40"
       )}
       onDragEnter={handleDragEnter}
@@ -211,14 +211,6 @@ function KanbanCardColumn({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {cards.length === 0 && (
-        <div className={cn(
-          "flex items-center justify-center text-xs italic select-none py-6 rounded-lg transition-colors",
-          isOver ? "text-primary font-semibold bg-primary/10 border-2 border-dashed border-primary/40" : "text-muted-foreground/40"
-        )}>
-          {isOver ? "Drop here" : "No applications"}
-        </div>
-      )}
       {cards.map((app) => (
         <KanbanCard
           key={app.id}
@@ -230,11 +222,19 @@ function KanbanCardColumn({
           onCardClick={onCardClick}
         />
       ))}
-      {isOver && cards.length > 0 && (
-        <div className="sticky bottom-2 mx-1 rounded-lg bg-primary/10 border-2 border-dashed border-primary/50 flex items-center justify-center py-2 text-xs font-semibold text-primary/80 gap-1.5 select-none z-10">
-          <span>Drop here</span>
-        </div>
-      )}
+      {/* Drop zone fills all remaining space — works for empty columns and bottom of tall columns */}
+      <div
+        className={cn(
+          "flex-1 min-h-[80px] rounded-lg flex items-center justify-center text-xs select-none transition-colors",
+          isOver
+            ? "bg-primary/10 border-2 border-dashed border-primary/50 text-primary font-semibold"
+            : cards.length === 0
+              ? "border-2 border-dashed border-muted-foreground/20 text-muted-foreground/40 italic"
+              : "border-2 border-dashed border-transparent"
+        )}
+      >
+        {isOver ? "Drop here" : cards.length === 0 ? "No applications" : ""}
+      </div>
     </div>
   );
 }
@@ -378,7 +378,7 @@ export function KanbanBoard({
 
         <div
           ref={cardRef}
-          className="flex-1 min-h-0 gap-3 items-start kanban-scroll"
+          className="flex-1 min-h-0 gap-3 items-stretch kanban-scroll"
           onScroll={onCardScroll}
         >
           {statusChoices.map((status) => (
