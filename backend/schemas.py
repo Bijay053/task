@@ -28,6 +28,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     password: Optional[str] = None
     availability_status: Optional[str] = None
+    manager_id: Optional[int] = None
 
 
 class UserOut(BaseModel):
@@ -38,6 +39,7 @@ class UserOut(BaseModel):
     is_active: bool
     availability_status: str = "available"
     created_at: datetime
+    manager_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -393,6 +395,7 @@ class RolePermOut(BaseModel):
     can_delete: bool
     can_upload: bool
     can_view_all_users: bool = False
+    can_view_mapped_users: bool = False
 
     class Config:
         from_attributes = True
@@ -404,6 +407,7 @@ class RolePermUpdate(BaseModel):
     can_delete: bool = False
     can_upload: bool = False
     can_view_all_users: bool = False
+    can_view_mapped_users: bool = False
 
 
 # ─── Reports ───────────────────────────────────────────────────────────────────

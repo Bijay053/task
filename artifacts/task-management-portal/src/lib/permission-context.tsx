@@ -10,6 +10,7 @@ export interface RolePerm {
   can_upload: boolean;
   can_delete: boolean;
   can_view_all_users: boolean;
+  can_view_mapped_users: boolean;
 }
 
 interface PermissionContextValue {
@@ -20,6 +21,7 @@ interface PermissionContextValue {
   canDelete: (dept: string) => boolean;
   canUpload: (dept: string) => boolean;
   canViewAllUsers: (dept: string) => boolean;
+  canViewMappedUsers: (dept: string) => boolean;
 }
 
 const PermissionContext = createContext<PermissionContextValue>({
@@ -30,6 +32,7 @@ const PermissionContext = createContext<PermissionContextValue>({
   canDelete: () => true,
   canUpload: () => true,
   canViewAllUsers: () => true,
+  canViewMappedUsers: () => false,
 });
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
@@ -80,9 +83,14 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     const p = getPerm(dept);
     return p ? (p.can_view_all_users ?? false) : false;
   };
+  const canViewMappedUsers = (dept: string) => {
+    if (!isCustomRole) return false;
+    const p = getPerm(dept);
+    return p ? (p.can_view_mapped_users ?? false) : false;
+  };
 
   return (
-    <PermissionContext.Provider value={{ perms, isCustomRole, canView, canEdit, canDelete, canUpload, canViewAllUsers }}>
+    <PermissionContext.Provider value={{ perms, isCustomRole, canView, canEdit, canDelete, canUpload, canViewAllUsers, canViewMappedUsers }}>
       {children}
     </PermissionContext.Provider>
   );

@@ -20,6 +20,21 @@ def list_users(db: Session = Depends(get_db), current_user: models.User = Depend
     return db.query(models.User).filter(models.User.is_active == True).all()
 
 
+@router.get("/my-team", response_model=List[schemas.UserOut])
+def get_my_team(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Return active users who share the same manager as the current user."""
+    if not current_user.manager_id:
+        return []
+    return (
+        db.query(models.User)
+        .filter(
+            models.User.manager_id == current_user.manager_id,
+            models.User.is_active == True,
+        )
+        .all()
+    )
+
+
 @router.post("/", response_model=schemas.UserOut)
 def create_user(data: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     existing = db.query(models.User).filter(models.User.email == data.email).first()
@@ -57,6 +72,12 @@ def update_user(user_id: int, data: schemas.UserUpdate, db: Session = Depends(ge
         if data.availability_status not in AVAILABILITY_CHOICES:
             raise HTTPException(status_code=400, detail=f"Invalid availability status. Choose: {AVAILABILITY_CHOICES}")
         user.availability_status = data.availability_status
+    if "manager_id" in data.model_fields_set:
+        if data.manager_id is not None:
+            mgr = db.query(models.User).filter(models.User.id == data.manager_id).first()
+            if not mgr:
+                raise HTTPException(status_code=400, detail="Manager not found")
+        user.manager_id = data.manager_id
     if data.password is not None:
         user.hashed_password = get_password_hash(data.password)
         # Invalidate existing sessions and clear any lockout

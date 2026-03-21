@@ -26,12 +26,13 @@ const DEPARTMENTS: { key: string; label: string; group?: string }[] = [
   { key: "settings",     label: "System Settings",       group: "Modules" },
 ];
 
-const PERM_COLS: { key: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users"; label: string; title?: string }[] = [
-  { key: "can_view",          label: "VIEW"      },
-  { key: "can_edit",          label: "EDIT"      },
-  { key: "can_upload",        label: "UPLOAD"    },
-  { key: "can_delete",        label: "DELETE"    },
-  { key: "can_view_all_users", label: "ALL USERS", title: "Can see all users in the Assigned To filter" },
+const PERM_COLS: { key: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users" | "can_view_mapped_users"; label: string; title?: string }[] = [
+  { key: "can_view",              label: "VIEW"       },
+  { key: "can_edit",              label: "EDIT"       },
+  { key: "can_upload",            label: "UPLOAD"     },
+  { key: "can_delete",            label: "DELETE"     },
+  { key: "can_view_all_users",    label: "ALL USERS",  title: "Can see all users in the Assigned To filter" },
+  { key: "can_view_mapped_users", label: "MY TEAM",    title: "Can see only their team (same manager) in the Assigned To filter" },
 ];
 
 function MatrixCheckbox({ checked, onChange }: { checked: boolean; onChange: () => void }) {
@@ -62,17 +63,17 @@ function PermMatrix({
   isLoading,
 }: {
   perms: any[] | undefined;
-  onToggle: (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users") => void;
+  onToggle: (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users" | "can_view_mapped_users") => void;
   isLoading: boolean;
 }) {
   const getPerm = (dept: string) =>
     perms?.find((p: any) => p.department === dept) ||
-    { can_view: false, can_edit: false, can_delete: false, can_upload: false, can_view_all_users: false };
+    { can_view: false, can_edit: false, can_delete: false, can_upload: false, can_view_all_users: false, can_view_mapped_users: false };
 
-  const colAllChecked = (field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users") =>
+  const colAllChecked = (field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users" | "can_view_mapped_users") =>
     DEPARTMENTS.every(d => getPerm(d.key)[field]);
 
-  const toggleAll = (field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users") => {
+  const toggleAll = (field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users" | "can_view_mapped_users") => {
     const allOn = colAllChecked(field);
     DEPARTMENTS.forEach(d => {
       const p = getPerm(d.key);
@@ -152,9 +153,9 @@ function RolePermissionsPanel({ roles }: { roles: any[] }) {
 
   const getPerm = (dept: string) =>
     perms?.find((p: any) => p.department === dept) ||
-    { can_view: false, can_edit: false, can_delete: false, can_upload: false, can_view_all_users: false };
+    { can_view: false, can_edit: false, can_delete: false, can_upload: false, can_view_all_users: false, can_view_mapped_users: false };
 
-  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users") => {
+  const toggle = async (dept: string, field: "can_view" | "can_edit" | "can_upload" | "can_delete" | "can_view_all_users" | "can_view_mapped_users") => {
     const p = getPerm(dept);
     try {
       await setRolePermMut.mutateAsync({
@@ -166,6 +167,7 @@ function RolePermissionsPanel({ roles }: { roles: any[] }) {
           can_delete: p.can_delete,
           can_upload: p.can_upload ?? false,
           can_view_all_users: p.can_view_all_users ?? false,
+          can_view_mapped_users: p.can_view_mapped_users ?? false,
           [field]: !p[field],
         },
       });
@@ -405,11 +407,13 @@ export default function Users() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const managerIdRaw = fd.get("manager_id") as string;
     const data: any = {
       full_name: fd.get("full_name") as string,
       email: fd.get("email") as string,
       role: fd.get("role") as string,
       is_active: fd.get("is_active") === "true",
+      manager_id: managerIdRaw ? Number(managerIdRaw) : null,
     };
     if (fd.get("password")) data.password = fd.get("password") as string;
 
@@ -613,6 +617,15 @@ export default function Users() {
             <Select name="role" required defaultValue={editingItem?.role || roles?.[0]?.name || ""}>
               {roles?.map(r => (
                 <option key={r.id} value={r.name}>{r.name.replace(/_/g, " ")}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Reports To (Manager)</Label>
+            <Select name="manager_id" defaultValue={editingItem?.manager_id ?? ""}>
+              <option value="">— No Manager —</option>
+              {users?.filter(u => u.id !== editingItem?.id).map(u => (
+                <option key={u.id} value={u.id}>{u.full_name} ({u.role})</option>
               ))}
             </Select>
           </div>

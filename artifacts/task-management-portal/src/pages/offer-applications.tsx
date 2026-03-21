@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePermissions } from "@/lib/permission-context";
+import { useQuery } from "@tanstack/react-query";
 import {
   useListApplications, useCreateApplication, useUpdateApplication, useDeleteApplication,
   useListStudents, useListUniversities, useListUsers, useListStatuses, useListAgents,
@@ -80,7 +81,17 @@ function UniversityField({ defaultUniversityId, defaultUniversityName }: { defau
 export default function OfferApplications() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { canEdit, canDelete } = usePermissions();
+  const { canEdit, canDelete, canViewAllUsers, canViewMappedUsers } = usePermissions();
+  const { data: myTeamUsers } = useQuery<any[]>({
+    queryKey: ["/api/users/my-team"],
+    queryFn: async () => {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch("/api/users/my-team", { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: canViewMappedUsers("offer"),
+  });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState<number | "">("");
@@ -263,11 +274,11 @@ export default function OfferApplications() {
                 </Select>
               </div>
             )}
-            {canViewAllUsers("offer") && (
+            {(canViewAllUsers("offer") || canViewMappedUsers("offer")) && (
               <div className="min-w-[180px]">
                 <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="bg-card">
-                  <option value="">All Agents</option>
-                  {users?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                  <option value="">{canViewAllUsers("offer") ? "All Agents" : "My Team"}</option>
+                  {(canViewAllUsers("offer") ? users : myTeamUsers)?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                 </Select>
               </div>
             )}

@@ -63,6 +63,8 @@ class User(Base):
     failed_login_attempts = Column(Integer, default=0, nullable=False, server_default="0")
     locked_until = Column(DateTime, nullable=True)
 
+    manager_id = Column(Integer, ForeignKey("task_users.id", ondelete="SET NULL"), nullable=True)
+
     assigned_applications = relationship(
         "Application", foreign_keys="Application.assigned_to_id", back_populates="assigned_to"
     )
@@ -284,6 +286,7 @@ class RolePermission(Base):
     can_delete = Column(Boolean, default=False)
     can_upload = Column(Boolean, default=False)
     can_view_all_users = Column(Boolean, default=False)
+    can_view_mapped_users = Column(Boolean, default=False)
 
     __table_args__ = (UniqueConstraint("role", "department", name="uq_role_dept_perm"),)
 

@@ -64,6 +64,7 @@ def set_role_permission(
     perm.can_delete = data.can_delete
     perm.can_upload = data.can_upload
     perm.can_view_all_users = data.can_view_all_users
+    perm.can_view_mapped_users = data.can_view_mapped_users
     db.commit()
     db.refresh(perm)
     return perm
