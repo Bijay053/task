@@ -18,6 +18,7 @@ export interface UserOut {
   work_days?: string | null;
   work_start_time?: string | null;
   work_end_time?: string | null;
+  work_timezone?: string | null;
   created_at: string;
 }
 
@@ -27,6 +28,7 @@ export interface UserAvailabilityUpdate {
   work_days?: string | null;
   work_start_time?: string | null;
   work_end_time?: string | null;
+  work_timezone?: string | null;
 }
 
 /** External agent / sub-agent / partner */

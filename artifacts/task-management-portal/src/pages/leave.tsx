@@ -60,10 +60,33 @@ function formatSchedule(u: UserOut): string {
   return parts.length > 0 ? parts.join("  ·  ") : "";
 }
 
+const TIMEZONES = [
+  { value: "Asia/Kathmandu",      label: "Nepal (NPT, UTC+5:45)" },
+  { value: "Asia/Kolkata",        label: "India (IST, UTC+5:30)" },
+  { value: "Australia/Sydney",    label: "Australia/Sydney (AEDT/AEST)" },
+  { value: "Australia/Melbourne", label: "Australia/Melbourne (AEDT/AEST)" },
+  { value: "Australia/Brisbane",  label: "Australia/Brisbane (AEST, UTC+10)" },
+  { value: "Australia/Perth",     label: "Australia/Perth (AWST, UTC+8)" },
+  { value: "Europe/London",       label: "UK (GMT/BST)" },
+  { value: "America/Toronto",     label: "Canada/Toronto (ET)" },
+  { value: "America/Vancouver",   label: "Canada/Vancouver (PT)" },
+  { value: "America/New_York",    label: "US/New York (ET)" },
+  { value: "America/Los_Angeles", label: "US/Los Angeles (PT)" },
+  { value: "Asia/Dubai",          label: "UAE (GST, UTC+4)" },
+  { value: "Asia/Singapore",      label: "Singapore (SGT, UTC+8)" },
+  { value: "UTC",                 label: "UTC" },
+];
+
+function tzLabel(tz: string | null | undefined): string {
+  if (!tz) return "";
+  return TIMEZONES.find(t => t.value === tz)?.label.split(" ")[0] ?? tz;
+}
+
 interface ScheduleForm {
   days: Set<string>;
   start: string;
   end: string;
+  timezone: string;
 }
 
 export default function LeavePage() {
@@ -104,6 +127,7 @@ export default function LeavePage() {
       days: parseDays(u.work_days),
       start: u.work_start_time || "",
       end: u.work_end_time || "",
+      timezone: u.work_timezone || "",
     });
   }
 
@@ -125,6 +149,7 @@ export default function LeavePage() {
           work_days: workDays || null,
           work_start_time: scheduleForm.start || null,
           work_end_time: scheduleForm.end || null,
+          work_timezone: scheduleForm.timezone || null,
         },
       });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -264,9 +289,14 @@ export default function LeavePage() {
                         </td>
                         <td>
                           {u.work_start_time && u.work_end_time ? (
-                            <div className="flex items-center gap-1.5 text-sm font-medium">
-                              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                              {u.work_start_time} – {u.work_end_time}
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5 text-sm font-medium">
+                                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                                {u.work_start_time} – {u.work_end_time}
+                              </div>
+                              {u.work_timezone && (
+                                <span className="text-xs text-muted-foreground pl-5">{tzLabel(u.work_timezone)}</span>
+                              )}
                             </div>
                           ) : (
                             <span className="text-xs text-muted-foreground italic">Not set</span>
@@ -369,6 +399,20 @@ export default function LeavePage() {
                                   onChange={e => setScheduleForm(p => ({ ...p, end: e.target.value }))}
                                   className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                 />
+                              </div>
+
+                              <div>
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Time Zone</div>
+                                <select
+                                  value={scheduleForm.timezone}
+                                  onChange={e => setScheduleForm(p => ({ ...p, timezone: e.target.value }))}
+                                  className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[220px]"
+                                >
+                                  <option value="">— Select timezone —</option>
+                                  {TIMEZONES.map(tz => (
+                                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                                  ))}
+                                </select>
                               </div>
 
                               {/* Actions */}

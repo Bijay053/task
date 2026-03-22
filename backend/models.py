@@ -61,6 +61,7 @@ class User(Base):
     work_days = Column(String(100), nullable=True)
     work_start_time = Column(String(10), nullable=True)
     work_end_time = Column(String(10), nullable=True)
+    work_timezone = Column(String(60), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     password_changed_at = Column(DateTime, default=datetime.utcnow)
     token_version = Column(Integer, default=0, nullable=False, server_default="0")

@@ -162,6 +162,8 @@ def update_availability(
         user.work_start_time = data.work_start_time or None
     if data.work_end_time is not None:
         user.work_end_time = data.work_end_time or None
+    if data.work_timezone is not None:
+        user.work_timezone = data.work_timezone or None
     db.commit()
     db.refresh(user)
     return user

@@ -42,6 +42,7 @@ class UserOut(BaseModel):
     work_days: Optional[str] = None
     work_start_time: Optional[str] = None
     work_end_time: Optional[str] = None
+    work_timezone: Optional[str] = None
     created_at: datetime
     manager_id: Optional[int] = None
 
@@ -55,6 +56,7 @@ class UserAvailabilityUpdate(BaseModel):
     work_days: Optional[str] = None
     work_start_time: Optional[str] = None
     work_end_time: Optional[str] = None
+    work_timezone: Optional[str] = None
 
 
 class StudentCreate(BaseModel):
