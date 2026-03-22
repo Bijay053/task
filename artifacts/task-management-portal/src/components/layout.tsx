@@ -289,7 +289,7 @@ export function Layout({ children }: { children: ReactNode }) {
         { href: "/reports",      label: "Performance Reports",  icon: BarChart3,     roles: ["admin", "manager"], permKey: "reports"   },
         { href: "/agents",       label: "External Agents",      icon: UserCheck,     roles: ["admin", "manager"], permKey: "agents"    },
         { href: "/students",     label: "Students Directory",   icon: GraduationCap, roles: ["admin", "manager", "agent"], permKey: "students" },
-        { href: "/universities", label: "Universities",         icon: Building2,     roles: ["admin", "manager", "agent"], permKey: "gs" },
+        { href: "/universities", label: "Universities",         icon: Building2,     roles: ["admin", "manager", "agent"], permKey: "universities" },
         { href: "/users",        label: "Team Directory",       icon: Users,         roles: ["admin", "manager"], permKey: "users"     },
         { href: "/leave",        label: "Leave & Availability", icon: Calendar,      roles: ["admin", "manager"], permKey: "leave"     },
         { href: "/settings",     label: "Settings",             icon: Settings,      roles: ["admin", "manager"], permKey: "settings"  },

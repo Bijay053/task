@@ -2,10 +2,16 @@ import { useState } from "react";
 import { useListUniversities, useCreateUniversity, useUpdateUniversity } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Modal, Label } from "@/components/ui-elements";
-import { Search, Plus, Building, Edit2, AlertCircle } from "lucide-react";
+import { Search, Plus, Building, Edit2, AlertCircle, ShieldAlert } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/lib/permission-context";
 
 export default function Universities() {
+  const { user } = useAuth();
+  const { isCustomRole, canView, canEdit } = usePermissions();
+  const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
+  const hasAccess = isAdminOrManager || (isCustomRole && canView("universities"));
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const { data: universities, isLoading } = useListUniversities({ search: search || undefined });
@@ -52,6 +58,20 @@ export default function Universities() {
     }
   };
 
+  if (!hasAccess) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+          <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+          <h2 className="text-2xl font-bold">Access Denied</h2>
+          <p className="text-muted-foreground mt-2 max-w-md">You do not have permission to view the Universities directory.</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  const canEditUniversities = isAdminOrManager || (isCustomRole && canEdit("universities"));
+
   return (
     <Layout>
       <div className="h-full flex flex-col space-y-6">
@@ -59,10 +79,12 @@ export default function Universities() {
           <div>
             <h1 className="text-3xl font-display font-bold tracking-tight">Universities</h1>
           </div>
-          <Button onClick={() => openModal(null)}>
-            <Plus className="w-5 h-5 mr-2" />
-            Add University
-          </Button>
+          {canEditUniversities && (
+            <Button onClick={() => openModal(null)}>
+              <Plus className="w-5 h-5 mr-2" />
+              Add University
+            </Button>
+          )}
         </div>
 
         <Card className="p-4 bg-muted/30 max-w-md">
@@ -101,9 +123,11 @@ export default function Universities() {
                     <td className="font-semibold text-foreground">{u.name}</td>
                     <td className="text-muted-foreground font-medium">{u.country || '-'}</td>
                     <td className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => openModal(u)}>
-                        <Edit2 className="w-4 h-4 mr-2" /> Edit
-                      </Button>
+                      {canEditUniversities && (
+                        <Button variant="ghost" size="sm" onClick={() => openModal(u)}>
+                          <Edit2 className="w-4 h-4 mr-2" /> Edit
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}

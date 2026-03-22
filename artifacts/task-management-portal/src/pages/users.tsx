@@ -20,6 +20,7 @@ const DEPARTMENTS: { key: string; label: string; group?: string }[] = [
   { key: "offer",        label: "Offer Applications",    group: "Departments" },
   { key: "my_tasks",     label: "My Tasks",              group: "Modules" },
   { key: "students",     label: "Students Directory",    group: "Modules" },
+  { key: "universities", label: "Universities",          group: "Modules" },
   { key: "reports",      label: "Performance Reports",   group: "Modules" },
   { key: "agents",       label: "External Agents",       group: "Modules" },
   { key: "users",        label: "Team Directory",        group: "Modules" },
