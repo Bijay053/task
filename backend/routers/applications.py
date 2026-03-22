@@ -142,16 +142,22 @@ def list_applications(
         if manager_agent_ids is not None:
             q = q.filter(models.Application.agent_id.in_(manager_agent_ids))
     elif current_user.role not in BASE_ROLES:
-        # Custom role — check can_view_all_users per department from the permissions table
-        dept_to_check = department or "gs"
-        perm = db.query(models.RolePermission).filter(
-            models.RolePermission.role == current_user.role,
-            models.RolePermission.department == dept_to_check,
-        ).first()
-        can_view_all = perm.can_view_all_users if perm else False
-        if not can_view_all:
-            # Restrict to applications explicitly assigned to this user
-            q = q.filter(models.Application.assigned_to_id == current_user.id)
+        # Custom role — first check if they have agent mappings (like a manager)
+        manager_agent_ids = get_manager_agent_ids(db, current_user.id)
+        if manager_agent_ids is not None:
+            # Tagged in Manager-Agent Mapping → only see those agents' applications
+            q = q.filter(models.Application.agent_id.in_(manager_agent_ids))
+        else:
+            # No agent mappings — fall back to can_view_all_users permission
+            dept_to_check = department or "gs"
+            perm = db.query(models.RolePermission).filter(
+                models.RolePermission.role == current_user.role,
+                models.RolePermission.department == dept_to_check,
+            ).first()
+            can_view_all = perm.can_view_all_users if perm else False
+            if not can_view_all:
+                # No mappings, no broad view → only own assigned applications
+                q = q.filter(models.Application.assigned_to_id == current_user.id)
     # admin and team_leader see all applications
 
     if department:

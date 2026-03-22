@@ -43,19 +43,28 @@ def _scoped_query(db: Session, current_user: models.User):
         # Only see their own assigned applications
         q = q.filter(models.Application.assigned_to_id == current_user.id)
     else:
-        # Custom role — check if they have can_view_all_users in any department.
-        # If yes, they see all applications (like a manager without agent restrictions).
-        # If no, they only see applications assigned to them.
-        has_full_view = (
-            db.query(models.RolePermission)
-            .filter(
-                models.RolePermission.role == role,
-                models.RolePermission.can_view_all_users == True,
-            )
-            .first()
+        # Custom role — first check if they have agent mappings (same logic as manager)
+        mappings = (
+            db.query(models.ManagerAgentMapping)
+            .filter(models.ManagerAgentMapping.manager_id == current_user.id)
+            .all()
         )
-        if not has_full_view:
-            q = q.filter(models.Application.assigned_to_id == current_user.id)
+        if mappings:
+            # Tagged in Manager-Agent Mapping → only see those agents' applications
+            agent_ids = [m.agent_id for m in mappings]
+            q = q.filter(models.Application.agent_id.in_(agent_ids))
+        else:
+            # No agent mappings — fall back to can_view_all_users permission
+            has_full_view = (
+                db.query(models.RolePermission)
+                .filter(
+                    models.RolePermission.role == role,
+                    models.RolePermission.can_view_all_users == True,
+                )
+                .first()
+            )
+            if not has_full_view:
+                q = q.filter(models.Application.assigned_to_id == current_user.id)
 
     return q
 
