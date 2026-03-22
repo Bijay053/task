@@ -195,7 +195,7 @@ export interface StaffPerformance {
 }
 
 /** Bulk upload */
-export interface BulkUploadResult { created: number; skipped: number; errors: string[]; }
+export interface BulkUploadResult { created: number; updated: number; skipped: number; errors: string[]; }
 
 /** Time-based performance reports */
 export interface StaffTimingReport {

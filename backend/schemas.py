@@ -480,6 +480,7 @@ class HealthStatus(BaseModel):
 
 class BulkUploadResult(BaseModel):
     created: int
+    updated: int = 0
     skipped: int
     errors: List[str]
 

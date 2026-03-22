@@ -124,7 +124,7 @@ export default function Agents() {
   const [editingAgent, setEditingAgent] = useState<AgentOut | null>(null);
   const [activeTab, setActiveTab] = useState<AgentTab>("directory");
   const [selectedManagerId, setSelectedManagerId] = useState<number | null>(null);
-  const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ created: number; updated: number; skipped: number; errors: string[] } | null>(null);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [dirSearch, setDirSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -188,7 +188,7 @@ export default function Agents() {
       setIsBulkModalOpen(true);
       queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
     } catch (err) {
-      setBulkResult({ created: 0, skipped: 0, errors: ["Upload failed. Please check your file format."] });
+      setBulkResult({ created: 0, updated: 0, skipped: 0, errors: ["Upload failed. Please check your file format."] });
       setIsBulkModalOpen(true);
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -403,18 +403,22 @@ export default function Agents() {
       <Modal isOpen={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} title="Bulk Upload Result">
         {bulkResult && (
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-center">
                 <div className="text-2xl font-bold text-green-700">{bulkResult.created}</div>
                 <div className="text-sm text-green-600">Created</div>
+              </div>
+              <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-center">
+                <div className="text-2xl font-bold text-blue-700">{bulkResult.updated}</div>
+                <div className="text-sm text-blue-600">Manager Updated</div>
               </div>
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
                 <div className="text-2xl font-bold text-slate-600">{bulkResult.skipped}</div>
                 <div className="text-sm text-slate-500">Skipped</div>
               </div>
-              <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-center">
-                <div className="text-2xl font-bold text-red-600">{bulkResult.errors.length}</div>
-                <div className="text-sm text-red-500">Warnings</div>
+              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center">
+                <div className="text-2xl font-bold text-amber-600">{bulkResult.errors.length}</div>
+                <div className="text-sm text-amber-500">Notices</div>
               </div>
             </div>
             {bulkResult.errors.length > 0 && (
@@ -427,6 +431,7 @@ export default function Agents() {
             )}
             <div className="pt-2 text-xs text-muted-foreground">
               Upload columns: <strong>Agent Name</strong> (required), Country, Manager Name.
+              If an agent already exists with no manager, the manager will be assigned automatically.
             </div>
             <div className="flex justify-end">
               <Button onClick={() => setIsBulkModalOpen(false)}>Done</Button>

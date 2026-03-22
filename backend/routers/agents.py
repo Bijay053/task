@@ -154,6 +154,7 @@ async def bulk_upload_agents(
     manager_map = {m.full_name.lower(): m for m in managers}
 
     created = 0
+    updated = 0
     skipped = 0
     errors = []
 
@@ -164,21 +165,43 @@ async def bulk_upload_agents(
             skipped += 1
             continue
 
-        # Check for duplicate name
-        existing = db.query(models.Agent).filter(
-            models.Agent.name.ilike(name)
-        ).first()
-        if existing:
-            errors.append(f"Row {i}: Agent '{name}' already exists — skipped.")
-            skipped += 1
-            continue
-
         company = col(row, "company") or None
         email = col(row, "email") or None
         phone = col(row, "phone") or None
         country = col(row, "country") or None
         manager_name = col(row, "manager name")
 
+        # Check if agent already exists by name
+        existing = db.query(models.Agent).filter(
+            models.Agent.name.ilike(name)
+        ).first()
+
+        if existing:
+            # Agent exists — only update manager if it's missing and the sheet has one
+            if manager_name:
+                existing_mapping = db.query(models.ManagerAgentMapping).filter_by(
+                    agent_id=existing.id
+                ).first()
+                if existing_mapping:
+                    # Already has a manager — skip
+                    errors.append(f"Row {i}: '{name}' already exists and already has a manager — skipped.")
+                    skipped += 1
+                else:
+                    # No manager yet — assign the one from the sheet
+                    manager = manager_map.get(manager_name.lower())
+                    if manager:
+                        db.add(models.ManagerAgentMapping(manager_id=manager.id, agent_id=existing.id))
+                        updated += 1
+                    else:
+                        errors.append(f"Row {i}: '{name}' exists but manager '{manager_name}' not found — no change.")
+                        skipped += 1
+            else:
+                # No manager in sheet and agent already exists — skip
+                errors.append(f"Row {i}: '{name}' already exists — skipped.")
+                skipped += 1
+            continue
+
+        # New agent — create it
         agent = models.Agent(
             name=name,
             company_name=company,
@@ -194,18 +217,14 @@ async def bulk_upload_agents(
         if manager_name:
             manager = manager_map.get(manager_name.lower())
             if manager:
-                existing_mapping = db.query(models.ManagerAgentMapping).filter_by(
-                    manager_id=manager.id, agent_id=agent.id
-                ).first()
-                if not existing_mapping:
-                    db.add(models.ManagerAgentMapping(manager_id=manager.id, agent_id=agent.id))
+                db.add(models.ManagerAgentMapping(manager_id=manager.id, agent_id=agent.id))
             else:
                 errors.append(f"Row {i}: Manager '{manager_name}' not found — agent created without manager.")
 
         created += 1
 
     db.commit()
-    return schemas.BulkUploadResult(created=created, skipped=skipped, errors=errors)
+    return schemas.BulkUploadResult(created=created, updated=updated, skipped=skipped, errors=errors)
 
 
 # ─── Manager-Agent Mappings ────────────────────────────────────────────────────
