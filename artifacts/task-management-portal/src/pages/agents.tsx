@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import {
   useListAgents, useCreateAgent, useUpdateAgent,
   useGetManagerAgents, useAssignAgentToManager, useUnassignAgentFromManager,
@@ -8,7 +8,7 @@ import type { AgentOut, UserOut } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Label, Modal, Select } from "@/components/ui-elements";
-import { Plus, Edit2, Users, Globe, X, Check, ShieldAlert, Upload, Download } from "lucide-react";
+import { Plus, Edit2, Users, Globe, X, Check, ShieldAlert, Upload, Download, Search } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/lib/permission-context";
 import { cn } from "@/lib/utils";
@@ -22,8 +22,19 @@ function ManagerMappingPanel({ managerId, managerName, allAgents }: {
   const { data: assignedAgents } = useGetManagerAgents(managerId);
   const assignMut = useAssignAgentToManager();
   const unassignMut = useUnassignAgentFromManager();
+  const [search, setSearch] = useState("");
 
   const assignedIds = new Set(assignedAgents?.map(a => a.id) || []);
+
+  const filteredAgents = useMemo(() => {
+    if (!search.trim()) return allAgents;
+    const q = search.toLowerCase();
+    return allAgents.filter(a =>
+      a.name.toLowerCase().includes(q) ||
+      (a.company_name || "").toLowerCase().includes(q) ||
+      (a.country || "").toLowerCase().includes(q)
+    );
+  }, [allAgents, search]);
 
   const toggle = async (agentId: number) => {
     if (assignedIds.has(agentId)) {
@@ -35,13 +46,46 @@ function ManagerMappingPanel({ managerId, managerName, allAgents }: {
   };
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Select which external agents {managerName} is responsible for. They will only see applications linked to those agents.</p>
-      <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Select which external agents <strong>{managerName}</strong> is responsible for. They will only see applications linked to those agents.</p>
+
+      {/* Search bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search agent by name, company or country…"
+          className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span><strong className="text-foreground">{assignedIds.size}</strong> assigned</span>
+        <span>·</span>
+        <span><strong className="text-foreground">{filteredAgents.length}</strong> {search ? "matching" : "total"} agents</span>
+      </div>
+
+      <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
         {allAgents.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">No agents in directory. Add agents first.</div>
+        ) : filteredAgents.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Search className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p>No agents match "<strong>{search}</strong>"</p>
+          </div>
         ) : (
-          allAgents.map(agent => {
+          filteredAgents.map(agent => {
             const isAssigned = assignedIds.has(agent.id);
             return (
               <div
@@ -82,6 +126,7 @@ export default function Agents() {
   const [selectedManagerId, setSelectedManagerId] = useState<number | null>(null);
   const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [dirSearch, setDirSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createMut = useCreateAgent();
@@ -178,6 +223,16 @@ export default function Agents() {
 
   const selectedManager = managers.find(m => m.id === selectedManagerId);
 
+  const filteredDirAgents = useMemo(() => {
+    if (!dirSearch.trim()) return agents || [];
+    const q = dirSearch.toLowerCase();
+    return (agents || []).filter(a =>
+      a.name.toLowerCase().includes(q) ||
+      (a.company_name || "").toLowerCase().includes(q) ||
+      (a.country || "").toLowerCase().includes(q)
+    );
+  }, [agents, dirSearch]);
+
   return (
     <Layout>
       <div className="h-full flex flex-col space-y-6">
@@ -214,6 +269,32 @@ export default function Agents() {
 
         {activeTab === "directory" && (
           <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            {/* Directory search bar */}
+            <div className="p-3 border-b border-border shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  value={dirSearch}
+                  onChange={e => setDirSearch(e.target.value)}
+                  placeholder="Search agents by name, company or country…"
+                  className="w-full pl-9 pr-9 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+                {dirSearch && (
+                  <button
+                    onClick={() => setDirSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              {dirSearch && (
+                <p className="text-xs text-muted-foreground mt-1.5 ml-1">
+                  {filteredDirAgents.length} of {agents?.length || 0} agents
+                </p>
+              )}
+            </div>
             <div className="table-container flex-1 h-full border-0 rounded-none">
               <table className="spreadsheet-table w-full">
                 <thead>
@@ -228,7 +309,9 @@ export default function Agents() {
                     <tr><td colSpan={3} className="text-center py-10 text-muted-foreground">Loading...</td></tr>
                   ) : agents?.length === 0 ? (
                     <tr><td colSpan={3} className="text-center py-10 text-muted-foreground">No agents yet. Add one above.</td></tr>
-                  ) : agents?.map(agent => (
+                  ) : filteredDirAgents.length === 0 ? (
+                    <tr><td colSpan={3} className="text-center py-10 text-muted-foreground">No agents match "{dirSearch}"</td></tr>
+                  ) : filteredDirAgents.map(agent => (
                     <tr key={agent.id} className="cursor-pointer group" onClick={() => { setEditingAgent(agent); setIsModalOpen(true); }}>
                       <td>
                         <div className="flex items-center gap-2">
