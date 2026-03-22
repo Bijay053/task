@@ -85,6 +85,15 @@ export default function Dashboard() {
   const dateStr = now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
+  const viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const viewerCity = viewerTz.includes("/") ? viewerTz.split("/").pop()!.replace(/_/g, " ") : viewerTz;
+  const viewerGmtOffset = (() => {
+    try {
+      return new Intl.DateTimeFormat("en", { timeZone: viewerTz, timeZoneName: "shortOffset" })
+        .formatToParts(now).find(p => p.type === "timeZoneName")?.value ?? "";
+    } catch { return ""; }
+  })();
+
   const stats = [
     { title: "Total Applications", value: summary?.total || 0, icon: Files, color: "text-blue-500", bg: "bg-blue-500/10" },
     { title: "Pending Actions", value: summary?.pending || 0, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
@@ -136,6 +145,7 @@ export default function Dashboard() {
               <Clock className="w-3.5 h-3.5" />
               <span>{dateStr}</span>
               <span className="font-semibold text-foreground">{timeStr}</span>
+              <span className="text-xs text-muted-foreground/70">· {viewerCity} ({viewerGmtOffset})</span>
             </div>
             <div className="flex gap-3 ml-auto text-sm">
               <span className="flex items-center gap-1.5 text-emerald-700"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />{staffGroups.available.length} On Duty</span>

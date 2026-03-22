@@ -6,7 +6,8 @@ GS:   App ID | Student Name | Country | University | Course | Intake | Status | 
 Offer: App ID | Student Name | University | Course | Intake | Channel | Status | Agent Name | Agent Email | Offer Applied Date | Offer Received Date | Remarks
 
 Agent Name / Agent Email → auto-creates External Agent record if not already in the system.
-Assigned To Email → optional internal staff assignment.
+Assigned To Email → optional internal staff assignment (by email).
+Assignee / Assigned To → optional internal staff assignment (by full name — alternative to email).
 """
 import io
 from datetime import date
@@ -67,6 +68,15 @@ def _find_user_by_email(db: Session, email: str) -> Optional[models.User]:
         return None
     return db.query(models.User).filter(
         models.User.email.ilike(email.strip())
+    ).first()
+
+
+def _find_user_by_name(db: Session, name: str) -> Optional[models.User]:
+    if not name:
+        return None
+    name = name.strip()
+    return db.query(models.User).filter(
+        models.User.full_name.ilike(name)
     ).first()
 
 
@@ -237,14 +247,23 @@ async def bulk_upload(
             ext_agent = _find_or_create_agent(db, agent_name_val, agent_email_val)
 
             # ── Internal staff assignee (optional) ─────────────────────────
-            # Looks for "Assigned To Email" / "Handler Email" / "Staff Email" columns
-            handler_email = (
+            # Supports: email columns OR name columns ("Assignee", "Assigned To", etc.)
+            raw_assignee_val = (
                 cell("assigned to email")
                 or cell("handler email")
                 or cell("staff email")
                 or cell("assignee email")
+                or cell("assigned to")
+                or cell("assignee")
+                or cell("handler")
+                or cell("staff name")
             )
-            assignee = _find_user_by_email(db, handler_email) if handler_email else None
+            assignee = None
+            if raw_assignee_val:
+                if "@" in raw_assignee_val:
+                    assignee = _find_user_by_email(db, raw_assignee_val)
+                else:
+                    assignee = _find_user_by_name(db, raw_assignee_val)
 
             app_id_val = (
                 cell("app id")
