@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.auth import get_current_user, require_admin, get_password_hash
+from backend.auth import get_current_user, require_admin, get_password_hash, validate_password_strength
 from backend.email_service import send_welcome_email
 import backend.models as models
 import backend.schemas as schemas
@@ -78,7 +78,9 @@ def update_user(user_id: int, data: schemas.UserUpdate, db: Session = Depends(ge
             if not mgr:
                 raise HTTPException(status_code=400, detail="Manager not found")
         user.manager_id = data.manager_id
-    if data.password is not None:
+    if data.password is not None and data.password.strip():
+        # Validate strength to prevent auto-filled / weak passwords being accepted
+        validate_password_strength(data.password, user.full_name)
         user.hashed_password = get_password_hash(data.password)
         # Invalidate existing sessions and clear any lockout
         user.token_version = (getattr(user, "token_version", 0) or 0) + 1

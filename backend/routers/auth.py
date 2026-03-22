@@ -1,5 +1,4 @@
 import random
-import re
 import secrets
 import string
 from datetime import datetime, timedelta
@@ -12,7 +11,7 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.auth import (
     verify_password, create_access_token,
-    get_current_user, get_password_hash,
+    get_current_user, get_password_hash, validate_password_strength,
 )
 from backend.email_service import (
     is_email_configured, send_otp_email, send_password_reset_email,
@@ -27,46 +26,6 @@ RESET_EXPIRE_MINUTES  = 30
 PASSWORD_EXPIRY_DAYS  = 90
 MAX_FAILED_ATTEMPTS   = 5
 LOCKOUT_MINUTES       = 30
-
-COMMON_PASSWORDS = {
-    "password", "password1", "password123", "123456", "12345678", "qwerty",
-    "abc123", "letmein", "admin", "admin123", "welcome", "welcome1",
-    "monkey", "dragon", "master", "1234567890", "passw0rd", "iloveyou",
-    "sunshine", "princess", "football", "shadow", "superman", "michael",
-    "login", "access", "trustno1", "hello", "charlie", "donald",
-}
-
-
-def _validate_password_strength(password: str, full_name: str = "") -> None:
-    """Raise HTTPException if password does not meet strength requirements."""
-    errors = []
-    if len(password) < 8:
-        errors.append("at least 8 characters")
-    if not re.search(r"[A-Z]", password):
-        errors.append("at least one uppercase letter")
-    if not re.search(r"[a-z]", password):
-        errors.append("at least one lowercase letter")
-    if not re.search(r"\d", password):
-        errors.append("at least one number")
-    if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?`~]", password):
-        errors.append("at least one special character (!@#$%^&*…)")
-
-    if password.lower() in COMMON_PASSWORDS:
-        errors.append("must not be a commonly used password")
-
-    if full_name:
-        name_parts = [p.lower() for p in full_name.split() if len(p) >= 3]
-        for part in name_parts:
-            if part in password.lower():
-                errors.append("must not contain your name")
-                break
-
-    if errors:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must contain: " + ", ".join(errors),
-        )
-
 
 # ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -267,7 +226,7 @@ def change_password(
 ):
     if not verify_password(data.current_password, current_user.hashed_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
-    _validate_password_strength(data.new_password, current_user.full_name)
+    validate_password_strength(data.new_password, current_user.full_name)
 
     current_user.hashed_password = get_password_hash(data.new_password)
     current_user.password_changed_at = datetime.utcnow()
@@ -340,7 +299,7 @@ def reset_password(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset link")
 
     user = rec.user
-    _validate_password_strength(data.new_password, user.full_name)
+    validate_password_strength(data.new_password, user.full_name)
     user.hashed_password = get_password_hash(data.new_password)
     user.password_changed_at = datetime.utcnow()
     # Invalidate all existing sessions

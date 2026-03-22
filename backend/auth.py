@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -15,7 +16,15 @@ SECRET_KEY = os.environ.get("SESSION_SECRET", "change-this-secret-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+COMMON_PASSWORDS = {
+    "password", "password1", "password123", "123456", "12345678", "qwerty",
+    "abc123", "letmein", "admin", "admin123", "welcome", "welcome1",
+    "monkey", "dragon", "master", "1234567890", "passw0rd", "iloveyou",
+    "sunshine", "princess", "football", "shadow", "superman", "michael",
+    "login", "access", "trustno1", "hello", "charlie", "donald",
+}
+
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
@@ -25,6 +34,34 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+
+def validate_password_strength(password: str, full_name: str = "") -> None:
+    """Raise HTTPException if password does not meet strength requirements."""
+    errors = []
+    if len(password) < 8:
+        errors.append("at least 8 characters")
+    if not re.search(r"[A-Z]", password):
+        errors.append("at least one uppercase letter")
+    if not re.search(r"[a-z]", password):
+        errors.append("at least one lowercase letter")
+    if not re.search(r"\d", password):
+        errors.append("at least one number")
+    if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?`~]", password):
+        errors.append("at least one special character (!@#$%^&*…)")
+    if password.lower() in COMMON_PASSWORDS:
+        errors.append("must not be a commonly used password")
+    if full_name:
+        name_parts = [p.lower() for p in full_name.split() if len(p) >= 3]
+        for part in name_parts:
+            if part in password.lower():
+                errors.append("must not contain your name")
+                break
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain: " + ", ".join(errors),
+        )
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
