@@ -1,14 +1,14 @@
 import { useRef, useState } from "react";
 import {
   useListAgents, useCreateAgent, useUpdateAgent,
-  useListUsers, useGetManagerAgents, useAssignAgentToManager, useUnassignAgentFromManager,
+  useGetManagerAgents, useAssignAgentToManager, useUnassignAgentFromManager,
   useBulkUploadAgents
 } from "@workspace/api-client-react";
-import type { AgentOut } from "@workspace/api-client-react";
+import type { AgentOut, UserOut } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout";
 import { Card, Button, Input, Label, Modal, Select } from "@/components/ui-elements";
 import { Plus, Edit2, Users, Globe, X, Check, ShieldAlert, Upload, Download } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/lib/permission-context";
 import { cn } from "@/lib/utils";
@@ -76,7 +76,6 @@ export default function Agents() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: agents, isLoading } = useListAgents();
-  const { data: users } = useListUsers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AgentOut | null>(null);
   const [activeTab, setActiveTab] = useState<AgentTab>("directory");
@@ -94,8 +93,18 @@ export default function Agents() {
   const { isCustomRole, canView } = usePermissions();
   const isAdminOrManager = user?.role === "admin" || user?.role === "manager" || (isCustomRole && canView("agents"));
 
-  // Include all active users — custom roles like "Agent Manager" can also be assigned to agents
-  const managers = users?.filter(u => u.is_active) || [];
+  // Fetch only users eligible for agent management: admin/manager + custom roles with MY TEAM permission for agents
+  const token = localStorage.getItem("access_token");
+  const { data: managers = [] } = useQuery<UserOut[]>({
+    queryKey: ["/api/users/agent-managers"],
+    queryFn: async () => {
+      const res = await fetch("/api/users/agent-managers", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch agent managers");
+      return res.json();
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

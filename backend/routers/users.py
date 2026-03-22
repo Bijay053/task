@@ -15,6 +15,35 @@ router = APIRouter(prefix="/users", tags=["users"])
 AVAILABILITY_CHOICES = {"available", "on_leave", "off_duty"}
 
 
+@router.get("/agent-managers", response_model=List[schemas.UserOut])
+def list_agent_managers(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """
+    Return users who can be assigned as managers in the Agent-Manager mapping.
+    Includes: admin, manager (built-in roles) + any custom-role user whose role has
+    can_view_mapped_users=True for the 'agents' department.
+    """
+    # Get all custom role names that have can_view_mapped_users for agents
+    eligible_custom_roles = (
+        db.query(models.RolePermission.role)
+        .filter(
+            models.RolePermission.department == "agents",
+            models.RolePermission.can_view_mapped_users == True,
+        )
+        .all()
+    )
+    eligible_role_names = {r.role for r in eligible_custom_roles}
+
+    return (
+        db.query(models.User)
+        .filter(
+            models.User.is_active == True,
+            models.User.role.in_({"admin", "manager"} | eligible_role_names),
+        )
+        .order_by(models.User.full_name)
+        .all()
+    )
+
+
 @router.get("/", response_model=List[schemas.UserOut])
 def list_users(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # Admins and managers must see inactive users too so they can reactivate them
