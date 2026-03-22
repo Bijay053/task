@@ -637,7 +637,7 @@ export default function Users() {
                   {usersLoading ? (
                     <tr><td colSpan={5} className="text-center py-8">Loading...</td></tr>
                   ) : users?.map(u => (
-                    <tr key={u.id}>
+                    <tr key={u.id} className={!u.is_active ? "opacity-50" : undefined}>
                       <td className="font-semibold text-foreground">
                         <div className="flex items-center">
                           <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold mr-3">
@@ -767,7 +767,7 @@ export default function Users() {
             <Label>Reports To (Manager)</Label>
             <Select name="manager_id" defaultValue={editingItem?.manager_id ?? ""}>
               <option value="">— No Manager —</option>
-              {users?.filter(u => u.id !== editingItem?.id).map(u => (
+              {users?.filter(u => u.id !== editingItem?.id && u.is_active).map(u => (
                 <option key={u.id} value={u.id}>{u.full_name} ({u.role})</option>
               ))}
             </Select>

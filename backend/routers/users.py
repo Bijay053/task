@@ -17,7 +17,10 @@ AVAILABILITY_CHOICES = {"available", "on_leave", "off_duty"}
 
 @router.get("/", response_model=List[schemas.UserOut])
 def list_users(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    return db.query(models.User).filter(models.User.is_active == True).all()
+    # Admins and managers must see inactive users too so they can reactivate them
+    if current_user.role in ("admin", "manager"):
+        return db.query(models.User).order_by(models.User.is_active.desc(), models.User.full_name).all()
+    return db.query(models.User).filter(models.User.is_active == True).order_by(models.User.full_name).all()
 
 
 @router.get("/my-team", response_model=List[schemas.UserOut])
