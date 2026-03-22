@@ -177,27 +177,44 @@ async def bulk_upload_agents(
         ).first()
 
         if existing:
-            # Agent exists — only update manager if it's missing and the sheet has one
+            # Agent exists — update fields and always sync manager from sheet
+            field_changed = False
+            if company and existing.company_name != company:
+                existing.company_name = company
+                field_changed = True
+            if email and existing.email != email:
+                existing.email = email
+                field_changed = True
+            if phone and existing.phone != phone:
+                existing.phone = phone
+                field_changed = True
+            if country and existing.country != country:
+                existing.country = country
+                field_changed = True
+
+            manager_changed = False
             if manager_name:
-                existing_mapping = db.query(models.ManagerAgentMapping).filter_by(
-                    agent_id=existing.id
-                ).first()
-                if existing_mapping:
-                    # Already has a manager — skip
-                    errors.append(f"Row {i}: '{name}' already exists and already has a manager — skipped.")
-                    skipped += 1
-                else:
-                    # No manager yet — assign the one from the sheet
-                    manager = manager_map.get(manager_name.lower())
-                    if manager:
-                        db.add(models.ManagerAgentMapping(manager_id=manager.id, agent_id=existing.id))
-                        updated += 1
+                manager = manager_map.get(manager_name.lower())
+                if manager:
+                    existing_mapping = db.query(models.ManagerAgentMapping).filter_by(
+                        agent_id=existing.id
+                    ).first()
+                    if existing_mapping:
+                        if existing_mapping.manager_id != manager.id:
+                            # Different manager — update the mapping
+                            existing_mapping.manager_id = manager.id
+                            manager_changed = True
+                        # else: same manager already — no change needed
                     else:
-                        errors.append(f"Row {i}: '{name}' exists but manager '{manager_name}' not found — no change.")
-                        skipped += 1
+                        # No manager yet — assign
+                        db.add(models.ManagerAgentMapping(manager_id=manager.id, agent_id=existing.id))
+                        manager_changed = True
+                else:
+                    errors.append(f"Row {i}: '{name}' exists but manager '{manager_name}' not found — no change.")
+
+            if field_changed or manager_changed:
+                updated += 1
             else:
-                # No manager in sheet and agent already exists — skip
-                errors.append(f"Row {i}: '{name}' already exists — skipped.")
                 skipped += 1
             continue
 
