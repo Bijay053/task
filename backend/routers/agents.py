@@ -136,17 +136,12 @@ async def bulk_upload_agents(
                 return str(cell.value or "").strip() if cell.value is not None else ""
         return ""
 
-    # Build manager name lookup — includes admin/manager built-in roles
-    # plus any custom role with can_view=True for the agents module
+    # Build manager name lookup — admin, manager, team_leader + any custom role
     from backend.models import RolePermission as _RP
-    custom_eligible_roles = {
-        r.role for r in db.query(_RP.role).filter(
-            _RP.department == "agents",
-            _RP.can_view == True,
-        ).all()
+    custom_role_names = {
+        r.role for r in db.query(_RP.role).distinct().all()
     }
-    base_roles = {"admin", "manager"}
-    all_eligible_roles = base_roles | custom_eligible_roles
+    all_eligible_roles = {"admin", "manager", "team_leader"} | custom_role_names
     managers = db.query(models.User).filter(
         models.User.role.in_(list(all_eligible_roles)),
         models.User.is_active == True,

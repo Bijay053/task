@@ -18,26 +18,24 @@ AVAILABILITY_CHOICES = {"available", "on_leave", "off_duty"}
 @router.get("/agent-managers", response_model=List[schemas.UserOut])
 def list_agent_managers(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
-    Return users who can be assigned as managers in the Agent-Manager mapping.
-    Includes: admin, manager (built-in roles) + any custom-role user whose role has
-    can_view=True for the 'agents' department (i.e. can access the Agents page).
+    Return users who can be assigned as agent managers.
+    Includes: admin, manager, team_leader (built-in roles) + ALL active users
+    with any custom role (team permission users), regardless of which specific
+    permissions their role has.  Only the built-in 'agent' role is excluded.
     """
-    # Get all custom role names that have can_view=True for the agents module
-    eligible_custom_roles = (
-        db.query(models.RolePermission.role)
-        .filter(
-            models.RolePermission.department == "agents",
-            models.RolePermission.can_view == True,
-        )
-        .all()
-    )
-    eligible_role_names = {r.role for r in eligible_custom_roles}
+    # Collect all distinct custom role names from the permissions table
+    custom_role_names = {
+        r.role for r in db.query(models.RolePermission.role).distinct().all()
+    }
+
+    built_in_eligible = {"admin", "manager", "team_leader"}
+    all_eligible = built_in_eligible | custom_role_names
 
     return (
         db.query(models.User)
         .filter(
             models.User.is_active == True,
-            models.User.role.in_({"admin", "manager"} | eligible_role_names),
+            models.User.role.in_(all_eligible),
         )
         .order_by(models.User.full_name)
         .all()
