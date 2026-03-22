@@ -187,8 +187,9 @@ export default function Agents() {
       setBulkResult(result);
       setIsBulkModalOpen(true);
       queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
-    } catch (err) {
-      setBulkResult({ created: 0, updated: 0, skipped: 0, errors: ["Upload failed. Please check your file format."] });
+    } catch (err: any) {
+      const detail = err?.data?.detail || err?.message || "Upload failed. Please check your file format.";
+      setBulkResult({ created: 0, updated: 0, skipped: 0, errors: [detail] });
       setIsBulkModalOpen(true);
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -430,7 +431,7 @@ export default function Agents() {
               </div>
             )}
             <div className="pt-2 text-xs text-muted-foreground">
-              Upload columns: <strong>Agent Name</strong> (required), Country, Manager Name.
+              Upload columns: <strong>Agent Name</strong> (required), Country, Manager Name. Accepts .xlsx or .csv files.
               If an agent already exists with no manager, the manager will be assigned automatically.
             </div>
             <div className="flex justify-end">

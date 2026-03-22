@@ -109,31 +109,55 @@ async def bulk_upload_agents(
 
     import openpyxl
     import io
+    import csv as _csv
 
     contents = await file.read()
+
+    # Try to parse as .xlsx first; fall back to CSV (for users who upload the template CSV directly)
+    parsed_rows: list[dict] = []
     try:
         wb = openpyxl.load_workbook(io.BytesIO(contents))
         ws = wb.active
+        raw_headers = [str(cell.value or "").strip().lower() for cell in next(ws.iter_rows(min_row=1, max_row=1))]
+        for row in ws.iter_rows(min_row=2):
+            parsed_rows.append({raw_headers[i]: (str(c.value or "").strip() if c.value is not None else "") for i, c in enumerate(row) if i < len(raw_headers)})
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid Excel file. Please upload a .xlsx file.")
+        # Fall back: try parsing as CSV / TSV
+        try:
+            text = contents.decode("utf-8-sig").strip()
+            if not text:
+                raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+            dialect = _csv.Sniffer().sniff(text[:2048], delimiters=",\t;")
+            reader = _csv.DictReader(io.StringIO(text), dialect=dialect)
+            reader.fieldnames = [str(h or "").strip().lower() for h in (reader.fieldnames or [])]
+            parsed_rows = [dict(r) for r in reader]
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail="Could not read file. Please upload a .xlsx or .csv file with Agent Name, Country, Manager Name columns.",
+            )
 
-    # Read header row
-    headers = [str(cell.value or "").strip().lower() for cell in next(ws.iter_rows(min_row=1, max_row=1))]
+    COLUMN_ALIASES: dict[str, list[str]] = {
+        "agent name": ["agent name", "name", "agent"],
+        "company": ["company", "company / agency", "company/agency", "agency"],
+        "email": ["email"],
+        "phone": ["phone", "telephone", "mobile"],
+        "country": ["country"],
+        "manager name": ["manager name", "manager", "assigned manager", "agent manager", "agent manager name"],
+    }
+
+    def _alias_key(row_dict: dict, field: str) -> str:
+        for alias in COLUMN_ALIASES.get(field, []):
+            if alias in row_dict:
+                return str(row_dict[alias] or "").strip()
+        return ""
 
     def col(row, name):
-        aliases = {
-            "agent name": ["agent name", "name", "agent"],
-            "company": ["company", "company / agency", "company/agency", "agency"],
-            "email": ["email"],
-            "phone": ["phone", "telephone", "mobile"],
-            "country": ["country"],
-            "manager name": ["manager name", "manager", "assigned manager", "agent manager", "agent manager name"],
-        }
-        for alias in aliases.get(name, []):
-            if alias in headers:
-                idx = headers.index(alias)
-                cell = row[idx]
-                return str(cell.value or "").strip() if cell.value is not None else ""
+        if isinstance(row, dict):
+            return _alias_key(row, name)
+        # Legacy xlsx cell row (fallback — should not be reached after refactor)
         return ""
 
     # Build manager name lookup — admin, manager, team_leader +
@@ -158,8 +182,7 @@ async def bulk_upload_agents(
     skipped = 0
     errors = []
 
-    rows = list(ws.iter_rows(min_row=2))
-    for i, row in enumerate(rows, start=2):
+    for i, row in enumerate(parsed_rows, start=2):
         name = col(row, "agent name")
         if not name:
             skipped += 1
