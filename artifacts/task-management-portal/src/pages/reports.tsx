@@ -421,8 +421,21 @@ export default function Reports() {
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><Timer className="w-6 h-6 text-red-500" /></div>
                   <div>
-                    <div className="text-sm font-bold truncate">{[...stageData].sort((a: any, b: any) => (b.avg_days ?? 0) - (a.avg_days ?? 0))[0]?.status ?? "—"}</div>
-                    <div className="text-sm text-muted-foreground">Biggest Bottleneck</div>
+                    {(() => {
+                      const bottleneck = [...stageData].sort((a: any, b: any) => {
+                        const scoreB = (b.avg_days ?? 0) * b.currently_in_stage;
+                        const scoreA = (a.avg_days ?? 0) * a.currently_in_stage;
+                        if (scoreB !== scoreA) return scoreB - scoreA;
+                        return b.currently_in_stage - a.currently_in_stage;
+                      })[0];
+                      return bottleneck ? (
+                        <>
+                          <div className="text-sm font-bold">{bottleneck.status}</div>
+                          <div className="text-xs text-muted-foreground">{bottleneck.currently_in_stage} apps · {fmtDays(bottleneck.avg_days)} avg</div>
+                        </>
+                      ) : <div className="text-sm font-bold">—</div>;
+                    })()}
+                    <div className="text-sm text-muted-foreground mt-0.5">Biggest Bottleneck</div>
                   </div>
                 </Card>
               </div>
