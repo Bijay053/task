@@ -78,8 +78,14 @@ export default function Dashboard() {
   const { data: users } = useListUsers();
 
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(t);
+    const tick = () => setNow(new Date());
+    const t = setInterval(tick, 60_000);
+    const onVisible = () => { if (!document.hidden) tick(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   const dateStr = now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
