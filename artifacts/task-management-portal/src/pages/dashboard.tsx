@@ -46,6 +46,11 @@ function getTimeInZone(now: Date, tz: string | null | undefined): { dayKey: stri
 function getEffectiveStatus(user: UserOut, now: Date): string {
   if (user.availability_status === "on_leave") return "on_leave";
 
+  // Only apply schedule-based logic when a timezone is set.
+  // Without a timezone we can't compare the viewer's clock against the
+  // user's local working hours — so just honour their availability_status.
+  if (!user.work_timezone) return user.availability_status;
+
   const { dayKey, curMinutes } = getTimeInZone(now, user.work_timezone);
 
   if (user.work_days) {
