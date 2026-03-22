@@ -13,10 +13,9 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { TableScrollWrapper } from "@/components/table-scroll-wrapper";
 import { BulkUploadButton } from "@/components/bulk-upload-button";
 import { Search, Plus, FileEdit, LayoutGrid, List, Users, Trash2 } from "lucide-react";
-import { OFFER_CHANNEL_CHOICES } from "@/lib/utils";
+import { OFFER_CHANNEL_CHOICES, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 type ViewMode = "table" | "kanban";
@@ -96,6 +95,9 @@ export default function OfferApplications() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState<number | "">("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<any>(null);
   const [formError, setFormError] = useState("");
@@ -135,6 +137,42 @@ export default function OfferApplications() {
   const statusChoices = statuses?.map(s => s.name) || [];
   const statusColors: Record<string, { bg: string; text: string }> = {};
   statuses?.forEach(s => { statusColors[s.name] = { bg: s.bg_color, text: s.text_color }; });
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (applications && selectedIds.size === applications.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(applications?.map((a: any) => a.id) || []));
+    }
+  };
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch("/api/applications/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ app_ids: Array.from(selectedIds) }),
+      });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      const count = selectedIds.size;
+      setSelectedIds(new Set());
+      setBulkDeleteConfirm(false);
+      toast({ title: `${count} application(s) deleted` });
+    } catch {
+      toast({ variant: "destructive", title: "Bulk delete failed" });
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   const handleOpenEdit = (app: any) => {
     setEditingApp(app);
@@ -286,12 +324,43 @@ export default function OfferApplications() {
           </div>
         </Card>
 
+        {canDelete("offer") && selectedIds.size > 0 && (
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-destructive/10 border border-destructive/30 rounded-lg shrink-0">
+            <span className="text-sm font-medium text-destructive">{selectedIds.size} application{selectedIds.size > 1 ? "s" : ""} selected</span>
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-muted-foreground hover:text-foreground underline">Clear</button>
+            <div className="flex-1" />
+            {bulkDeleteConfirm ? (
+              <>
+                <span className="text-sm font-medium text-destructive">Delete {selectedIds.size} application{selectedIds.size > 1 ? "s" : ""}?</span>
+                <Button type="button" variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDeleting}>
+                  {bulkDeleting ? "Deleting…" : "Yes, Delete"}
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setBulkDeleteConfirm(false)}>Cancel</Button>
+              </>
+            ) : (
+              <Button type="button" variant="destructive" size="sm" onClick={() => setBulkDeleteConfirm(true)}>
+                <Trash2 className="w-4 h-4 mr-1.5" />Delete Selected
+              </Button>
+            )}
+          </div>
+        )}
+
         {viewMode === "table" ? (
           <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <TableScrollWrapper>
               <table className="spreadsheet-table w-full h-full">
                 <thead>
                   <tr>
+                    {canDelete("offer") && (
+                      <th className="w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={!!applications && applications.length > 0 && selectedIds.size === applications.length}
+                          onChange={toggleSelectAll}
+                          className="w-4 h-4 rounded cursor-pointer accent-destructive"
+                        />
+                      </th>
+                    )}
                     <th className="w-8 text-center">#</th>
                     <th className="w-28">App ID</th>
                     <th>Student</th>
@@ -311,12 +380,22 @@ export default function OfferApplications() {
                 </thead>
                 <tbody className="align-top">
                   {isLoading ? (
-                    <tr><td colSpan={15} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
+                    <tr><td colSpan={canDelete("offer") ? 16 : 15} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
                   ) : applications?.length === 0 ? (
-                    <tr><td colSpan={15} className="text-center py-12 text-muted-foreground">No offer applications found.</td></tr>
+                    <tr><td colSpan={canDelete("offer") ? 16 : 15} className="text-center py-12 text-muted-foreground">No offer applications found.</td></tr>
                   ) : (
                     applications?.map(app => (
-                      <tr key={app.id} className={`group ${canEdit("offer") ? "cursor-pointer" : "cursor-default"}`} onClick={() => canEdit("offer") && handleOpenEdit(app)}>
+                      <tr key={app.id} className={cn("group", canEdit("offer") ? "cursor-pointer" : "cursor-default", selectedIds.has(app.id) ? "bg-destructive/5" : "")} onClick={() => canEdit("offer") && handleOpenEdit(app)}>
+                        {canDelete("offer") && (
+                          <td className="text-center" onClick={e => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(app.id)}
+                              onChange={() => toggleSelect(app.id)}
+                              className="w-4 h-4 rounded cursor-pointer accent-destructive"
+                            />
+                          </td>
+                        )}
                         <td className="text-center text-muted-foreground text-xs">{app.id}</td>
                         <td>
                           {(app as any).app_id

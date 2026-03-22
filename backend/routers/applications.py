@@ -1,6 +1,7 @@
 from datetime import date
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel as PydanticBaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
@@ -452,6 +453,28 @@ def assign_application(
             pass
 
     return app
+
+
+class BulkDeleteRequest(PydanticBaseModel):
+    app_ids: List[int]
+
+
+@router.post("/bulk-delete")
+def bulk_delete_applications(
+    payload: BulkDeleteRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role == "agent":
+        raise HTTPException(status_code=403, detail="Agents cannot delete applications")
+    app_ids = payload.app_ids
+    if not app_ids:
+        return {"message": "Nothing to delete", "deleted": 0}
+    db.query(models.ActivityLog).filter(models.ActivityLog.application_id.in_(app_ids)).delete(synchronize_session=False)
+    db.query(models.ApplicationFollower).filter(models.ApplicationFollower.application_id.in_(app_ids)).delete(synchronize_session=False)
+    deleted = db.query(models.Application).filter(models.Application.id.in_(app_ids)).delete(synchronize_session=False)
+    db.commit()
+    return {"message": f"Deleted {deleted} applications", "deleted": deleted}
 
 
 @router.delete("/{app_id}")
