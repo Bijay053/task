@@ -147,12 +147,19 @@ def update_availability(
         # Also allow self-update
         if current_user.id != user_id:
             raise HTTPException(status_code=403, detail="Insufficient permissions to update availability")
-    if data.availability_status not in AVAILABILITY_CHOICES:
-        raise HTTPException(status_code=400, detail=f"Invalid status. Choose: {AVAILABILITY_CHOICES}")
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    user.availability_status = data.availability_status
+    if data.availability_status is not None:
+        if data.availability_status not in AVAILABILITY_CHOICES:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Choose: {AVAILABILITY_CHOICES}")
+        user.availability_status = data.availability_status
+    if data.work_days is not None:
+        user.work_days = data.work_days or None
+    if data.work_start_time is not None:
+        user.work_start_time = data.work_start_time or None
+    if data.work_end_time is not None:
+        user.work_end_time = data.work_end_time or None
     db.commit()
     db.refresh(user)
     return user

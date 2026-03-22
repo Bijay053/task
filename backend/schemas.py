@@ -38,6 +38,9 @@ class UserOut(BaseModel):
     role: str
     is_active: bool
     availability_status: str = "available"
+    work_days: Optional[str] = None
+    work_start_time: Optional[str] = None
+    work_end_time: Optional[str] = None
     created_at: datetime
     manager_id: Optional[int] = None
 
@@ -46,7 +49,10 @@ class UserOut(BaseModel):
 
 
 class UserAvailabilityUpdate(BaseModel):
-    availability_status: str  # "available", "on_leave", "off_duty"
+    availability_status: Optional[str] = None
+    work_days: Optional[str] = None
+    work_start_time: Optional[str] = None
+    work_end_time: Optional[str] = None
 
 
 class StudentCreate(BaseModel):

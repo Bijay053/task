@@ -14,11 +14,17 @@ export interface UserOut {
   role: string;
   is_active: boolean;
   availability_status: string;
+  work_days?: string | null;
+  work_start_time?: string | null;
+  work_end_time?: string | null;
   created_at: string;
 }
 
 export interface UserAvailabilityUpdate {
-  availability_status: string;
+  availability_status?: string | null;
+  work_days?: string | null;
+  work_start_time?: string | null;
+  work_end_time?: string | null;
 }
 
 /** External agent / sub-agent / partner */

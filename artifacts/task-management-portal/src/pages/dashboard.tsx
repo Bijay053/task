@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { useGetDashboardSummary, useGetUniversityCount, useListUsers } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui-elements";
 import { Files, Clock, CheckCircle2, XCircle, Wifi, WifiOff, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { UserOut } from "@workspace/api-client-react";
 
 const availabilityConfig: Record<string, { label: string; icon: any; cls: string; dot: string }> = {
   available:  { label: "On Duty",   icon: Wifi,    cls: "text-emerald-700 bg-emerald-50 border-emerald-200", dot: "bg-emerald-500" },
@@ -10,10 +12,45 @@ const availabilityConfig: Record<string, { label: string; icon: any; cls: string
   off_duty:   { label: "Off Duty",  icon: WifiOff,  cls: "text-slate-600 bg-slate-50 border-slate-200",   dot: "bg-slate-400" },
 };
 
+const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+function getEffectiveStatus(user: UserOut, now: Date): string {
+  if (user.availability_status === "on_leave") return "on_leave";
+
+  const todayKey = DAY_KEYS[now.getDay()];
+
+  if (user.work_days) {
+    const days = user.work_days.split(",").map(d => d.trim().toLowerCase());
+    if (!days.includes(todayKey)) {
+      return user.availability_status === "available" ? "off_duty" : user.availability_status;
+    }
+  }
+
+  if (user.work_start_time && user.work_end_time) {
+    const [sh, sm] = user.work_start_time.split(":").map(Number);
+    const [eh, em] = user.work_end_time.split(":").map(Number);
+    const cur = now.getHours() * 60 + now.getMinutes();
+    if (cur < sh * 60 + sm || cur > eh * 60 + em) {
+      return user.availability_status === "available" ? "off_duty" : user.availability_status;
+    }
+  }
+
+  return user.availability_status;
+}
+
 export default function Dashboard() {
+  const [now, setNow] = useState(new Date());
   const { data: summary } = useGetDashboardSummary();
   const { data: uniCounts } = useGetUniversityCount();
   const { data: users } = useListUsers();
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const dateStr = now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
   const stats = [
     { title: "Total Applications", value: summary?.total || 0, icon: Files, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -22,10 +59,12 @@ export default function Dashboard() {
     { title: "Refused", value: summary?.refused || 0, icon: XCircle, color: "text-rose-500", bg: "bg-rose-500/10" },
   ];
 
+  const activeUsers = users?.filter(u => u.is_active) || [];
+
   const staffGroups = {
-    available: users?.filter(u => u.availability_status === "available" && u.is_active) || [],
-    on_leave:  users?.filter(u => u.availability_status === "on_leave" && u.is_active) || [],
-    off_duty:  users?.filter(u => u.availability_status === "off_duty" && u.is_active) || [],
+    available: activeUsers.filter(u => getEffectiveStatus(u, now) === "available"),
+    on_leave:  activeUsers.filter(u => getEffectiveStatus(u, now) === "on_leave"),
+    off_duty:  activeUsers.filter(u => getEffectiveStatus(u, now) === "off_duty"),
   };
 
   return (
@@ -55,11 +94,16 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* Staff Availability - visible to ALL users */}
+        {/* Staff Availability */}
         <Card className="p-6">
-          <div className="flex items-center gap-2 mb-5">
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
             <Wifi className="w-5 h-5 text-primary" />
             <h3 className="font-display font-semibold text-lg">Team Availability</h3>
+            <div className="flex items-center gap-1.5 ml-2 text-sm text-muted-foreground">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{dateStr}</span>
+              <span className="font-semibold text-foreground">{timeStr}</span>
+            </div>
             <div className="flex gap-3 ml-auto text-sm">
               <span className="flex items-center gap-1.5 text-emerald-700"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />{staffGroups.available.length} On Duty</span>
               <span className="flex items-center gap-1.5 text-amber-700"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />{staffGroups.on_leave.length} On Leave</span>
@@ -85,17 +129,27 @@ export default function Dashboard() {
                       <div className="text-xs opacity-60 py-2 text-center">No staff</div>
                     ) : (
                       <div className="space-y-2">
-                        {group.map(u => (
-                          <div key={u.id} className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-white/70 flex items-center justify-center text-xs font-bold shrink-0 opacity-80">
-                              {u.full_name.charAt(0)}
+                        {group.map(u => {
+                          const workHours = u.work_start_time && u.work_end_time
+                            ? `${u.work_start_time} – ${u.work_end_time}`
+                            : null;
+                          return (
+                            <div key={u.id} className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-full bg-white/70 flex items-center justify-center text-xs font-bold shrink-0 opacity-80">
+                                {u.full_name.charAt(0)}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium truncate">{u.full_name}</div>
+                                <div className="text-xs opacity-60 flex items-center gap-1">
+                                  <span className="capitalize">{u.role.replace("_", " ")}</span>
+                                  {workHours && (
+                                    <><span>·</span><span>{workHours}</span></>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <div className="text-sm font-medium truncate">{u.full_name}</div>
-                              <div className="text-xs opacity-60 capitalize">{u.role.replace("_", " ")}</div>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
