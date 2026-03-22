@@ -10,6 +10,8 @@ import backend.schemas as schemas
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
+BASE_ROLES = {"admin", "manager", "team_leader", "agent"}
+
 APPROVED_STATUSES = {"GS approved", "CoE Approved", "Visa Granted"}
 REFUSED_STATUSES = {"GS Rejected", "Visa Refused", "Refund Requested"}
 PENDING_STATUSES = {
@@ -24,9 +26,9 @@ def _scoped_query(db: Session, current_user: models.User):
     q = db.query(models.Application)
     role = current_user.role
 
-    if role in ("agent", "team_leader"):
-        # Only see their own assigned applications
-        q = q.filter(models.Application.assigned_to_id == current_user.id)
+    if role == "admin":
+        # Admin sees everything — no filter
+        pass
     elif role == "manager":
         # If manager has specific agent mappings, limit to those agents
         mappings = (
@@ -37,7 +39,23 @@ def _scoped_query(db: Session, current_user: models.User):
         if mappings:
             agent_ids = [m.agent_id for m in mappings]
             q = q.filter(models.Application.agent_id.in_(agent_ids))
-    # admin: no filter — sees everything
+    elif role in ("agent", "team_leader"):
+        # Only see their own assigned applications
+        q = q.filter(models.Application.assigned_to_id == current_user.id)
+    else:
+        # Custom role — check if they have can_view_all_users in any department.
+        # If yes, they see all applications (like a manager without agent restrictions).
+        # If no, they only see applications assigned to them.
+        has_full_view = (
+            db.query(models.RolePermission)
+            .filter(
+                models.RolePermission.role == role,
+                models.RolePermission.can_view_all_users == True,
+            )
+            .first()
+        )
+        if not has_full_view:
+            q = q.filter(models.Application.assigned_to_id == current_user.id)
 
     return q
 

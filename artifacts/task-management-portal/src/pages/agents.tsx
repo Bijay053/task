@@ -94,7 +94,8 @@ export default function Agents() {
   const { isCustomRole, canView } = usePermissions();
   const isAdminOrManager = user?.role === "admin" || user?.role === "manager" || (isCustomRole && canView("agents"));
 
-  const managers = users?.filter(u => ["admin", "manager"].includes(u.role)) || [];
+  // Include all active users — custom roles like "Agent Manager" can also be assigned to agents
+  const managers = users?.filter(u => u.is_active) || [];
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
