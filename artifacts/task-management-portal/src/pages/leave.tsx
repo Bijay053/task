@@ -60,26 +60,43 @@ function formatSchedule(u: UserOut): string {
   return parts.length > 0 ? parts.join("  ·  ") : "";
 }
 
-const TIMEZONES = [
-  { value: "Asia/Kathmandu",      label: "Nepal (NPT, UTC+5:45)" },
-  { value: "Asia/Kolkata",        label: "India (IST, UTC+5:30)" },
-  { value: "Australia/Sydney",    label: "Australia/Sydney (AEDT/AEST)" },
-  { value: "Australia/Melbourne", label: "Australia/Melbourne (AEDT/AEST)" },
-  { value: "Australia/Brisbane",  label: "Australia/Brisbane (AEST, UTC+10)" },
-  { value: "Australia/Perth",     label: "Australia/Perth (AWST, UTC+8)" },
-  { value: "Europe/London",       label: "UK (GMT/BST)" },
-  { value: "America/Toronto",     label: "Canada/Toronto (ET)" },
-  { value: "America/Vancouver",   label: "Canada/Vancouver (PT)" },
-  { value: "America/New_York",    label: "US/New York (ET)" },
-  { value: "America/Los_Angeles", label: "US/Los Angeles (PT)" },
-  { value: "Asia/Dubai",          label: "UAE (GST, UTC+4)" },
-  { value: "Asia/Singapore",      label: "Singapore (SGT, UTC+8)" },
-  { value: "UTC",                 label: "UTC" },
-];
+const ALL_TIMEZONES: string[] = (() => {
+  try {
+    return (Intl as any).supportedValuesOf("timeZone") as string[];
+  } catch {
+    return ["UTC"];
+  }
+})();
+
+const TZ_GROUPS: { region: string; zones: string[] }[] = (() => {
+  const map: Record<string, string[]> = {};
+  for (const tz of ALL_TIMEZONES) {
+    const region = tz.includes("/") ? tz.split("/")[0] : "Other";
+    if (!map[region]) map[region] = [];
+    map[region].push(tz);
+  }
+  return Object.entries(map)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([region, zones]) => ({ region, zones }));
+})();
+
+const _now = new Date();
+const TZ_OFFSET_MAP: Record<string, string> = (() => {
+  const m: Record<string, string> = {};
+  for (const tz of ALL_TIMEZONES) {
+    try {
+      const parts = new Intl.DateTimeFormat("en", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(_now);
+      m[tz] = parts.find(p => p.type === "timeZoneName")?.value ?? "";
+    } catch {
+      m[tz] = "";
+    }
+  }
+  return m;
+})();
 
 function tzLabel(tz: string | null | undefined): string {
   if (!tz) return "";
-  return TIMEZONES.find(t => t.value === tz)?.label.split(" ")[0] ?? tz;
+  return tz;
 }
 
 interface ScheduleForm {
@@ -429,11 +446,17 @@ export default function LeavePage() {
                                 <select
                                   value={scheduleForm.timezone}
                                   onChange={e => setScheduleForm(p => ({ ...p, timezone: e.target.value }))}
-                                  className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[220px]"
+                                  className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[260px]"
                                 >
                                   <option value="">— Select timezone —</option>
-                                  {TIMEZONES.map(tz => (
-                                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                                  {TZ_GROUPS.map(({ region, zones }) => (
+                                    <optgroup key={region} label={region}>
+                                      {zones.map(tz => (
+                                        <option key={tz} value={tz}>
+                                          {tz.split("/").slice(1).join("/").replace(/_/g, " ")} ({TZ_OFFSET_MAP[tz]})
+                                        </option>
+                                      ))}
+                                    </optgroup>
                                   ))}
                                 </select>
                               </div>
