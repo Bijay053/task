@@ -56,7 +56,11 @@ function DateInput({ label, value, onChange }: { label: string; value: string; o
 async function fetchReport(path: string, params: Record<string, string | undefined>) {
   const url = new URL(`${import.meta.env.BASE_URL}api${path}`, window.location.origin);
   Object.entries(params).forEach(([k, v]) => { if (v) url.searchParams.set(k, v); });
-  const res = await fetch(url.toString(), { credentials: "include" });
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(url.toString(), {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) throw new Error("Failed to fetch report");
   return res.json();
 }
