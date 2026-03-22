@@ -97,7 +97,15 @@ async def bulk_upload_agents(
     Manager Name maps to an existing user with role manager/admin.
     """
     if current_user.role not in ("admin", "manager"):
-        raise HTTPException(status_code=403, detail="Admin or manager required")
+        # Also allow custom-role users who have view access to the agents module
+        from backend.models import RolePermission
+        perm = db.query(RolePermission).filter(
+            RolePermission.role == current_user.role,
+            RolePermission.department == "agents",
+            RolePermission.can_view == True,
+        ).first()
+        if not perm:
+            raise HTTPException(status_code=403, detail="Admin or manager required")
 
     import openpyxl
     import io
@@ -119,7 +127,7 @@ async def bulk_upload_agents(
             "email": ["email"],
             "phone": ["phone", "telephone", "mobile"],
             "country": ["country"],
-            "manager name": ["manager name", "manager", "assigned manager"],
+            "manager name": ["manager name", "manager", "assigned manager", "agent manager", "agent manager name"],
         }
         for alias in aliases.get(name, []):
             if alias in headers:
@@ -128,9 +136,19 @@ async def bulk_upload_agents(
                 return str(cell.value or "").strip() if cell.value is not None else ""
         return ""
 
-    # Build manager name lookup
+    # Build manager name lookup — includes admin/manager built-in roles
+    # plus any custom role with can_view=True for the agents module
+    from backend.models import RolePermission as _RP
+    custom_eligible_roles = {
+        r.role for r in db.query(_RP.role).filter(
+            _RP.department == "agents",
+            _RP.can_view == True,
+        ).all()
+    }
+    base_roles = {"admin", "manager"}
+    all_eligible_roles = base_roles | custom_eligible_roles
     managers = db.query(models.User).filter(
-        models.User.role.in_(["admin", "manager"]),
+        models.User.role.in_(list(all_eligible_roles)),
         models.User.is_active == True,
     ).all()
     manager_map = {m.full_name.lower(): m for m in managers}

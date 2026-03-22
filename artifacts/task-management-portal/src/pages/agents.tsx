@@ -150,7 +150,11 @@ export default function Agents() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = "Agent Name,Country,Manager Name\nJohn Smith,Bangladesh,Alice Manager\n";
+    const rows = [
+      ["Agent Name", "Country", "Manager Name"],
+      ["John Smith", "Bangladesh", "Alice Manager"],
+    ];
+    const csvContent = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
