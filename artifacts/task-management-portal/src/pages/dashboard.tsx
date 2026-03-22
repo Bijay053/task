@@ -88,10 +88,12 @@ export default function Dashboard() {
   const viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const viewerCity = viewerTz.includes("/") ? viewerTz.split("/").pop()!.replace(/_/g, " ") : viewerTz;
   const viewerGmtOffset = (() => {
-    try {
-      return new Intl.DateTimeFormat("en", { timeZone: viewerTz, timeZoneName: "shortOffset" })
-        .formatToParts(now).find(p => p.type === "timeZoneName")?.value ?? "";
-    } catch { return ""; }
+    const offsetMin = -now.getTimezoneOffset();
+    const sign = offsetMin >= 0 ? "+" : "-";
+    const absMin = Math.abs(offsetMin);
+    const h = Math.floor(absMin / 60);
+    const m = absMin % 60;
+    return `GMT${sign}${h}${m > 0 ? `:${String(m).padStart(2, "0")}` : ""}`;
   })();
 
   const stats = [
