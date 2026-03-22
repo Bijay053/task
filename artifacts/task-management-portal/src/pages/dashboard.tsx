@@ -14,14 +14,43 @@ const availabilityConfig: Record<string, { label: string; icon: any; cls: string
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
+const WEEKDAY_MAP: Record<string, string> = {
+  Sun: "sun", Mon: "mon", Tue: "tue", Wed: "wed", Thu: "thu", Fri: "fri", Sat: "sat",
+};
+
+function getTimeInZone(now: Date, tz: string | null | undefined): { dayKey: string; curMinutes: number } {
+  if (tz) {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).formatToParts(now);
+      const weekday = parts.find(p => p.type === "weekday")?.value ?? "";
+      const hour   = parseInt(parts.find(p => p.type === "hour")?.value   ?? "0", 10);
+      const minute = parseInt(parts.find(p => p.type === "minute")?.value ?? "0", 10);
+      return {
+        dayKey: WEEKDAY_MAP[weekday] ?? DAY_KEYS[now.getDay()],
+        curMinutes: (hour % 24) * 60 + minute,
+      };
+    } catch { /* fall through */ }
+  }
+  return {
+    dayKey: DAY_KEYS[now.getDay()],
+    curMinutes: now.getHours() * 60 + now.getMinutes(),
+  };
+}
+
 function getEffectiveStatus(user: UserOut, now: Date): string {
   if (user.availability_status === "on_leave") return "on_leave";
 
-  const todayKey = DAY_KEYS[now.getDay()];
+  const { dayKey, curMinutes } = getTimeInZone(now, user.work_timezone);
 
   if (user.work_days) {
     const days = user.work_days.split(",").map(d => d.trim().toLowerCase());
-    if (!days.includes(todayKey)) {
+    if (!days.includes(dayKey)) {
       return user.availability_status === "available" ? "off_duty" : user.availability_status;
     }
   }
@@ -29,8 +58,7 @@ function getEffectiveStatus(user: UserOut, now: Date): string {
   if (user.work_start_time && user.work_end_time) {
     const [sh, sm] = user.work_start_time.split(":").map(Number);
     const [eh, em] = user.work_end_time.split(":").map(Number);
-    const cur = now.getHours() * 60 + now.getMinutes();
-    if (cur < sh * 60 + sm || cur > eh * 60 + em) {
+    if (curMinutes < sh * 60 + sm || curMinutes > eh * 60 + em) {
       return user.availability_status === "available" ? "off_duty" : user.availability_status;
     }
   }
@@ -133,6 +161,14 @@ export default function Dashboard() {
                           const workHours = u.work_start_time && u.work_end_time
                             ? `${u.work_start_time} – ${u.work_end_time}`
                             : null;
+                          const tzShort = u.work_timezone
+                            ? (() => {
+                                try {
+                                  return new Intl.DateTimeFormat("en", { timeZone: u.work_timezone, timeZoneName: "short" })
+                                    .formatToParts(now).find(p => p.type === "timeZoneName")?.value ?? u.work_timezone.split("/").pop();
+                                } catch { return null; }
+                              })()
+                            : null;
                           return (
                             <div key={u.id} className="flex items-center gap-2.5">
                               <div className="w-7 h-7 rounded-full bg-white/70 flex items-center justify-center text-xs font-bold shrink-0 opacity-80">
@@ -143,7 +179,7 @@ export default function Dashboard() {
                                 <div className="text-xs opacity-60 flex items-center gap-1">
                                   <span className="capitalize">{u.role.replace("_", " ")}</span>
                                   {workHours && (
-                                    <><span>·</span><span>{workHours}</span></>
+                                    <><span>·</span><span>{workHours}{tzShort ? ` (${tzShort})` : ""}</span></>
                                   )}
                                 </div>
                               </div>
