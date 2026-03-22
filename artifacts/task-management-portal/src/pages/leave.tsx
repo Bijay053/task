@@ -100,8 +100,12 @@ export default function LeavePage() {
   const isAdminOrManager = user?.role === "admin" || user?.role === "manager" || (isCustomRole && canView("leave"));
 
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [scheduleForm, setScheduleForm] = useState<ScheduleForm>({ days: new Set(), start: "", end: "" });
+  const [scheduleForm, setScheduleForm] = useState<ScheduleForm>({ days: new Set(), start: "", end: "", timezone: "" });
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+
+  const visibleUsers = (users || []).filter(u => showHidden || u.show_in_availability !== false);
+  const hiddenCount = (users || []).filter(u => u.show_in_availability === false).length;
 
   if (!isAdminOrManager) {
     return (
@@ -116,9 +120,9 @@ export default function LeavePage() {
   }
 
   const summary = {
-    available: users?.filter(u => (u.availability_status || "available") === "available").length ?? 0,
-    on_leave: users?.filter(u => u.availability_status === "on_leave").length ?? 0,
-    off_duty: users?.filter(u => u.availability_status === "off_duty").length ?? 0,
+    available: visibleUsers.filter(u => (u.availability_status || "available") === "available").length,
+    on_leave: visibleUsers.filter(u => u.availability_status === "on_leave").length,
+    off_duty: visibleUsers.filter(u => u.availability_status === "off_duty").length,
   };
 
   function startEdit(u: UserOut) {
@@ -162,9 +166,25 @@ export default function LeavePage() {
   return (
     <Layout>
       <div className="h-full flex flex-col space-y-6">
-        <div className="shrink-0">
-          <h1 className="text-3xl font-display font-bold tracking-tight">Leave & Availability</h1>
-          <p className="text-muted-foreground mt-1">Track and manage staff availability, leaves, and working schedules.</p>
+        <div className="flex items-start justify-between gap-4 shrink-0">
+          <div>
+            <h1 className="text-3xl font-display font-bold tracking-tight">Leave & Availability</h1>
+            <p className="text-muted-foreground mt-1">Track and manage staff availability, leaves, and working schedules.</p>
+          </div>
+          {canEdit && hiddenCount > 0 && (
+            <button
+              onClick={() => setShowHidden(v => !v)}
+              className={cn(
+                "shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors mt-1",
+                showHidden
+                  ? "bg-slate-800 text-white border-slate-800 hover:bg-slate-700"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              )}
+            >
+              {showHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              {showHidden ? `Showing ${hiddenCount} hidden` : `${hiddenCount} hidden`}
+            </button>
+          )}
         </div>
 
         {/* Summary Cards */}
@@ -216,13 +236,16 @@ export default function LeavePage() {
               <tbody>
                 {isLoading ? (
                   <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">Loading...</td></tr>
-                ) : users?.map(u => {
+                ) : visibleUsers.length === 0 ? (
+                  <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">No staff members to display.</td></tr>
+                ) : visibleUsers.map(u => {
                   const status = u.availability_status || "available";
                   const isEditing = editingId === u.id;
+                  const isHidden = u.show_in_availability === false;
 
                   return (
                     <Fragment key={u.id}>
-                      <tr>
+                      <tr className={isHidden ? "opacity-50" : ""}>
                         <td>
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold shrink-0">
