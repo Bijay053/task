@@ -20,14 +20,14 @@ def list_agent_managers(db: Session = Depends(get_db), current_user: models.User
     """
     Return users who can be assigned as managers in the Agent-Manager mapping.
     Includes: admin, manager (built-in roles) + any custom-role user whose role has
-    can_view_mapped_users=True for the 'agents' department.
+    can_view=True for the 'agents' department (i.e. can access the Agents page).
     """
-    # Get all custom role names that have can_view_mapped_users for agents
+    # Get all custom role names that have can_view=True for the agents module
     eligible_custom_roles = (
         db.query(models.RolePermission.role)
         .filter(
             models.RolePermission.department == "agents",
-            models.RolePermission.can_view_mapped_users == True,
+            models.RolePermission.can_view == True,
         )
         .all()
     )
