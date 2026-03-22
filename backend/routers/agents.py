@@ -136,10 +136,15 @@ async def bulk_upload_agents(
                 return str(cell.value or "").strip() if cell.value is not None else ""
         return ""
 
-    # Build manager name lookup — admin, manager, team_leader + any custom role
+    # Build manager name lookup — admin, manager, team_leader +
+    # custom roles with can_view for GS or Offer Applications
     from backend.models import RolePermission as _RP
+    from sqlalchemy import or_ as _or
     custom_role_names = {
-        r.role for r in db.query(_RP.role).distinct().all()
+        r.role for r in db.query(_RP.role).filter(
+            _RP.can_view == True,
+            _or(_RP.department == "gs", _RP.department == "offer"),
+        ).distinct().all()
     }
     all_eligible_roles = {"admin", "manager", "team_leader"} | custom_role_names
     managers = db.query(models.User).filter(

@@ -19,17 +19,26 @@ AVAILABILITY_CHOICES = {"available", "on_leave", "off_duty"}
 def list_agent_managers(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
     Return users who can be assigned as agent managers.
-    Includes: admin, manager, team_leader (built-in roles) + ALL active users
-    with any custom role (team permission users), regardless of which specific
-    permissions their role has.  Only the built-in 'agent' role is excluded.
+    Includes:
+      - admin, manager, team_leader (built-in roles)
+      - Any custom-role user whose role has can_view=True for GS Applications
+        OR Offer Applications (the two main application departments).
     """
-    # Collect all distinct custom role names from the permissions table
-    custom_role_names = {
-        r.role for r in db.query(models.RolePermission.role).distinct().all()
+    from sqlalchemy import or_
+
+    # Custom roles with view access to GS or Offer Applications
+    eligible_custom_roles = {
+        r.role for r in db.query(models.RolePermission.role).filter(
+            models.RolePermission.can_view == True,
+            or_(
+                models.RolePermission.department == "gs",
+                models.RolePermission.department == "offer",
+            ),
+        ).distinct().all()
     }
 
     built_in_eligible = {"admin", "manager", "team_leader"}
-    all_eligible = built_in_eligible | custom_role_names
+    all_eligible = built_in_eligible | eligible_custom_roles
 
     return (
         db.query(models.User)
