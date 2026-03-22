@@ -295,15 +295,12 @@ export default function Reports() {
                             </td>
                             <td>
                               <div className="flex flex-wrap gap-1">
-                                {Object.entries(p.status_breakdown).slice(0, 4).map(([status, count]) => (
-                                  <span key={status} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-muted text-muted-foreground" title={status}>
-                                    <span className="truncate max-w-[80px]">{status}</span>
+                                {Object.entries(p.status_breakdown).map(([status, count]) => (
+                                  <span key={status} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-muted text-muted-foreground">
+                                    <span>{status}</span>
                                     <span className="font-bold text-foreground">{count as number}</span>
                                   </span>
                                 ))}
-                                {Object.keys(p.status_breakdown).length > 4 && (
-                                  <span className="text-xs text-muted-foreground">+{Object.keys(p.status_breakdown).length - 4} more</span>
-                                )}
                               </div>
                             </td>
                           </tr>
