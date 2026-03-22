@@ -6,7 +6,7 @@ import { Select } from "@/components/ui-elements";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/lib/permission-context";
-import { ShieldAlert, Calendar, Wifi, WifiOff, Clock, Pencil, Check, X } from "lucide-react";
+import { ShieldAlert, Calendar, Wifi, WifiOff, Clock, Pencil, Check, X, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserOut } from "@workspace/api-client-react";
 
@@ -184,12 +184,13 @@ export default function LeavePage() {
                   <th>Update Status</th>
                   <th>Working Days</th>
                   <th>Working Hours</th>
+                  <th className="text-center w-36">Show in Dashboard</th>
                   {canEdit && <th className="w-20">Schedule</th>}
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={7} className="text-center py-10 text-muted-foreground">Loading...</td></tr>
+                  <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">Loading...</td></tr>
                 ) : users?.map(u => {
                   const status = u.availability_status || "available";
                   const isEditing = editingId === u.id;
@@ -271,6 +272,37 @@ export default function LeavePage() {
                             <span className="text-xs text-muted-foreground italic">Not set</span>
                           )}
                         </td>
+                        <td className="text-center">
+                          {canEdit ? (
+                            <button
+                              onClick={async () => {
+                                await availMut.mutateAsync({
+                                  userId: u.id,
+                                  data: { show_in_availability: !u.show_in_availability },
+                                });
+                                queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                              }}
+                              title={u.show_in_availability ? "Click to hide from Dashboard" : "Click to show in Dashboard"}
+                              className={cn(
+                                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer",
+                                u.show_in_availability
+                                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                              )}
+                            >
+                              {u.show_in_availability
+                                ? <><Eye className="w-3.5 h-3.5" /> Visible</>
+                                : <><EyeOff className="w-3.5 h-3.5" /> Hidden</>}
+                            </button>
+                          ) : (
+                            <span className={cn(
+                              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
+                              u.show_in_availability ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+                            )}>
+                              {u.show_in_availability ? <><Eye className="w-3.5 h-3.5" /> Visible</> : <><EyeOff className="w-3.5 h-3.5" /> Hidden</>}
+                            </span>
+                          )}
+                        </td>
                         {canEdit && (
                           <td>
                             {isEditing ? (
@@ -294,7 +326,7 @@ export default function LeavePage() {
 
                       {isEditing && (
                         <tr className="bg-blue-50/60">
-                          <td colSpan={7} className="px-4 py-4">
+                          <td colSpan={8} className="px-4 py-4">
                             <div className="flex flex-wrap items-end gap-6">
                               {/* Day picker */}
                               <div>

@@ -14,6 +14,7 @@ export interface UserOut {
   role: string;
   is_active: boolean;
   availability_status: string;
+  show_in_availability: boolean;
   work_days?: string | null;
   work_start_time?: string | null;
   work_end_time?: string | null;
@@ -22,6 +23,7 @@ export interface UserOut {
 
 export interface UserAvailabilityUpdate {
   availability_status?: string | null;
+  show_in_availability?: boolean | null;
   work_days?: string | null;
   work_start_time?: string | null;
   work_end_time?: string | null;

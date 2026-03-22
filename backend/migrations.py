@@ -150,6 +150,9 @@ def run_migrations():
         _add_column(conn, "task_system_audit_logs", "user_agent", "TEXT")
 
         # Work schedule columns on task_users
-        _add_column(conn, "task_users", "work_days",       "VARCHAR(100)")
-        _add_column(conn, "task_users", "work_start_time", "VARCHAR(10)")
-        _add_column(conn, "task_users", "work_end_time",   "VARCHAR(10)")
+        _add_column(conn, "task_users", "work_days",              "VARCHAR(100)")
+        _add_column(conn, "task_users", "work_start_time",        "VARCHAR(10)")
+        _add_column(conn, "task_users", "work_end_time",          "VARCHAR(10)")
+
+        # Team availability visibility flag (default TRUE so existing users stay visible)
+        _add_column(conn, "task_users", "show_in_availability",   "BOOLEAN NOT NULL DEFAULT TRUE")

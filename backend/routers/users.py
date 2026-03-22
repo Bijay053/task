@@ -154,6 +154,8 @@ def update_availability(
         if data.availability_status not in AVAILABILITY_CHOICES:
             raise HTTPException(status_code=400, detail=f"Invalid status. Choose: {AVAILABILITY_CHOICES}")
         user.availability_status = data.availability_status
+    if data.show_in_availability is not None:
+        user.show_in_availability = data.show_in_availability
     if data.work_days is not None:
         user.work_days = data.work_days or None
     if data.work_start_time is not None:

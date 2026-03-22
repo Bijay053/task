@@ -38,6 +38,7 @@ class UserOut(BaseModel):
     role: str
     is_active: bool
     availability_status: str = "available"
+    show_in_availability: bool = True
     work_days: Optional[str] = None
     work_start_time: Optional[str] = None
     work_end_time: Optional[str] = None
@@ -50,6 +51,7 @@ class UserOut(BaseModel):
 
 class UserAvailabilityUpdate(BaseModel):
     availability_status: Optional[str] = None
+    show_in_availability: Optional[bool] = None
     work_days: Optional[str] = None
     work_start_time: Optional[str] = None
     work_end_time: Optional[str] = None

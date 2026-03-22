@@ -57,6 +57,7 @@ class User(Base):
     role = Column(String(50), default="agent", nullable=False)
     is_active = Column(Boolean, default=True)
     availability_status = Column(String(50), default="available", nullable=False)
+    show_in_availability = Column(Boolean, default=True, nullable=False, server_default="TRUE")
     work_days = Column(String(100), nullable=True)
     work_start_time = Column(String(10), nullable=True)
     work_end_time = Column(String(10), nullable=True)

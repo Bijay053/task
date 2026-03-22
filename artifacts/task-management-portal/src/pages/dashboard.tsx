@@ -59,7 +59,7 @@ export default function Dashboard() {
     { title: "Refused", value: summary?.refused || 0, icon: XCircle, color: "text-rose-500", bg: "bg-rose-500/10" },
   ];
 
-  const activeUsers = users?.filter(u => u.is_active) || [];
+  const activeUsers = users?.filter(u => u.is_active && u.show_in_availability !== false) || [];
 
   const staffGroups = {
     available: activeUsers.filter(u => getEffectiveStatus(u, now) === "available"),
