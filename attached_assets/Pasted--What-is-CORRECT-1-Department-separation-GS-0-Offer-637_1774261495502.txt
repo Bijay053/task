@@ -1,0 +1,156 @@
+✅ What is CORRECT 👍
+✔ 1. Department separation
+GS = 0
+Offer = 637
+
+👉 ✔ Good — clean separation of GS vs Offer
+
+✔ 2. Staff totals match breakdown
+
+Example:
+
+Prashanti = 82
+39 + 10 + 17 + 13 + 3 = 82 ✔
+
+👉 ✔ Your aggregation is accurate
+
+✔ 3. Status types are logical (Offer flow)
+
+You are using:
+
+Offer Received
+Offer Rejected
+Not Eligible
+On Hold
+Document Requested
+
+👉 ✔ This is correct for Offer stage
+
+❌ MAIN ISSUE — WORKLOAD IS WRONG
+❗ Problem:
+
+You are using:
+
+Workload = Total cases per staff
+
+Example:
+
+Prashanti = 82 → 100%
+Indira = 78 → 95%
+
+👉 ❌ This is WRONG
+
+✅ Correct Workload Logic
+
+Workload should be based on ACTIVE cases only, NOT total.
+
+✔ Define COMPLETED (Offer)
+Completed =
+- Offer Received
+- Offer Rejected
+- Not Eligible
+
+👉 These are FINAL outcomes
+
+✔ Define ACTIVE (Offer)
+Active =
+- On Hold
+- Document Requested
+
+👉 These are pending work
+
+🔥 Correct Workload Calculation
+❌ Current (Wrong)
+Workload % = Total / Max Total
+✅ Correct (Must implement)
+Active Workload = On Hold + Document Requested
+
+Workload % = Active / Max Active among staff
+📊 Example FIX
+Prashanti:
+On Hold = 13
+Document Requested = 3
+👉 Active = 16
+Indira:
+On Hold = 21
+Document Requested = 3
+👉 Active = 24
+Now:
+Max Active = 24 (Indira)
+Workload:
+Staff	Active	Workload %
+Prashanti	16	67%
+Indira	24	100%
+Swostika	(2+6=8)	33%
+
+👉 THIS is real workload
+
+❌ ISSUE 2 — Missing Pending Indicator
+
+Your UI does NOT show:
+
+Active count per staff ❌
+
+👉 You must add:
+
+Pending (Active Workload)
+✅ Add Column:
+Staff	Total	Active	Completed
+❌ ISSUE 3 — No Time-Based Insight
+
+You are missing:
+
+Avg handling time (Offer)
+Delay / SLA breach
+
+👉 This is critical for performance
+
+❌ ISSUE 4 — Status grouping clarity
+
+Right now:
+
+“Not Eligible” treated same as rejection
+
+👉 That’s OK, BUT:
+
+Better grouping:
+Positive:
+- Offer Received
+
+Negative:
+- Offer Rejected
+- Not Eligible
+
+👉 Useful for conversion rate
+
+🔥 FINAL CORRECT MODEL (Offer Dept)
+✅ Workload Overview SHOULD BE:
+✔ Metrics
+Total Applications
+Active (Pending)
+Completed
+Avg Handling Time
+✔ Staff Table
+Staff	Total	Active	Completed	Workload %
+✔ Active Definition
+Active =
+On Hold + Document Requested
+✔ Completed Definition
+Completed =
+Offer Received + Rejected + Not Eligible
+🚀 FINAL VERDICT
+
+👉 Your current screen is:
+
+✅ Data correct
+✅ Status logic correct
+❌ Workload calculation WRONG
+❌ Missing active workload visibility
+💡 BIG RECOMMENDATION
+
+Across your whole system (GS + Offer + Visa):
+
+👉 Standardize:
+
+Workload = ONLY ACTIVE cases
+Performance = ONLY COMPLETED cases

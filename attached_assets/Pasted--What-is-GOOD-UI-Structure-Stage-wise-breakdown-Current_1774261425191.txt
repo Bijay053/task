@@ -1,0 +1,207 @@
+✅ What is GOOD 👍
+✔ UI / Structure
+Stage-wise breakdown ✔
+Currently Here ✔
+Transitions ✔
+Avg Time ✔
+Bottleneck highlight ✔
+
+👉 Design is correct and professional
+
+❌ CRITICAL LOGIC ISSUES
+❌ ISSUE 1 — You are treating FINAL statuses as “Stages”
+
+Your stages shown:
+
+GS Rejected ❌
+GS Approved ❌
+
+👉 These are NOT stages
+👉 These are FINAL OUTCOMES
+
+✅ Correct Stage Definition
+
+Stages should be process steps, NOT outcomes:
+
+GS Submitted
+In Review
+GS On Hold
+GS Decision (final step)
+
+👉 Inside GS Decision:
+
+Approved
+Rejected
+❌ Your mistake
+
+You are doing:
+
+Stage = Status
+
+👉 This is WRONG architecture
+
+❌ ISSUE 2 — “Currently Here” is WRONG
+
+Example:
+
+GS Rejected = 177 currently here ❌
+
+👉 Impossible.
+
+Because:
+👉 Once rejected → case is finished
+👉 It is NOT “currently in stage”
+
+✅ Correct Logic
+Currently Here =
+Cases that are STILL ACTIVE in that stage
+✔ Example:
+Stage	Currently Here
+GS Submitted	Active cases
+In Review	Active cases
+On Hold	Active cases
+
+❌ NOT:
+
+Approved
+Rejected
+❌ ISSUE 3 — Bottleneck is WRONG
+
+You show:
+
+GS Rejected = Biggest bottleneck
+
+❌ This is completely wrong
+
+✅ Bottleneck Definition
+Bottleneck =
+Stage with highest Avg Time (ONLY ACTIVE STAGES)
+✔ Correct Example:
+
+If:
+
+In Review = 18h
+GS Submitted = 10h
+
+👉 Bottleneck = In Review
+
+❌ But your system:
+
+Picks GS Rejected (final stage)
+👉 This makes no business sense
+❌ ISSUE 4 — Avg Time in Stage is INVALID
+
+All rows show:
+
+14h
+14h
+14h
+
+👉 🚨 This is a BIG red flag
+
+❗ Why wrong?
+
+Each stage should have different time
+
+✅ Correct Formula
+Time in Stage =
+Exit Time - Enter Time
+✔ Example:
+Stage	Avg Time
+GS Submitted	8h
+In Review	20h
+On Hold	30h
+
+👉 NOT all same
+
+❌ ISSUE 5 — Transitions logic unclear
+
+Example:
+
+GS Rejected → 293 transitions
+
+👉 Question:
+
+From where?
+To where?
+✅ Correct Transition Tracking
+Transition =
+Movement BETWEEN stages
+
+Example:
+
+GS Submitted → In Review
+In Review → Decision
+
+👉 NOT:
+
+Counting final status repeatedly
+❌ ISSUE 6 — Total Stages = 4 (WRONG)
+
+You show:
+
+Total Stages = 4
+
+But actual GS flow:
+
+1. GS Submitted
+2. In Review
+3. On Hold (optional)
+4. Decision (Approved/Rejected)
+
+👉 That’s 4 PROCESS stages
+
+BUT you are counting:
+
+Rejected
+Approved
+
+👉 This distorts stage count
+
+🔥 CORRECT MODEL (VERY IMPORTANT)
+✅ STEP 1 — Separate STAGE vs STATUS
+Stage (process)
+GS Submitted
+In Review
+On Hold
+Decision
+Status (outcome)
+Approved
+Rejected
+✅ STEP 2 — Fix Table
+SHOULD LOOK LIKE:
+Stage	Currently Here	Avg Time	Bottleneck
+GS Submitted	Active count	8h	❌
+In Review	Active count	18h	✅
+On Hold	Active count	30h	maybe
+Decision	0	—	❌
+✅ STEP 3 — Fix Bottleneck
+Only consider ACTIVE stages
+Ignore completed stages
+✅ STEP 4 — Fix Avg Time
+Avg Time =
+AVG (exit_time - entry_time)
+per stage
+✅ STEP 5 — Fix Currently Here
+Only active cases
+NOT completed cases
+🚀 FINAL VERDICT
+
+👉 Your Stage Analysis is:
+
+✅ UI good
+❌ Concept wrong
+❌ Stage vs Status mixed
+❌ Bottleneck incorrect
+❌ Time calculation likely wrong
+💡 BIG RECOMMENDATION (Important for your system)
+
+You are building a very powerful CRM — but you must follow:
+
+STAGE = PROCESS
+STATUS = RESULT
+
+👉 If you mix them:
+
+All analytics become wrong
+Reports mislead management

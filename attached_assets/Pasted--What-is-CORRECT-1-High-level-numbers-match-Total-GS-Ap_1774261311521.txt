@@ -1,0 +1,181 @@
+✅ What is CORRECT 👍
+✔ 1. High-level numbers match
+Total GS Apps = 366
+Completed = 262
+Pending = 104
+
+👉 ✔ 262 + 104 = 366 → Correct
+
+✔ 2. Per staff calculation is consistent
+
+Example:
+
+Manjita: 119 = 100 (completed) + 19 (pending) ✔
+Kejina: 93 = 57 + 36 ✔
+Kritika: 58 = 44 + 14 ✔
+
+👉 ✔ Your basic split logic is correct
+
+⚠️ BUT THERE ARE CRITICAL ISSUES
+❌ ISSUE 1 — What is counted as “Completed”?
+
+Right now your system likely counts:
+
+GS Approved ✅
+GS Rejected ✅
+
+👉 That is correct for GS stage
+
+BUT question:
+
+❗ Are you including these incorrectly?
+Visa Granted
+Visa Refused
+CoE Approved
+
+👉 These should NOT be part of GS handling time
+
+✅ Correct Definition (VERY IMPORTANT)
+
+For GS Handling Time report:
+
+Completed (GS) =
+ONLY:
+- GS Approved
+- GS Rejected
+
+❌ Do NOT include:
+
+Visa Granted
+Visa Refused
+CoE Approved
+Refund Requested
+
+👉 Otherwise your GS performance becomes fake / inflated
+
+❌ ISSUE 2 — Pending Definition is WRONG (likely)
+
+Your Pending probably includes:
+
+GS On Hold
+In Review
+GS Submitted
+
+👉 ✔ correct
+
+BUT also check:
+
+❗ Are you including:
+CoE Requested
+Visa Lodged
+
+👉 If YES → ❌ WRONG
+
+✅ Correct Pending (GS only)
+Pending (GS) =
+- GS Submitted
+- In Review
+- GS On Hold
+- GS Document Pending
+❌ ISSUE 3 — Avg Handling Time Logic
+
+You show:
+
+1.2d, 1.1d, 1.4d etc
+
+👉 Looks good BUT depends on calculation:
+
+❗ Most common mistake:
+Avg Handling Time =
+(current date - assigned date)
+
+❌ WRONG
+
+✅ Correct Formula:
+Handling Time =
+(GS Decision Date - GS Assigned Date)
+
+Avg = average of ONLY completed GS cases
+
+👉 Only include:
+
+GS Approved
+GS Rejected
+
+❌ Do NOT include pending cases
+
+❌ ISSUE 4 — Avg Completion vs Avg Handling (Confusion)
+
+You have:
+
+Avg Handling Time (blue)
+Avg Completion (purple)
+
+👉 These look almost same → ⚠️ Red flag
+
+✅ Proper difference should be:
+Avg First Action
+First Action Date - Assigned Date
+Avg Handling Time
+Last Update Date - Assigned Date (for active)
+OR
+Completion Date - Assigned Date (for completed)
+Avg Completion Time
+ONLY completed cases:
+(GS decision date - assigned date)
+
+👉 If all are similar → your logic is duplicated ❌
+
+❌ ISSUE 5 — Missing Stage Cutoff
+
+Your system should STOP GS timing when:
+
+GS Approved → STOP timer
+GS Rejected → STOP timer
+
+👉 If timer continues after:
+
+CoE Requested
+Visa Lodged
+
+❌ Then your time is WRONG
+
+🔥 FINAL CORRECT MODEL (YOU SHOULD IMPLEMENT)
+✅ GS REPORT SHOULD FOLLOW THIS
+✔ GS Total
+All GS stage records
+✔ Completed (GS)
+GS Approved + GS Rejected
+✔ Pending (GS)
+GS Submitted
+In Review
+GS On Hold
+GS Doc Pending
+✔ Avg Handling Time
+AVG (GS Decision Date - Assigned Date)
+ONLY for completed
+✔ Avg First Action
+AVG (First Action Date - Assigned Date)
+🚀 FINAL VERDICT
+
+👉 Your current screen is:
+
+✅ Structurally correct
+✅ Data split correct
+❌ Stage logic still partially wrong
+❌ Risk of wrong time calculation
+💡 Recommendation (Important for your system)
+
+Since you have:
+
+GS stage
+CoE stage
+Visa stage
+
+👉 Build SEPARATE reports per stage
+
+GS Performance
+Offer Performance
+Visa Performance
+
+👉 Otherwise mixing stages = wrong KPIs

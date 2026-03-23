@@ -146,19 +146,19 @@ def staff_timing_report(
     _: models.User = Depends(require_manager),
 ):
     """
-    For each staff member, compute average handling time on GS or Offer applications
-    using ActivityLog data (status change timestamps).
+    Per-staff GS or Offer stage handling time.
 
-    GS:
-      - Total  = Review + GS submitted + GS onhold + GS approved + GS Rejected
-      - Completed = GS approved + GS Rejected
-      - Pending   = Review + GS submitted + GS onhold
+    GS scope (GS stage ONLY — CoE/Visa statuses excluded):
+      Total      = GS pending + GS completed
+      Completed  = GS Approved + GS Rejected   (timer stops here)
+      Pending    = In Review + GS submitted + GS onhold + GS document pending
+                   + GS additional document request
+      Avg Handling Time = AVG(decision_date - assigned_date) for completed ONLY
+      Avg First Action  = AVG(first_status_change - assigned_date) for all
 
-    Offer:
-      - Total  = Enquiries + Document Requested + On Hold + Offer Requested +
-                 Offer Received + Offer Rejected + Not Eligible
-      - Completed = Offer Received + Offer Rejected + Not Eligible
-      - Pending   = Enquiries + Document Requested + On Hold + Offer Requested
+    Offer scope (same principle):
+      Completed  = Offer Received + Offer Rejected + Not Eligible
+      Pending    = the rest
     """
     now = datetime.utcnow()
     dt_from = _parse_date(date_from)
@@ -166,12 +166,20 @@ def staff_timing_report(
 
     dept = department if department in ("gs", "offer") else "gs"
 
+    # ── Scope: GS timing only covers the GS stage itself ──────────────────────
     if dept == "gs":
-        all_statuses = GS_ALL_STATUSES
-        completed_statuses = GS_COMPLETED_STATUSES
+        # Completed = decision made at GS stage — timer stops
+        timing_completed = {"GS approved", "GS Rejected"}
+        # Pending = still in GS stage (CoE/Visa statuses intentionally excluded)
+        timing_pending = {
+            "In Review", "GS submitted", "GS onhold",
+            "GS document pending", "GS additional document request",
+        }
+        timing_all = timing_pending | timing_completed
     else:
-        all_statuses = OFFER_ALL_STATUSES
-        completed_statuses = OFFER_COMPLETED_STATUSES
+        timing_completed = {"Offer Received", "Offer Rejected", "Not Eligible"}
+        timing_pending = {"Enquiries", "Document Requested", "On Hold", "Offer Request"}
+        timing_all = timing_pending | timing_completed
 
     users = db.query(models.User).filter(models.User.is_active == True).all()
     result = []
@@ -180,7 +188,7 @@ def staff_timing_report(
         q = db.query(models.Application).filter(
             models.Application.assigned_to_id == user.id,
             models.Application.department == dept,
-            models.Application.application_status.in_(list(all_statuses)),
+            models.Application.application_status.in_(list(timing_all)),
         )
         if dt_from:
             q = q.filter(models.Application.created_at >= dt_from)
@@ -214,72 +222,76 @@ def staff_timing_report(
         for log in status_logs:
             logs_by_app.setdefault(log.application_id, []).append(log)
 
+        # ── Avg Handling Time: ONLY completed cases, decision_date - assigned_date
         handling_days_list = []
-        completion_days_list = []
+        # ── Avg First Action: all apps, first_status_change - assigned_date
         first_action_days_list = []
+        # ── Stage duration breakdown (for active stages only, timer stops at completion)
         stage_days: dict = {}
 
         pending_count = 0
         completed_count = 0
 
+        def ref_datetime(app):
+            """Return assigned date (or created_at) as a datetime."""
+            if app.assigned_date:
+                return datetime.combine(app.assigned_date, datetime.min.time())
+            return app.created_at
+
         for app in apps:
-            is_completed = app.application_status in completed_statuses
+            is_completed = app.application_status in timing_completed
             if is_completed:
                 completed_count += 1
             else:
                 pending_count += 1
 
-            app_id_logs = logs_by_app.get(app.id)
-            ref = app.assigned_date or app.created_at.date() if hasattr(app, 'assigned_date') and app.assigned_date else None
+            app_logs = logs_by_app.get(app.id, [])
+            ref_dt = ref_datetime(app)
 
-            # ── Avg Handling Time: include ALL apps (active + completed) ──────
-            if ref:
-                ref_dt = datetime.combine(ref, datetime.min.time()) if hasattr(ref, 'year') and not hasattr(ref, 'hour') else ref
-                if is_completed and app_id_logs:
-                    last_log = app_id_logs[-1]
-                    days = (last_log.changed_at - ref_dt).total_seconds() / 86400
-                else:
-                    days = (now - ref_dt).total_seconds() / 86400
-                handling_days_list.append(max(0, days))
-
-            # ── Avg Completion Time: only completed apps ───────────────────────
+            # ── Avg Handling Time (completed only) ────────────────────────────
+            # Find the log entry where status changed TO a completed status
             if is_completed:
-                ref_dt_for_comp = (
-                    datetime.combine(app.assigned_date, datetime.min.time())
-                    if app.assigned_date else app.created_at
-                )
-                if app_id_logs:
-                    last_log = app_id_logs[-1]
-                    comp_days = (last_log.changed_at - ref_dt_for_comp).total_seconds() / 86400
-                else:
-                    # No log — use current time as best estimate
-                    comp_days = (now - ref_dt_for_comp).total_seconds() / 86400
-                completion_days_list.append(max(0, comp_days))
+                decision_log = None
+                for log in reversed(app_logs):
+                    if log.new_value in timing_completed:
+                        decision_log = log
+                        break
+                if decision_log:
+                    days = (decision_log.changed_at - ref_dt).total_seconds() / 86400
+                    handling_days_list.append(max(0, days))
+                # If no log found, skip (don't use current time — it would be wrong)
 
-            # ── Avg First Action ───────────────────────────────────────────────
-            if app_id_logs:
-                first_log = app_id_logs[0]
-                fa_days = (first_log.changed_at - app.created_at).total_seconds() / 86400
+            # ── Avg First Action (all apps) ───────────────────────────────────
+            if app_logs:
+                first_log = app_logs[0]
+                fa_days = (first_log.changed_at - ref_dt).total_seconds() / 86400
                 first_action_days_list.append(max(0, fa_days))
 
             # ── Stage duration breakdown ───────────────────────────────────────
-            logs = app_id_logs or []
+            # Only track time spent in GS-stage statuses; stop at completion
+            logs = app_logs
             if logs:
                 init_status = logs[0].old_value
-                if init_status:
+                if init_status and init_status in timing_all:
                     init_days = (logs[0].changed_at - app.created_at).total_seconds() / 86400
                     stage_days.setdefault(init_status, []).append(max(0, init_days))
 
                 for i in range(len(logs) - 1):
                     from_status = logs[i].new_value
-                    if from_status:
+                    if from_status and from_status in timing_all:
                         days_in = (logs[i + 1].changed_at - logs[i].changed_at).total_seconds() / 86400
                         stage_days.setdefault(from_status, []).append(max(0, days_in))
 
+                # For PENDING apps only: add ongoing time in current status
                 current_status = logs[-1].new_value
-                if current_status and not is_completed:
+                if current_status and current_status in timing_pending:
                     days_in = (now - logs[-1].changed_at).total_seconds() / 86400
                     stage_days.setdefault(current_status, []).append(max(0, days_in))
+            else:
+                # No logs yet: time since creation in current pending status
+                if app.application_status in timing_pending:
+                    days = (now - app.created_at).total_seconds() / 86400
+                    stage_days.setdefault(app.application_status, []).append(max(0, days))
 
         def avg(lst): return round(sum(lst) / len(lst), 1) if lst else None
 
@@ -292,8 +304,8 @@ def staff_timing_report(
             total_gs=len(apps),
             pending_gs=pending_count,
             completed_gs=completed_count,
-            avg_handling_days=avg(handling_days_list),
-            avg_completion_days=avg(completion_days_list),
+            avg_handling_days=avg(handling_days_list),   # completed only
+            avg_completion_days=None,                     # retired — same as handling
             avg_first_action_days=avg(first_action_days_list),
             avg_stage_days=avg_stage,
         ))

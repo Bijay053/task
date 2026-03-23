@@ -362,7 +362,7 @@ export default function Reports() {
                     <div className="text-2xl font-bold">
                       {fmtDays(staffTiming.filter((p: any) => p.avg_handling_days).reduce((s: number, p: any, _: number, arr: any[]) => s + (p.avg_handling_days ?? 0) / arr.filter((x: any) => x.avg_handling_days).length, 0) || null)}
                     </div>
-                    <div className="text-sm text-muted-foreground">Avg Handling Time</div>
+                    <div className="text-sm text-muted-foreground">Avg Handling (completed only)</div>
                   </div>
                 </Card>
               </div>
@@ -374,19 +374,24 @@ export default function Reports() {
                     <tr>
                       <th>Staff Member</th>
                       <th>Role</th>
-                      <th className="text-center">{timingDept === "gs" ? "GS" : "Offer"} Total</th>
-                      <th className="text-center">Pending</th>
-                      <th className="text-center">Completed</th>
-                      <th style={{ minWidth: "200px" }}>Avg Handling Time</th>
-                      <th style={{ minWidth: "180px" }}>Avg Completion</th>
-                      <th style={{ minWidth: "180px" }}>Avg First Action</th>
+                      <th className="text-center">{timingDept === "gs" ? "GS Stage" : "Offer Stage"} Total</th>
+                      <th className="text-center text-amber-700">Pending</th>
+                      <th className="text-center text-green-700">Completed</th>
+                      <th style={{ minWidth: "220px" }}>
+                        <div>Avg Handling Time</div>
+                        <div className="font-normal text-xs text-muted-foreground">(completed cases only)</div>
+                      </th>
+                      <th style={{ minWidth: "180px" }}>
+                        <div>Avg First Action</div>
+                        <div className="font-normal text-xs text-muted-foreground">(all cases)</div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {timingLoading ? (
-                      <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">Loading timing data...</td></tr>
+                      <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Loading timing data...</td></tr>
                     ) : staffTiming?.length === 0 ? (
-                      <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
+                      <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
                     ) : (
                       staffTiming?.map((p: any) => {
                         const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
@@ -407,7 +412,6 @@ export default function Reports() {
                               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{p.completed_gs}</span>
                             </td>
                             <td><DaysBar days={p.avg_handling_days} max={maxHandling} /></td>
-                            <td><DaysBar days={p.avg_completion_days} max={maxHandling} color="bg-violet-500" /></td>
                             <td><DaysBar days={p.avg_first_action_days} max={maxHandling} color="bg-amber-500" /></td>
                           </tr>
                         );
