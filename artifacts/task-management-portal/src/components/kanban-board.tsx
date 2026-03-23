@@ -71,58 +71,58 @@ function KanbanCard({
       onDragEnd={onDragEnd}
       onClick={handleClick}
       className={cn(
-        "bg-card border border-border rounded-lg px-2 py-1.5 shadow-sm select-none transition-all",
+        "bg-card border border-border rounded-xl px-3 py-2.5 shadow-sm select-none transition-all",
         "hover:shadow-md hover:border-primary/30 cursor-grab active:cursor-grabbing",
         isDragging && "opacity-40 scale-95 ring-2 ring-primary/40",
         onCardClick && "cursor-pointer"
       )}
     >
       {/* Top row: app_id (left) + priority + grip (right) */}
-      <div className="flex items-center justify-between gap-1 mb-1">
-        <div className="flex items-center gap-1 min-w-0">
+      <div className="flex items-center justify-between gap-1 mb-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
           {app.app_id && (
-            <span className="text-[9px] font-mono font-semibold text-slate-400 dark:text-slate-500 truncate" title={app.app_id}>
+            <span className="text-[10px] font-mono font-semibold text-slate-400 dark:text-slate-500 truncate" title={app.app_id}>
               {app.app_id}
             </span>
           )}
           <PriorityDot priority={app.priority ?? undefined} />
         </div>
-        <GripVertical className="w-3 h-3 text-muted-foreground/20 shrink-0" />
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
       </div>
 
       {/* Student name — main content */}
-      <p className="text-xs font-semibold leading-tight line-clamp-1 mb-0.5">{studentName}</p>
+      <p className="text-sm font-semibold leading-snug line-clamp-1 mb-1">{studentName}</p>
 
       {/* University — single line, muted */}
       {uniName && (
-        <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1 mb-1">{uniName}</p>
+        <p className="text-xs text-muted-foreground leading-snug line-clamp-1 mb-2">{uniName}</p>
       )}
 
       {/* Footer: intake + assignee avatar */}
       <div className="flex items-center justify-between gap-1">
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           {app.intake && (
-            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground/60 shrink-0">
-              <Calendar className="w-2.5 h-2.5" />{app.intake}
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70 shrink-0">
+              <Calendar className="w-3 h-3" />{app.intake}
             </span>
           )}
           {(app.agent?.name || app.channel) && (
-            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground/50 truncate">
-              <UserCheck className="w-2.5 h-2.5 shrink-0" />
-              <span className="truncate max-w-[55px]">{app.agent?.name || app.channel}</span>
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground/60 truncate">
+              <UserCheck className="w-3 h-3 shrink-0" />
+              <span className="truncate max-w-[70px]">{app.agent?.name || app.channel}</span>
             </span>
           )}
         </div>
         {app.assigned_to?.full_name ? (
           <div
-            className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0"
+            className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary shrink-0"
             title={app.assigned_to.full_name}
           >
             {app.assigned_to.full_name.charAt(0)}
           </div>
         ) : (
-          <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0" title="Unassigned">
-            <User className="w-3 h-3 text-muted-foreground/30" />
+          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0" title="Unassigned">
+            <User className="w-3.5 h-3.5 text-muted-foreground/40" />
           </div>
         )}
       </div>
@@ -183,7 +183,7 @@ function KanbanCardColumn({
   return (
     <div
       className={cn(
-        "w-[280px] min-w-[280px] max-w-[280px] shrink-0 rounded-b-xl p-1.5 transition-colors relative flex flex-col gap-1.5",
+        "w-[310px] min-w-[310px] max-w-[310px] shrink-0 rounded-b-xl p-1.5 transition-colors relative flex flex-col gap-1.5",
         isOver ? "bg-primary/5 ring-2 ring-primary/30 ring-inset" : "bg-muted/40"
       )}
       onDragEnter={handleDragEnter}
@@ -317,7 +317,7 @@ export function KanbanBoard({
           return (
             <div
               key={status}
-              className="w-[280px] min-w-[280px] max-w-[280px] shrink-0 flex items-center justify-between px-3 py-2 rounded-t-xl font-semibold text-xs uppercase tracking-wide"
+              className="w-[310px] min-w-[310px] max-w-[310px] shrink-0 flex items-center justify-between px-3 py-2 rounded-t-xl font-semibold text-xs uppercase tracking-wide"
               style={{ backgroundColor: color.bg, color: color.text }}
             >
               <span className="truncate">{status}</span>
