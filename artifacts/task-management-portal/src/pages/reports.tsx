@@ -597,31 +597,49 @@ export default function Reports() {
                             <th className="text-center">{timingDept === "gs" ? "GS Stage" : "Offer Stage"} Total</th>
                             <th className="text-center text-amber-700">Pending</th>
                             <th className="text-center text-green-700">Completed</th>
-                            <th style={{ minWidth: "210px" }}>
-                              <div>Avg Handling Time</div>
-                              <div className="font-normal text-xs text-muted-foreground">all cases (workload pressure)</div>
+                            <th style={{ minWidth: "180px" }}>
+                              <div>Pending Workload</div>
+                              <div className="font-normal text-xs text-muted-foreground">pending / max pending</div>
                             </th>
-                            <th style={{ minWidth: "210px" }}>
+                            <th style={{ minWidth: "190px" }}>
+                              <div>Avg Handling Time</div>
+                              <div className="font-normal text-xs text-muted-foreground">all cases incl. pending</div>
+                            </th>
+                            <th style={{ minWidth: "190px" }}>
                               <div>Avg Completion Time</div>
-                              <div className="font-normal text-xs text-muted-foreground">completed only (performance)</div>
+                              <div className="font-normal text-xs text-muted-foreground">completed only</div>
                             </th>
                             <th style={{ minWidth: "180px" }}>
                               <div>Avg First Action</div>
-                              <div className="font-normal text-xs text-muted-foreground">first touch after assignment</div>
+                              <div className="font-normal text-xs text-muted-foreground">first non-final touch</div>
                             </th>
-                            <th className="text-center">SLA</th>
+                            <th className="text-center">
+                              <div>Performance</div>
+                              <div className="font-normal text-xs text-muted-foreground">SLA + outliers</div>
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {timingLoading ? (
-                            <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">Loading timing data...</td></tr>
+                            <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">Loading timing data...</td></tr>
                           ) : staffTiming?.length === 0 ? (
-                            <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
-                          ) : (
-                            staffTiming?.map((p: any) => {
+                            <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
+                          ) : (() => {
+                            const maxPending = Math.max(1, ...staffTiming.map((p: any) => p.pending_gs ?? 0));
+                            return staffTiming?.map((p: any) => {
                               const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
-                              const slaBreachPct = p.total_gs > 0 ? Math.round(((p.sla_breach_count ?? 0) / p.total_gs) * 100) : 0;
-                              const slaOk = (p.sla_breach_count ?? 0) === 0;
+                              const pendPct = Math.round(((p.pending_gs ?? 0) / maxPending) * 100);
+                              const breachCount = p.sla_breach_count ?? 0;
+                              const outlierCount = p.outlier_count ?? 0;
+                              const slaBreachPct = p.total_gs > 0 ? Math.round((breachCount / p.total_gs) * 100) : 0;
+
+                              // SLA traffic-light based on avg_completion_days
+                              const compDays = p.avg_completion_days;
+                              const perfStatus = compDays == null ? null
+                                : compDays <= 1   ? "good"
+                                : compDays <= 2   ? "slow"
+                                : "critical";
+
                               return (
                                 <tr key={p.user_id} className="align-middle">
                                   <td>
@@ -638,27 +656,55 @@ export default function Reports() {
                                   <td className="text-center">
                                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{p.completed_gs}</span>
                                   </td>
+                                  {/* Pending Workload % bar */}
+                                  <td>
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
+                                        <div
+                                          className={cn("h-full rounded-full transition-all",
+                                            pendPct >= 100 ? "bg-red-500" : pendPct > 60 ? "bg-orange-400" : "bg-blue-500")}
+                                          style={{ width: `${pendPct}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-xs text-muted-foreground w-16 shrink-0">{p.pending_gs} ({pendPct}%)</span>
+                                    </div>
+                                  </td>
                                   <td><DaysBar days={p.avg_handling_days} max={maxHandling} /></td>
                                   <td><DaysBar days={p.avg_completion_days} max={maxCompletion} color="bg-violet-500" /></td>
-                                  <td><DaysBar days={p.avg_first_action_days} max={maxHandling} color="bg-amber-500" /></td>
-                                  <td className="text-center">
-                                    {p.total_gs === 0 ? (
-                                      <span className="text-xs text-muted-foreground">—</span>
-                                    ) : slaOk ? (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ On Time</span>
+                                  <td>
+                                    {p.avg_first_action_days == null ? (
+                                      <span className="text-xs text-muted-foreground italic">single-step closes</span>
                                     ) : (
-                                      <div className="flex flex-col items-center gap-0.5">
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                                          ✕ {p.sla_breach_count} delayed
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">{slaBreachPct}% of cases</span>
-                                      </div>
+                                      <DaysBar days={p.avg_first_action_days} max={Math.max(1, maxHandling / 4)} color="bg-amber-500" />
                                     )}
+                                  </td>
+                                  {/* Performance: traffic light + SLA + outliers */}
+                                  <td>
+                                    <div className="flex flex-col items-start gap-1">
+                                      {perfStatus && (
+                                        <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold",
+                                          perfStatus === "good"     ? "bg-green-100 text-green-700"
+                                          : perfStatus === "slow"   ? "bg-amber-100 text-amber-700"
+                                          : "bg-red-100 text-red-700"
+                                        )}>
+                                          {perfStatus === "good" ? "✓ Good" : perfStatus === "slow" ? "⚠ Slow" : "✕ Critical"}
+                                        </span>
+                                      )}
+                                      {breachCount > 0 && (
+                                        <span className="text-xs text-red-600">{breachCount} SLA breach ({slaBreachPct}%)</span>
+                                      )}
+                                      {outlierCount > 0 && (
+                                        <span className="text-xs text-amber-600">⚠ {outlierCount} case{outlierCount > 1 ? "s" : ""} &gt;30d</span>
+                                      )}
+                                      {perfStatus === null && breachCount === 0 && (
+                                        <span className="text-xs text-muted-foreground">—</span>
+                                      )}
+                                    </div>
                                   </td>
                                 </tr>
                               );
-                            })
-                          )}
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>

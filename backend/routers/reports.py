@@ -242,25 +242,20 @@ def staff_timing_report(
             logs_by_app.setdefault(log.application_id, []).append(log)
 
         # ── Metrics accumulators ───────────────────────────────────────────────
-        # Avg Handling = ALL apps: completed → decision_date - assigned;
-        #                          pending   → now - assigned
-        handling_days_list = []
-        # Avg Completion = ONLY completed apps: decision_date - assigned_date
-        completion_days_list = []
-        # Avg First Action = first status change - assigned_date (all apps with logs)
-        first_action_days_list = []
-        # SLA: cases where handling_days > SLA_TARGET_DAYS are "delayed"
-        SLA_TARGET_DAYS = 2.0
-        OUTLIER_MIN_DAYS = 5 / (60 * 24)   # 5 minutes — below this → data artifact
-        OUTLIER_MAX_DAYS = 30.0              # 30 days   — above this → flag but keep
+        handling_days_list   = []   # all apps (completed→decision, pending→now)
+        completion_days_list = []   # completed only: decision - assigned
+        first_action_days_list = [] # FIRST NON-FINAL log - assigned (hours expected)
+        SLA_TARGET_DAYS  = 2.0
+        OUTLIER_MIN_DAYS = 5 / (60 * 24)   # 5 minutes — data artifacts below this
+        OUTLIER_MAX_DAYS = 30.0             # 30 days — stalled/suspicious above this
         sla_breach_count = 0
+        outlier_count    = 0
 
         stage_days: dict = {}
-        pending_count = 0
+        pending_count   = 0
         completed_count = 0
 
         def ref_datetime(app):
-            """Return assigned date (or created_at) as a datetime."""
             if app.assigned_date:
                 return datetime.combine(app.assigned_date, datetime.min.time())
             return app.created_at
@@ -276,8 +271,8 @@ def staff_timing_report(
             ref_dt = ref_datetime(app)
 
             # ── Avg Handling Time (ALL apps) ──────────────────────────────────
-            # Completed: use actual decision timestamp
-            # Pending:   use now (measures current workload pressure)
+            # Completed: decision_log.changed_at - assigned
+            # Pending:   now - assigned  (workload pressure)
             if is_completed:
                 decision_log = None
                 for log in reversed(app_logs):
@@ -285,30 +280,38 @@ def staff_timing_report(
                         decision_log = log
                         break
                 if decision_log:
-                    h_days = (decision_log.changed_at - ref_dt).total_seconds() / 86400
-                    h_days = max(0, h_days)
-                    if h_days >= OUTLIER_MIN_DAYS:   # exclude sub-5-min artifacts
+                    h_days = max(0, (decision_log.changed_at - ref_dt).total_seconds() / 86400)
+                    if h_days >= OUTLIER_MIN_DAYS:
                         handling_days_list.append(h_days)
+                        completion_days_list.append(h_days)
                         if h_days > SLA_TARGET_DAYS:
                             sla_breach_count += 1
-                        # ── Avg Completion (only for confirmed completed) ─────
-                        completion_days_list.append(h_days)
+                        if h_days > OUTLIER_MAX_DAYS:
+                            outlier_count += 1
             else:
-                # Pending: ongoing timer
-                h_days = (now - ref_dt).total_seconds() / 86400
-                h_days = max(0, h_days)
+                h_days = max(0, (now - ref_dt).total_seconds() / 86400)
                 if h_days >= OUTLIER_MIN_DAYS:
                     handling_days_list.append(h_days)
                     if h_days > SLA_TARGET_DAYS:
                         sla_breach_count += 1
+                    if h_days > OUTLIER_MAX_DAYS:
+                        outlier_count += 1
 
-            # ── Avg First Action (all apps that have at least one log) ────────
+            # ── Avg First Action ───────────────────────────────────────────────
+            # ONLY the first log whose new_value is NOT a final/completion status.
+            # This measures "how quickly did staff first TOUCH the case?" — expected
+            # to be hours. If the very first log is the final decision (single-step
+            # close), we skip it so First Action ≠ Handling.
             if app_logs:
-                first_log = app_logs[0]
-                fa_days = (first_log.changed_at - ref_dt).total_seconds() / 86400
-                fa_days = max(0, fa_days)
-                if fa_days >= OUTLIER_MIN_DAYS:
-                    first_action_days_list.append(fa_days)
+                first_intermediate = None
+                for log in app_logs:
+                    if log.new_value not in timing_completed:
+                        first_intermediate = log
+                        break
+                if first_intermediate:
+                    fa_days = max(0, (first_intermediate.changed_at - ref_dt).total_seconds() / 86400)
+                    if fa_days >= OUTLIER_MIN_DAYS:
+                        first_action_days_list.append(fa_days)
 
             # ── Stage duration breakdown ───────────────────────────────────────
             logs = app_logs
@@ -344,12 +347,13 @@ def staff_timing_report(
             total_gs=len(apps),
             pending_gs=pending_count,
             completed_gs=completed_count,
-            avg_handling_days=avg(handling_days_list),       # all cases (workload pressure)
-            avg_completion_days=avg(completion_days_list),   # completed only (performance)
+            avg_handling_days=avg(handling_days_list),
+            avg_completion_days=avg(completion_days_list),
             avg_first_action_days=avg(first_action_days_list),
             avg_stage_days=avg_stage,
             sla_breach_count=sla_breach_count,
             sla_target_days=SLA_TARGET_DAYS,
+            outlier_count=outlier_count,
         ))
 
     return sorted(result, key=lambda x: x.total_gs, reverse=True)

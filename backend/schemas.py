@@ -451,10 +451,11 @@ class StaffTimingReport(BaseModel):
     completed_gs: int
     avg_handling_days: Optional[float]       # avg days (all cases): completed→decision, pending→now
     avg_completion_days: Optional[float]     # avg days (completed only): decision_date - assigned_date
-    sla_breach_count: int = 0               # cases exceeding SLA target
-    sla_target_days: float = 2.0            # SLA target in days (configurable per dept)
-    avg_first_action_days: Optional[float]   # avg days before first update (status change)
-    avg_stage_days: Optional[Dict[str, float]]  # avg days per stage for this user's GS apps
+    sla_breach_count: int = 0               # cases exceeding SLA target (>2d)
+    sla_target_days: float = 2.0            # SLA target in days
+    outlier_count: int = 0                  # cases taking >30 days (suspicious/stalled)
+    avg_first_action_days: Optional[float]  # avg days to FIRST NON-FINAL status change (hours expected)
+    avg_stage_days: Optional[Dict[str, float]]
 
 
 class StageReport(BaseModel):
