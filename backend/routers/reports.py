@@ -30,14 +30,26 @@ GS_ACTIVE_STATUSES = {
 }
 GS_ALL_STATUSES = GS_ACTIVE_STATUSES | GS_COMPLETED_STATUSES
 
-# Weighted workload tiers: GS-core stage = heavy (×3), Visa Lodged = medium (×2), Offer = light (×1)
-# CoE Requested is NOT weighted at ×2 — only Visa Lodged carries the elevated weight.
-GS_WEIGHT3_STATUSES = {
-    "In Review", "GS submitted", "GS onhold",
-    "GS document pending", "GS additional document request",
-    "Refund Requested", "CoE Requested",
+# ─── Weighted workload maps ───────────────────────────────────────────────────
+# Statuses NOT listed default to 0 (not counted).
+# Refund Requested = excluded (0).  CoE Requested = ×0.1 (minor touch).
+GS_STATUS_WEIGHTS: dict = {
+    "In Review":                       3,
+    "GS submitted":                    3,
+    "GS onhold":                       3,
+    "GS document pending":             3,
+    "GS additional document request":  3,
+    "Visa Lodged":                     2,
+    "CoE Requested":                   0.1,
+    # Refund Requested → 0 (not counted)
 }
-GS_WEIGHT2_STATUSES = {"Visa Lodged"}
+# Docs Pending / On Hold excluded (0).  Not Eligible = ×0.1 (minor completed work).
+OFFER_STATUS_WEIGHTS: dict = {
+    "Offer Request":  1,
+    "Enquiries":      1,
+    "Not Eligible":   0.1,
+    # Document Requested, On Hold → 0 (not counted)
+}
 
 # Offer pipeline
 OFFER_COMPLETED_STATUSES = {"Offer Received", "Offer Rejected", "Not Eligible"}
@@ -128,13 +140,11 @@ def performance_report(
         )
 
         # weighted_workload: GS core (×3) + CoE/Visa (×2) + Offer active (×1)
-        weighted_workload = sum(
-            3 if a.application_status in GS_WEIGHT3_STATUSES else
-            2 if a.application_status in GS_WEIGHT2_STATUSES else
-            1  # Offer active
+        weighted_workload: float = sum(
+            GS_STATUS_WEIGHTS.get(a.application_status, 0)
+            if a.department == "gs"
+            else OFFER_STATUS_WEIGHTS.get(a.application_status, 0)
             for a in apps
-            if (a.department == "gs" and a.application_status in GS_ACTIVE_STATUSES)
-            or (a.department == "offer" and a.application_status in OFFER_ACTIVE_STATUSES)
         )
 
         breakdown: dict = {}

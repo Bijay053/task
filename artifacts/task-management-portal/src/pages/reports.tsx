@@ -474,7 +474,7 @@ export default function Reports() {
                             </th>
                             <th style={{ minWidth: "200px" }}>
                               <div>Weighted Score</div>
-                              <div className="font-normal text-xs text-muted-foreground">share of total · GS×3 · Visa×2 · Offer×1</div>
+                              <div className="font-normal text-xs text-muted-foreground">share of total · GS×3 · Visa×2 · Offer×1 · CoE/Not Eligible×0.1</div>
                             </th>
                             <th style={{ minWidth: "320px" }}>Status Breakdown</th>
                           </tr>
@@ -519,7 +519,7 @@ export default function Reports() {
                                   </td>
                                   <td>
                                     {(() => {
-                                      const wScore = p.weighted_workload ?? 0;
+                                      const wScore: number = p.weighted_workload ?? 0;
                                       const wPct = totalWeighted > 0 ? Math.round((wScore / totalWeighted) * 100) : 0;
                                       return (
                                         <div className="flex items-center gap-2">
@@ -529,7 +529,7 @@ export default function Reports() {
                                               style={{ width: `${wPct}%` }}
                                             />
                                           </div>
-                                          <span className="text-xs text-muted-foreground w-16 shrink-0">{wScore} ({wPct}%)</span>
+                                          <span className="text-xs text-muted-foreground w-16 shrink-0">{wScore % 1 === 0 ? wScore : wScore.toFixed(1)} ({wPct}%)</span>
                                         </div>
                                       );
                                     })()}
