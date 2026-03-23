@@ -222,13 +222,21 @@ def staff_timing_report(
         for log in status_logs:
             logs_by_app.setdefault(log.application_id, []).append(log)
 
-        # ── Avg Handling Time: ONLY completed cases, decision_date - assigned_date
+        # ── Metrics accumulators ───────────────────────────────────────────────
+        # Avg Handling = ALL apps: completed → decision_date - assigned;
+        #                          pending   → now - assigned
         handling_days_list = []
-        # ── Avg First Action: all apps, first_status_change - assigned_date
+        # Avg Completion = ONLY completed apps: decision_date - assigned_date
+        completion_days_list = []
+        # Avg First Action = first status change - assigned_date (all apps with logs)
         first_action_days_list = []
-        # ── Stage duration breakdown (for active stages only, timer stops at completion)
-        stage_days: dict = {}
+        # SLA: cases where handling_days > SLA_TARGET_DAYS are "delayed"
+        SLA_TARGET_DAYS = 2.0
+        OUTLIER_MIN_DAYS = 5 / (60 * 24)   # 5 minutes — below this → data artifact
+        OUTLIER_MAX_DAYS = 30.0              # 30 days   — above this → flag but keep
+        sla_breach_count = 0
 
+        stage_days: dict = {}
         pending_count = 0
         completed_count = 0
 
@@ -248,8 +256,9 @@ def staff_timing_report(
             app_logs = logs_by_app.get(app.id, [])
             ref_dt = ref_datetime(app)
 
-            # ── Avg Handling Time (completed only) ────────────────────────────
-            # Find the log entry where status changed TO a completed status
+            # ── Avg Handling Time (ALL apps) ──────────────────────────────────
+            # Completed: use actual decision timestamp
+            # Pending:   use now (measures current workload pressure)
             if is_completed:
                 decision_log = None
                 for log in reversed(app_logs):
@@ -257,18 +266,32 @@ def staff_timing_report(
                         decision_log = log
                         break
                 if decision_log:
-                    days = (decision_log.changed_at - ref_dt).total_seconds() / 86400
-                    handling_days_list.append(max(0, days))
-                # If no log found, skip (don't use current time — it would be wrong)
+                    h_days = (decision_log.changed_at - ref_dt).total_seconds() / 86400
+                    h_days = max(0, h_days)
+                    if h_days >= OUTLIER_MIN_DAYS:   # exclude sub-5-min artifacts
+                        handling_days_list.append(h_days)
+                        if h_days > SLA_TARGET_DAYS:
+                            sla_breach_count += 1
+                        # ── Avg Completion (only for confirmed completed) ─────
+                        completion_days_list.append(h_days)
+            else:
+                # Pending: ongoing timer
+                h_days = (now - ref_dt).total_seconds() / 86400
+                h_days = max(0, h_days)
+                if h_days >= OUTLIER_MIN_DAYS:
+                    handling_days_list.append(h_days)
+                    if h_days > SLA_TARGET_DAYS:
+                        sla_breach_count += 1
 
-            # ── Avg First Action (all apps) ───────────────────────────────────
+            # ── Avg First Action (all apps that have at least one log) ────────
             if app_logs:
                 first_log = app_logs[0]
                 fa_days = (first_log.changed_at - ref_dt).total_seconds() / 86400
-                first_action_days_list.append(max(0, fa_days))
+                fa_days = max(0, fa_days)
+                if fa_days >= OUTLIER_MIN_DAYS:
+                    first_action_days_list.append(fa_days)
 
             # ── Stage duration breakdown ───────────────────────────────────────
-            # Only track time spent in GS-stage statuses; stop at completion
             logs = app_logs
             if logs:
                 init_status = logs[0].old_value
@@ -282,13 +305,11 @@ def staff_timing_report(
                         days_in = (logs[i + 1].changed_at - logs[i].changed_at).total_seconds() / 86400
                         stage_days.setdefault(from_status, []).append(max(0, days_in))
 
-                # For PENDING apps only: add ongoing time in current status
                 current_status = logs[-1].new_value
                 if current_status and current_status in timing_pending:
                     days_in = (now - logs[-1].changed_at).total_seconds() / 86400
                     stage_days.setdefault(current_status, []).append(max(0, days_in))
             else:
-                # No logs yet: time since creation in current pending status
                 if app.application_status in timing_pending:
                     days = (now - app.created_at).total_seconds() / 86400
                     stage_days.setdefault(app.application_status, []).append(max(0, days))
@@ -304,10 +325,12 @@ def staff_timing_report(
             total_gs=len(apps),
             pending_gs=pending_count,
             completed_gs=completed_count,
-            avg_handling_days=avg(handling_days_list),   # completed only
-            avg_completion_days=None,                     # retired — same as handling
+            avg_handling_days=avg(handling_days_list),       # all cases (workload pressure)
+            avg_completion_days=avg(completion_days_list),   # completed only (performance)
             avg_first_action_days=avg(first_action_days_list),
             avg_stage_days=avg_stage,
+            sla_breach_count=sla_breach_count,
+            sla_target_days=SLA_TARGET_DAYS,
         ))
 
     return sorted(result, key=lambda x: x.total_gs, reverse=True)

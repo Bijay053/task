@@ -436,85 +436,142 @@ export default function Reports() {
         {/* ── Staff Handling Time ── */}
         {reportTab === "timing" && (
           <>
-            {staffTiming && (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><Users className="w-6 h-6 text-blue-600" /></div>
-                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s: number, p: any) => s + p.total_gs, 0)}</div><div className="text-sm text-muted-foreground">Total {timingDept === "gs" ? "GS" : "Offer"} Apps</div></div>
-                </Card>
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
-                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s: number, p: any) => s + p.completed_gs, 0)}</div><div className="text-sm text-muted-foreground">Completed</div></div>
-                </Card>
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0"><Timer className="w-6 h-6 text-amber-600" /></div>
-                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s: number, p: any) => s + p.pending_gs, 0)}</div><div className="text-sm text-muted-foreground">Pending</div></div>
-                </Card>
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Clock className="w-6 h-6 text-primary" /></div>
-                  <div>
-                    <div className="text-2xl font-bold">
-                      {fmtDays(staffTiming.filter((p: any) => p.avg_handling_days).reduce((s: number, p: any, _: number, arr: any[]) => s + (p.avg_handling_days ?? 0) / arr.filter((x: any) => x.avg_handling_days).length, 0) || null)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Avg Handling (completed only)</div>
+            {staffTiming && (() => {
+              const totalApps = staffTiming.reduce((s: number, p: any) => s + p.total_gs, 0);
+              const totalCompleted = staffTiming.reduce((s: number, p: any) => s + p.completed_gs, 0);
+              const totalPending = staffTiming.reduce((s: number, p: any) => s + p.pending_gs, 0);
+              const totalSLABreach = staffTiming.reduce((s: number, p: any) => s + (p.sla_breach_count ?? 0), 0);
+              const slaTarget = staffTiming[0]?.sla_target_days ?? 2;
+
+              const withHandling = staffTiming.filter((p: any) => p.avg_handling_days != null);
+              const overallAvgHandling = withHandling.length
+                ? withHandling.reduce((s: number, p: any) => s + p.avg_handling_days, 0) / withHandling.length
+                : null;
+              const withCompletion = staffTiming.filter((p: any) => p.avg_completion_days != null);
+              const overallAvgCompletion = withCompletion.length
+                ? withCompletion.reduce((s: number, p: any) => s + p.avg_completion_days, 0) / withCompletion.length
+                : null;
+
+              const maxCompletion = Math.max(1, ...staffTiming.map((p: any) => p.avg_completion_days ?? 0));
+
+              return (
+                <>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><Users className="w-6 h-6 text-blue-600" /></div>
+                      <div>
+                        <div className="text-2xl font-bold">{totalApps}</div>
+                        <div className="text-sm text-muted-foreground">Total {timingDept === "gs" ? "GS Stage" : "Offer Stage"} Apps</div>
+                        <div className="text-xs text-muted-foreground">{totalCompleted} completed · {totalPending} pending</div>
+                      </div>
+                    </Card>
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Clock className="w-6 h-6 text-primary" /></div>
+                      <div>
+                        <div className="text-2xl font-bold">{fmtDays(overallAvgHandling)}</div>
+                        <div className="text-sm text-muted-foreground">Avg Handling Time</div>
+                        <div className="text-xs text-muted-foreground">all cases incl. pending</div>
+                      </div>
+                    </Card>
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
+                      <div>
+                        <div className="text-2xl font-bold">{fmtDays(overallAvgCompletion)}</div>
+                        <div className="text-sm text-muted-foreground">Avg Completion Time</div>
+                        <div className="text-xs text-muted-foreground">completed cases only</div>
+                      </div>
+                    </Card>
+                    <Card className={cn("p-5 flex items-center gap-4", totalSLABreach > 0 ? "border-red-200 bg-red-50/30" : "")}>
+                      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", totalSLABreach > 0 ? "bg-red-100" : "bg-green-100")}>
+                        <AlertTriangle className={cn("w-6 h-6", totalSLABreach > 0 ? "text-red-500" : "text-green-600")} />
+                      </div>
+                      <div>
+                        <div className={cn("text-2xl font-bold", totalSLABreach > 0 ? "text-red-600" : "text-green-700")}>{totalSLABreach}</div>
+                        <div className="text-sm text-muted-foreground">SLA Breaches</div>
+                        <div className="text-xs text-muted-foreground">target: {slaTarget}d per case</div>
+                      </div>
+                    </Card>
                   </div>
-                </Card>
-              </div>
-            )}
-            <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
-              <div className="table-container flex-1 h-full border-0 rounded-none">
-                <table className="spreadsheet-table w-full">
-                  <thead>
-                    <tr>
-                      <th>Staff Member</th>
-                      <th>Role</th>
-                      <th className="text-center">{timingDept === "gs" ? "GS Stage" : "Offer Stage"} Total</th>
-                      <th className="text-center text-amber-700">Pending</th>
-                      <th className="text-center text-green-700">Completed</th>
-                      <th style={{ minWidth: "220px" }}>
-                        <div>Avg Handling Time</div>
-                        <div className="font-normal text-xs text-muted-foreground">(completed cases only)</div>
-                      </th>
-                      <th style={{ minWidth: "180px" }}>
-                        <div>Avg First Action</div>
-                        <div className="font-normal text-xs text-muted-foreground">(all cases)</div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {timingLoading ? (
-                      <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Loading timing data...</td></tr>
-                    ) : staffTiming?.length === 0 ? (
-                      <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
-                    ) : (
-                      staffTiming?.map((p: any) => {
-                        const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
-                        return (
-                          <tr key={p.user_id} className="align-middle">
-                            <td>
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">{p.full_name.charAt(0)}</div>
-                                <span className="font-semibold">{p.full_name}</span>
-                              </div>
-                            </td>
-                            <td><span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", roleBadge.cls)}>{roleBadge.label}</span></td>
-                            <td className="text-center font-bold">{p.total_gs}</td>
-                            <td className="text-center">
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{p.pending_gs}</span>
-                            </td>
-                            <td className="text-center">
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{p.completed_gs}</span>
-                            </td>
-                            <td><DaysBar days={p.avg_handling_days} max={maxHandling} /></td>
-                            <td><DaysBar days={p.avg_first_action_days} max={maxHandling} color="bg-amber-500" /></td>
+
+                  <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
+                    <div className="table-container flex-1 h-full border-0 rounded-none">
+                      <table className="spreadsheet-table w-full">
+                        <thead>
+                          <tr>
+                            <th>Staff Member</th>
+                            <th>Role</th>
+                            <th className="text-center">{timingDept === "gs" ? "GS Stage" : "Offer Stage"} Total</th>
+                            <th className="text-center text-amber-700">Pending</th>
+                            <th className="text-center text-green-700">Completed</th>
+                            <th style={{ minWidth: "210px" }}>
+                              <div>Avg Handling Time</div>
+                              <div className="font-normal text-xs text-muted-foreground">all cases (workload pressure)</div>
+                            </th>
+                            <th style={{ minWidth: "210px" }}>
+                              <div>Avg Completion Time</div>
+                              <div className="font-normal text-xs text-muted-foreground">completed only (performance)</div>
+                            </th>
+                            <th style={{ minWidth: "180px" }}>
+                              <div>Avg First Action</div>
+                              <div className="font-normal text-xs text-muted-foreground">first touch after assignment</div>
+                            </th>
+                            <th className="text-center">SLA</th>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                        </thead>
+                        <tbody>
+                          {timingLoading ? (
+                            <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">Loading timing data...</td></tr>
+                          ) : staffTiming?.length === 0 ? (
+                            <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
+                          ) : (
+                            staffTiming?.map((p: any) => {
+                              const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
+                              const slaBreachPct = p.total_gs > 0 ? Math.round(((p.sla_breach_count ?? 0) / p.total_gs) * 100) : 0;
+                              const slaOk = (p.sla_breach_count ?? 0) === 0;
+                              return (
+                                <tr key={p.user_id} className="align-middle">
+                                  <td>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">{p.full_name.charAt(0)}</div>
+                                      <span className="font-semibold">{p.full_name}</span>
+                                    </div>
+                                  </td>
+                                  <td><span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", roleBadge.cls)}>{roleBadge.label}</span></td>
+                                  <td className="text-center font-bold">{p.total_gs}</td>
+                                  <td className="text-center">
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{p.pending_gs}</span>
+                                  </td>
+                                  <td className="text-center">
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{p.completed_gs}</span>
+                                  </td>
+                                  <td><DaysBar days={p.avg_handling_days} max={maxHandling} /></td>
+                                  <td><DaysBar days={p.avg_completion_days} max={maxCompletion} color="bg-violet-500" /></td>
+                                  <td><DaysBar days={p.avg_first_action_days} max={maxHandling} color="bg-amber-500" /></td>
+                                  <td className="text-center">
+                                    {p.total_gs === 0 ? (
+                                      <span className="text-xs text-muted-foreground">—</span>
+                                    ) : slaOk ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ On Time</span>
+                                    ) : (
+                                      <div className="flex flex-col items-center gap-0.5">
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                                          ✕ {p.sla_breach_count} delayed
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">{slaBreachPct}% of cases</span>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                </>
+              );
+            })()}
           </>
         )}
 
