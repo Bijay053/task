@@ -11,6 +11,28 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Status classification for color-coded badges in breakdown
+const GS_ACTIVE_SET = new Set([
+  "In Review", "GS submitted", "GS onhold",
+  "GS document pending", "GS additional document request",
+  "Refund Requested", "CoE Requested", "Visa Lodged",
+]);
+const GS_POSITIVE_SET = new Set(["GS approved", "CoE Approved", "Visa Granted"]);
+const GS_NEGATIVE_SET = new Set(["GS Rejected", "Visa Refused", "Withdrawn"]);
+const OFFER_ACTIVE_SET = new Set(["Document Requested", "On Hold", "Offer Request", "Enquiries"]);
+const OFFER_POSITIVE_SET = new Set(["Offer Received"]);
+const OFFER_NEGATIVE_SET = new Set(["Offer Rejected", "Not Eligible"]);
+
+function statusBadgeCls(status: string): string {
+  if (GS_ACTIVE_SET.has(status) || OFFER_ACTIVE_SET.has(status))
+    return "bg-amber-50 text-amber-700 border border-amber-200";
+  if (GS_POSITIVE_SET.has(status) || OFFER_POSITIVE_SET.has(status))
+    return "bg-green-50 text-green-700 border border-green-200";
+  if (GS_NEGATIVE_SET.has(status) || OFFER_NEGATIVE_SET.has(status))
+    return "bg-red-50 text-red-600 border border-red-200";
+  return "bg-muted text-muted-foreground";
+}
+
 const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
   admin:       { label: "Admin", cls: "bg-violet-100 text-violet-700" },
   manager:     { label: "Manager", cls: "bg-blue-100 text-blue-700" },
@@ -244,98 +266,170 @@ export default function Reports() {
         {/* ── Workload Overview ── */}
         {reportTab === "workload" && (
           <>
-            {performance && (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Users className="w-6 h-6 text-primary" /></div>
-                  <div><div className="text-2xl font-bold">{performance.length}</div><div className="text-sm text-muted-foreground">Staff Members</div></div>
-                </Card>
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><FileText className="w-6 h-6 text-blue-600" /></div>
-                  <div><div className="text-2xl font-bold">{performance.reduce((sum: number, p: any) => sum + p.total_assigned, 0)}</div><div className="text-sm text-muted-foreground">Total Applications</div></div>
-                </Card>
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0"><AlertTriangle className="w-6 h-6 text-orange-600" /></div>
-                  <div><div className="text-2xl font-bold text-orange-700">{performance.reduce((sum: number, p: any) => sum + p.active_count, 0)}</div><div className="text-sm text-muted-foreground">Active Workload</div></div>
-                </Card>
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
-                  <div><div className="text-2xl font-bold text-green-700">{performance.reduce((sum: number, p: any) => sum + p.completed_count, 0)}</div><div className="text-sm text-muted-foreground">Completed</div></div>
-                </Card>
-              </div>
-            )}
-            <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
-              <div className="table-container flex-1 h-full border-0 rounded-none">
-                <table className="spreadsheet-table w-full">
-                  <thead>
-                    <tr>
-                      <th>Staff Member</th>
-                      <th>Role</th>
-                      <th className="text-center">Total</th>
-                      <th className="text-center text-orange-700">Active</th>
-                      <th className="text-center text-green-700">Completed</th>
-                      <th className="text-center">GS Total</th>
-                      <th className="text-center">Offer Total</th>
-                      <th style={{ minWidth: "200px" }}>Active Workload</th>
-                      <th>Status Breakdown</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {perfLoading ? (
-                      <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">Loading report...</td></tr>
-                    ) : performance?.length === 0 ? (
-                      <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
-                    ) : (
-                      performance?.map((p: any) => {
-                        const pct = Math.round((p.active_count / maxActive) * 100);
-                        const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
-                        return (
-                          <tr key={p.user_id} className="align-top">
-                            <td>
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">{p.full_name.charAt(0)}</div>
-                                <span className="font-semibold">{p.full_name}</span>
-                              </div>
-                            </td>
-                            <td><span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", roleBadge.cls)}>{roleBadge.label}</span></td>
-                            <td className="text-center font-bold text-lg">{p.total_assigned}</td>
-                            <td className="text-center">
-                              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 min-w-[28px]">{p.active_count}</span>
-                            </td>
-                            <td className="text-center">
-                              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 min-w-[28px]">{p.completed_count}</span>
-                            </td>
-                            <td className="text-center text-blue-700 font-semibold">{p.gs_count}</td>
-                            <td className="text-center text-violet-700 font-semibold">{p.offer_count}</td>
-                            <td>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
-                                  <div
-                                    className={cn("h-full rounded-full transition-all", pct > 75 ? "bg-red-500" : pct > 50 ? "bg-orange-400" : "bg-primary")}
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs text-muted-foreground w-14 shrink-0">{p.active_count} ({pct}%)</span>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="flex flex-wrap gap-1">
-                                {Object.entries(p.status_breakdown).map(([status, count]) => (
-                                  <span key={status} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-muted text-muted-foreground">
-                                    <span>{status}</span>
-                                    <span className="font-bold text-foreground">{count as number}</span>
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
+            {performance && (() => {
+              const totalApps = performance.reduce((s: number, p: any) => s + p.total_assigned, 0);
+              const totalActive = performance.reduce((s: number, p: any) => s + p.active_count, 0);
+              const totalCompleted = performance.reduce((s: number, p: any) => s + p.completed_count, 0);
+
+              // Offer conversion rate: sum Offer Received across all breakdown maps
+              const totalOfferPositive = performance.reduce((s: number, p: any) =>
+                s + (p.status_breakdown?.["Offer Received"] ?? 0), 0);
+              const totalOfferNeg = performance.reduce((s: number, p: any) =>
+                s + (p.status_breakdown?.["Offer Rejected"] ?? 0) + (p.status_breakdown?.["Not Eligible"] ?? 0), 0);
+              const conversionRate = (totalOfferPositive + totalOfferNeg) > 0
+                ? Math.round((totalOfferPositive / (totalOfferPositive + totalOfferNeg)) * 100)
+                : null;
+
+              // GS approval rate
+              const totalGSApproved = performance.reduce((s: number, p: any) =>
+                s + (p.status_breakdown?.["GS approved"] ?? 0), 0);
+              const totalGSRejected = performance.reduce((s: number, p: any) =>
+                s + (p.status_breakdown?.["GS Rejected"] ?? 0), 0);
+              const gsApprovalRate = (totalGSApproved + totalGSRejected) > 0
+                ? Math.round((totalGSApproved / (totalGSApproved + totalGSRejected)) * 100)
+                : null;
+
+              const showGSDept = !deptFilter || deptFilter === "gs";
+              const showOfferDept = !deptFilter || deptFilter === "offer";
+              const colSpanCount = 7 + (showGSDept && showOfferDept ? 2 : 1);
+
+              return (
+                <>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Users className="w-6 h-6 text-primary" /></div>
+                      <div>
+                        <div className="text-2xl font-bold">{totalApps}</div>
+                        <div className="text-sm text-muted-foreground">Total Applications</div>
+                      </div>
+                    </Card>
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0"><AlertTriangle className="w-6 h-6 text-orange-600" /></div>
+                      <div>
+                        <div className="text-2xl font-bold text-orange-700">{totalActive}</div>
+                        <div className="text-sm text-muted-foreground">Active Workload</div>
+                      </div>
+                    </Card>
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
+                      <div>
+                        <div className="text-2xl font-bold text-green-700">{totalCompleted}</div>
+                        <div className="text-sm text-muted-foreground">Completed</div>
+                      </div>
+                    </Card>
+                    {/* Conversion / approval rate card */}
+                    {deptFilter === "offer" && (
+                      <Card className="p-5 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><TrendingUp className="w-6 h-6 text-blue-600" /></div>
+                        <div>
+                          <div className="text-2xl font-bold text-blue-700">
+                            {conversionRate !== null ? `${conversionRate}%` : "—"}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Offer Conversion Rate</div>
+                          <div className="text-xs text-muted-foreground">{totalOfferPositive} received / {totalOfferPositive + totalOfferNeg} decided</div>
+                        </div>
+                      </Card>
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                    {deptFilter === "gs" && (
+                      <Card className="p-5 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><TrendingUp className="w-6 h-6 text-blue-600" /></div>
+                        <div>
+                          <div className="text-2xl font-bold text-blue-700">
+                            {gsApprovalRate !== null ? `${gsApprovalRate}%` : "—"}
+                          </div>
+                          <div className="text-sm text-muted-foreground">GS Approval Rate</div>
+                          <div className="text-xs text-muted-foreground">{totalGSApproved} approved / {totalGSApproved + totalGSRejected} decided</div>
+                        </div>
+                      </Card>
+                    )}
+                    {!deptFilter && (
+                      <Card className="p-5 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><FileText className="w-6 h-6 text-slate-500" /></div>
+                        <div>
+                          <div className="text-2xl font-bold">{performance.length}</div>
+                          <div className="text-sm text-muted-foreground">Staff Members</div>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+
+                  <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
+                    <div className="table-container flex-1 h-full border-0 rounded-none">
+                      <table className="spreadsheet-table w-full">
+                        <thead>
+                          <tr>
+                            <th>Staff Member</th>
+                            <th>Role</th>
+                            <th className="text-center">Total</th>
+                            <th className="text-center text-amber-700">Active</th>
+                            <th className="text-center text-green-700">Completed</th>
+                            {showGSDept && showOfferDept && <th className="text-center">GS Total</th>}
+                            {showGSDept && showOfferDept && <th className="text-center">Offer Total</th>}
+                            <th style={{ minWidth: "200px" }}>Active Workload %</th>
+                            <th>Status Breakdown</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {perfLoading ? (
+                            <tr><td colSpan={colSpanCount} className="text-center py-12 text-muted-foreground">Loading report...</td></tr>
+                          ) : performance?.length === 0 ? (
+                            <tr><td colSpan={colSpanCount} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
+                          ) : (
+                            performance?.map((p: any) => {
+                              const pct = Math.round((p.active_count / maxActive) * 100);
+                              const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
+                              return (
+                                <tr key={p.user_id} className="align-top">
+                                  <td>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">{p.full_name.charAt(0)}</div>
+                                      <span className="font-semibold">{p.full_name}</span>
+                                    </div>
+                                  </td>
+                                  <td><span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", roleBadge.cls)}>{roleBadge.label}</span></td>
+                                  <td className="text-center font-bold text-lg">{p.total_assigned}</td>
+                                  <td className="text-center">
+                                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 min-w-[28px]">{p.active_count}</span>
+                                  </td>
+                                  <td className="text-center">
+                                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 min-w-[28px]">{p.completed_count}</span>
+                                  </td>
+                                  {showGSDept && showOfferDept && <td className="text-center text-blue-700 font-semibold">{p.gs_count}</td>}
+                                  {showGSDept && showOfferDept && <td className="text-center text-violet-700 font-semibold">{p.offer_count}</td>}
+                                  <td>
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
+                                        <div
+                                          className={cn("h-full rounded-full transition-all", pct > 75 ? "bg-red-500" : pct > 50 ? "bg-orange-400" : "bg-primary")}
+                                          style={{ width: `${pct}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-xs text-muted-foreground w-14 shrink-0">{p.active_count} ({pct}%)</span>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <div className="flex flex-wrap gap-1">
+                                      {Object.entries(p.status_breakdown)
+                                        .sort(([, a], [, b]) => (b as number) - (a as number))
+                                        .map(([status, count]) => (
+                                        <span key={status} className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs", statusBadgeCls(status))}>
+                                          <span>{status}</span>
+                                          <span className="font-bold">{count as number}</span>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                </>
+              );
+            })()}
           </>
         )}
 

@@ -1,0 +1,157 @@
+✅ WHAT IS CORRECT 👍
+✔ 1. Stages are mostly correct (better than GS)
+
+You are using:
+
+Document Requested ✔
+On Hold ✔
+Offer Received ✔
+Offer Rejected ✔
+Not Eligible ✔
+
+👉 This matches Offer workflow
+
+✔ 2. Counts look realistic
+Offer Received = 303
+Others distributed logically
+
+👉 ✔ Data aggregation looks fine
+
+❌ MAJOR ISSUE — STAGE vs FINAL STATUS (AGAIN)
+
+You are still mixing:
+
+PROCESS STAGE  +  FINAL OUTCOME
+❌ Wrong in your table:
+Offer Received ❌ (final)
+Offer Rejected ❌ (final)
+Not Eligible ❌ (final)
+
+👉 These are NOT stages
+
+✅ Correct Separation
+✔ Stage (process)
+Enquiry / Submitted
+Document Requested
+On Hold
+Under Processing (optional)
+Decision Stage
+✔ Final Outcome
+Offer Received
+Offer Rejected
+Not Eligible
+
+👉 Stage Analysis should ONLY show:
+👉 PROCESS stages, NOT final results
+
+❌ ISSUE 2 — “Currently Here” is WRONG
+
+Example:
+
+Offer Received = 303 “currently here” ❌
+
+👉 Impossible because:
+
+Once offer received → case is DONE
+✅ Correct Logic
+Currently Here =
+ONLY active applications in that stage
+✔ Correct Example:
+Stage	Currently Here
+Document Requested	48
+On Hold	109
+Processing	X
+
+❌ Remove:
+
+Offer Received
+Offer Rejected
+Not Eligible
+❌ ISSUE 3 — Bottleneck is WRONG
+
+You show:
+
+Offer Received = biggest bottleneck
+
+👉 ❌ Completely incorrect
+
+✅ Correct Bottleneck
+Bottleneck =
+Stage with highest Avg Time
+(ONLY ACTIVE STAGES)
+✔ Likely real bottleneck:
+On Hold (109 cases)
+or Document Requested
+
+👉 NOT final outcomes
+
+❌ ISSUE 4 — Avg Time is suspicious
+
+You show:
+
+Almost all = 17h
+One = 14h
+
+👉 🚨 This means calculation is likely wrong
+
+❗ Why wrong?
+
+Each stage should have different time:
+
+Stage	Expected
+Document Requested	longer
+On Hold	longest
+Processing	medium
+✅ Correct Formula
+Time in Stage =
+Exit Time - Enter Time
+
+👉 Must be tracked per stage change
+
+❌ ISSUE 5 — Total Apps in Stage = 653 (Mismatch)
+
+Top shows:
+
+Total Offer Apps = 637
+
+Stage shows:
+
+Apps in Stage = 653 ❌
+❗ This means:
+Double counting
+Or multiple stage entries counted
+✅ Fix:
+Apps in Stage =
+DISTINCT application_id
+🔥 CORRECT FINAL MODEL
+✅ Stage Analysis SHOULD BE
+✔ Only Active Stages
+Stage	Currently Here	Avg Time	Bottleneck
+Document Requested	48	18h	maybe
+On Hold	109	30h	✅
+Processing	X	12h	❌
+❌ REMOVE THESE FROM TABLE:
+Offer Received
+Offer Rejected
+Not Eligible
+✅ Show separately (optional card)
+Final Outcomes:
+Offer Received: 303
+Rejected: 86
+Not Eligible: 107
+🚀 FINAL VERDICT
+
+👉 Your current screen is:
+
+✅ UI good
+✅ Data mostly correct
+❌ Stage concept wrong
+❌ Bottleneck incorrect
+❌ Time calculation likely wrong
+❌ Duplicate counting issue
+💡 IMPORTANT SYSTEM RULE (for your whole CRM)
+STAGE = WHERE WORK IS HAPPENING
+STATUS = FINAL RESULT
+
+👉 Stage Analysis = ONLY STAGES
+👉 Performance = use STATUS
