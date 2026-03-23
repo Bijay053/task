@@ -63,6 +63,7 @@ function KanbanCard({
 
   const studentName = app.student?.full_name || app.student_name || "Unknown Student";
   const uniName = app.university?.name || app.university_name || null;
+  const courseName = app.course || null;
 
   return (
     <div
@@ -95,7 +96,12 @@ function KanbanCard({
 
       {/* University — single line, muted */}
       {uniName && (
-        <p className="text-xs text-muted-foreground leading-snug line-clamp-1 mb-2">{uniName}</p>
+        <p className="text-xs text-muted-foreground leading-snug line-clamp-1 mb-0.5">{uniName}</p>
+      )}
+
+      {/* Course name */}
+      {courseName && (
+        <p className="text-[11px] text-muted-foreground/70 leading-snug line-clamp-1 mb-2 italic">{courseName}</p>
       )}
 
       {/* Footer: intake + assignee avatar */}
