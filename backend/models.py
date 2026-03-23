@@ -173,6 +173,7 @@ class Application(Base):
 
     # External agent (sub-agent / agency) who referred the student
     agent_id = Column(Integer, ForeignKey("task_agents.id"), nullable=True)
+    agent_name = Column(String(255), nullable=True)  # free-text fallback when agent not in directory
 
     # Internal staff member responsible for handling the application
     assigned_to_id = Column(Integer, ForeignKey("task_users.id"), nullable=True)

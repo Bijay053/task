@@ -102,6 +102,7 @@ export default function GsApplications() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<any>(null);
   const [formError, setFormError] = useState("");
+  const [agentInput, setAgentInput] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const p = new URLSearchParams(window.location.search).get("view");
     return p === "kanban" ? "kanban" : "table";
@@ -212,6 +213,7 @@ export default function GsApplications() {
     setFormError("");
     setOfferAutofillApps([]);
     setAutofill(null);
+    setAgentInput(app.agent?.name || app.agent_name || "");
     setIsModalOpen(true);
   };
   const handleOpenCreate = () => {
@@ -222,6 +224,7 @@ export default function GsApplications() {
     setFormError("");
     setOfferAutofillApps([]);
     setAutofill(null);
+    setAgentInput("");
     setIsModalOpen(true);
   };
 
@@ -246,6 +249,8 @@ export default function GsApplications() {
     const fd = new FormData(e.currentTarget);
     const studentId = fd.get("student_id") ? Number(fd.get("student_id")) : undefined;
     const universityId = fd.get("university_id") ? Number(fd.get("university_id")) : undefined;
+    const agentText = agentInput.trim();
+    const matchedAgent = agents?.find(a => a.name === agentText || `${a.name}${a.company_name ? ` (${a.company_name})` : ""}` === agentText);
     const data: any = {
       department: "gs",
       app_id: fd.get("app_id") as string || null,
@@ -253,7 +258,8 @@ export default function GsApplications() {
       student_name: fd.get("student_name") as string || null,
       university_id: universityId || null,
       university_name: fd.get("university_name") as string || null,
-      agent_id: fd.get("agent_id") ? Number(fd.get("agent_id")) : null,
+      agent_id: matchedAgent ? matchedAgent.id : null,
+      agent_name: matchedAgent ? null : (agentText || null),
       assigned_to_id: fd.get("assigned_to_id") ? Number(fd.get("assigned_to_id")) : undefined,
       application_status: fd.get("application_status") as string,
       intake: fd.get("intake") as string,
@@ -277,7 +283,7 @@ export default function GsApplications() {
       queryClient.invalidateQueries({ queryKey: ["/api/universities"] });
       setIsModalOpen(false);
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message || "Something went wrong.";
+      const detail = (err?.data as any)?.detail || err?.message || "Something went wrong.";
       setFormError(detail);
     }
   };
@@ -461,7 +467,7 @@ export default function GsApplications() {
                           </span>
                         </td>
                         <td className="text-xs text-sky-600 whitespace-nowrap">
-                          {app.agent?.name || <span className="text-muted-foreground/40">—</span>}
+                          {app.agent?.name || app.agent_name || <span className="text-muted-foreground/40">—</span>}
                         </td>
                         <td>
                           {app.assigned_to ? (
@@ -589,10 +595,23 @@ export default function GsApplications() {
             </div>
             <div className="space-y-2">
               <Label>External Agent (Sub-Agent / Partner)</Label>
-              <Select name="agent_id" defaultValue={editingApp?.agent_id || ""}>
-                <option value="">— None —</option>
-                {agents?.map(a => <option key={a.id} value={a.id}>{a.name}{a.company_name ? ` (${a.company_name})` : ""}</option>)}
-              </Select>
+              <div className="relative">
+                <input
+                  list="gs-agents-datalist"
+                  value={agentInput}
+                  onChange={e => setAgentInput(e.target.value)}
+                  placeholder="Type or select agent…"
+                  className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+                {agentInput && (
+                  <button type="button" onClick={() => setAgentInput("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs">✕</button>
+                )}
+              </div>
+              <datalist id="gs-agents-datalist">
+                {agents?.map(a => (
+                  <option key={a.id} value={`${a.name}${a.company_name ? ` (${a.company_name})` : ""}`} />
+                ))}
+              </datalist>
             </div>
             <div className="space-y-2">
               <Label>Internal Assignee (Staff)</Label>

@@ -175,6 +175,7 @@ class ApplicationCreate(BaseModel):
 
     # External agent (sub-agent/partner)
     agent_id: Optional[int] = None
+    agent_name: Optional[str] = None
 
     # Internal staff assignee
     assigned_to_id: Optional[int] = None
@@ -201,9 +202,14 @@ class ApplicationCreate(BaseModel):
 
 class ApplicationUpdate(BaseModel):
     app_id: Optional[str] = None
+    # Directory links
+    student_id: Optional[int] = None
+    student_name: Optional[str] = None
     university_id: Optional[int] = None
     university_name: Optional[str] = None
+    # Agent (FK or free-text)
     agent_id: Optional[int] = None
+    agent_name: Optional[str] = None
     assigned_to_id: Optional[int] = None
     application_status: Optional[str] = None
     intake: Optional[str] = None
@@ -257,6 +263,7 @@ class ApplicationOut(BaseModel):
     # Raw fallback names
     student_name: Optional[str]
     university_name: Optional[str]
+    agent_name: Optional[str]
 
     # GS-specific
     priority: Optional[str]

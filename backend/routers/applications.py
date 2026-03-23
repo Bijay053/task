@@ -229,6 +229,12 @@ def create_application(
     if resolved_uni_id:
         app_data["university_id"] = resolved_uni_id
 
+    # Agent: if agent_id is set, clear free-text; if agent_name only, clear agent_id
+    if app_data.get("agent_id"):
+        app_data["agent_name"] = None
+    elif app_data.get("agent_name"):
+        app_data["agent_id"] = None
+
     if _check_duplicate(db, dept, app_data.get("app_id"), app_data.get("student_name"), app_data.get("student_id"), app_data.get("university_id"), app_data.get("course")):
         raise HTTPException(
             status_code=409,
@@ -323,6 +329,13 @@ def update_application(
     )
     if resolved_uni_id:
         update_data["university_id"] = resolved_uni_id
+
+    # If agent_id is explicitly set, clear free-text agent_name
+    if "agent_id" in update_data and update_data["agent_id"]:
+        update_data["agent_name"] = None
+    # If agent_name is set (free-text) with no agent_id, clear agent_id
+    elif "agent_name" in update_data and update_data.get("agent_name"):
+        update_data["agent_id"] = None
 
     for key, val in update_data.items():
         setattr(app, key, val)
