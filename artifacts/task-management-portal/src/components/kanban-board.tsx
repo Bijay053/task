@@ -71,73 +71,58 @@ function KanbanCard({
       onDragEnd={onDragEnd}
       onClick={handleClick}
       className={cn(
-        "bg-card border border-border rounded-lg p-2 shadow-sm select-none transition-all",
+        "bg-card border border-border rounded-lg px-2 py-1.5 shadow-sm select-none transition-all",
         "hover:shadow-md hover:border-primary/30 cursor-grab active:cursor-grabbing",
         isDragging && "opacity-40 scale-95 ring-2 ring-primary/40",
         onCardClick && "cursor-pointer"
       )}
     >
-      {/* Header: status badge + app_id + priority + grip */}
-      <div className="flex items-center justify-between gap-1.5 mb-1">
-        <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-          <span
-            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full truncate max-w-[120px] shrink-0"
-            style={{ backgroundColor: color.bg + "33", color: color.text }}
-          >
-            {app.application_status}
-          </span>
+      {/* Top row: app_id (left) + priority + grip (right) */}
+      <div className="flex items-center justify-between gap-1 mb-1">
+        <div className="flex items-center gap-1 min-w-0">
           {app.app_id && (
-            <span className="text-[9px] font-mono font-semibold px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 truncate max-w-[80px]" title={app.app_id}>
+            <span className="text-[9px] font-mono font-semibold text-slate-400 dark:text-slate-500 truncate" title={app.app_id}>
               {app.app_id}
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-0.5 shrink-0">
           <PriorityDot priority={app.priority ?? undefined} />
-          <GripVertical className="w-3 h-3 text-muted-foreground/30" />
         </div>
+        <GripVertical className="w-3 h-3 text-muted-foreground/20 shrink-0" />
       </div>
 
-      {/* Student name */}
-      <div className="flex items-center gap-1 mb-0.5">
-        <User className="w-3 h-3 text-muted-foreground/60 shrink-0" />
-        <span className="text-xs font-semibold leading-tight line-clamp-1">{studentName}</span>
-      </div>
+      {/* Student name — main content */}
+      <p className="text-xs font-semibold leading-tight line-clamp-1 mb-0.5">{studentName}</p>
 
-      {/* University — single line only */}
+      {/* University — single line, muted */}
       {uniName && (
-        <div className="flex items-center gap-1 mb-1">
-          <BookOpen className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-          <span className="text-[11px] text-muted-foreground leading-tight line-clamp-1">{uniName}</span>
-        </div>
+        <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1 mb-1">{uniName}</p>
       )}
 
-      {/* Footer: intake + agent/channel on left, assignee avatar on right */}
-      <div className="flex items-center justify-between gap-1 mt-0.5">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Footer: intake + assignee avatar */}
+      <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center gap-1.5 min-w-0">
           {app.intake && (
-            <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground/60 shrink-0">
-              <Calendar className="w-2.5 h-2.5" />
-              {app.intake}
-            </div>
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground/60 shrink-0">
+              <Calendar className="w-2.5 h-2.5" />{app.intake}
+            </span>
           )}
           {(app.agent?.name || app.channel) && (
-            <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground/60 min-w-0">
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground/50 truncate">
               <UserCheck className="w-2.5 h-2.5 shrink-0" />
-              <span className="truncate max-w-[60px]">{app.agent?.name || app.channel}</span>
-            </div>
+              <span className="truncate max-w-[55px]">{app.agent?.name || app.channel}</span>
+            </span>
           )}
         </div>
         {app.assigned_to?.full_name ? (
-          <div className="flex items-center gap-1 shrink-0" title={app.assigned_to.full_name}>
-            <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-bold text-primary shrink-0">
-              {app.assigned_to.full_name.charAt(0)}
-            </div>
-            <span className="text-[10px] text-muted-foreground truncate max-w-[60px] hidden sm:block">{app.assigned_to.full_name}</span>
+          <div
+            className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0"
+            title={app.assigned_to.full_name}
+          >
+            {app.assigned_to.full_name.charAt(0)}
           </div>
         ) : (
-          <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center shrink-0" title="Unassigned">
-            <User className="w-2.5 h-2.5 text-muted-foreground/40" />
+          <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0" title="Unassigned">
+            <User className="w-3 h-3 text-muted-foreground/30" />
           </div>
         )}
       </div>
