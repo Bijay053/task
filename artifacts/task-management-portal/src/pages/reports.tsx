@@ -470,7 +470,7 @@ export default function Reports() {
                             {showGSDept && showOfferDept && <th className="text-center">Offer Total</th>}
                             <th style={{ minWidth: "200px" }}>
                               <div>Active Workload %</div>
-                              <div className="font-normal text-xs text-muted-foreground">active / max active</div>
+                              <div className="font-normal text-xs text-muted-foreground">share of total active</div>
                             </th>
                             <th style={{ minWidth: "200px" }}>
                               <div>Weighted Score</div>
@@ -486,7 +486,7 @@ export default function Reports() {
                             <tr><td colSpan={colSpanCount} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
                           ) : (
                             performance?.map((p: any) => {
-                              const pct = Math.round((p.active_count / maxActive) * 100);
+                              const pct = totalActive > 0 ? Math.round((p.active_count / totalActive) * 100) : 0;
                               const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
                               return (
                                 <tr key={p.user_id} className="align-top">
