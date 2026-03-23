@@ -30,13 +30,14 @@ GS_ACTIVE_STATUSES = {
 }
 GS_ALL_STATUSES = GS_ACTIVE_STATUSES | GS_COMPLETED_STATUSES
 
-# Weighted workload tiers: GS-core stage = heavy (×3), CoE/Visa = medium (×2), Offer = light (×1)
+# Weighted workload tiers: GS-core stage = heavy (×3), Visa Lodged = medium (×2), Offer = light (×1)
+# CoE Requested is NOT weighted at ×2 — only Visa Lodged carries the elevated weight.
 GS_WEIGHT3_STATUSES = {
     "In Review", "GS submitted", "GS onhold",
     "GS document pending", "GS additional document request",
-    "Refund Requested",
+    "Refund Requested", "CoE Requested",
 }
-GS_WEIGHT2_STATUSES = {"CoE Requested", "Visa Lodged"}
+GS_WEIGHT2_STATUSES = {"Visa Lodged"}
 
 # Offer pipeline
 OFFER_COMPLETED_STATUSES = {"Offer Received", "Offer Rejected", "Not Eligible"}

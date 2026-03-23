@@ -426,7 +426,7 @@ export default function Reports() {
                       <div>
                         <div className="text-2xl font-bold text-purple-700">{totalWeighted}</div>
                         <div className="text-sm text-muted-foreground">Weighted Load Score</div>
-                        <div className="text-xs text-muted-foreground">GS×3 · CoE/Visa×2 · Offer×1</div>
+                        <div className="text-xs text-muted-foreground">GS×3 · Visa×2 · Offer×1</div>
                       </div>
                     </Card>
                   </div>
@@ -474,7 +474,7 @@ export default function Reports() {
                             </th>
                             <th style={{ minWidth: "200px" }}>
                               <div>Weighted Score</div>
-                              <div className="font-normal text-xs text-muted-foreground">GS×3 · CoE/Visa×2 · Offer×1</div>
+                              <div className="font-normal text-xs text-muted-foreground">GS×3 · Visa×2 · Offer×1</div>
                             </th>
                             <th style={{ minWidth: "320px" }}>Status Breakdown</th>
                           </tr>
