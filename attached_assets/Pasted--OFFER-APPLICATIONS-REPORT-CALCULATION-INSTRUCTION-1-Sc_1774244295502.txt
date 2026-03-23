@@ -1,0 +1,234 @@
+📊 OFFER APPLICATIONS – REPORT CALCULATION INSTRUCTION
+1. Scope
+
+This report is for Offer / Admission Applications only.
+
+Used in:
+
+Workload Overview
+Staff Handling Time
+Stage Analysis
+Offer Total Number
+Avg Handling Time
+Avg Completion Time
+2. OFFER WORKFLOW (STANDARD)
+Enquiries → (Review)
+
+→ Document Requested (if missing docs)
+→ On Hold (if incomplete / waiting)
+→ Not Eligible (if not qualified)
+
+→ Offer Requested
+   → Offer Received ✅
+   → Offer Rejected ❌
+3. STATUS DEFINITIONS
+🟡 Active / In-Progress
+
+These are ongoing cases:
+
+Enquiries
+Document Requested
+On Hold
+🔵 Processing Stage
+
+Core admission processing:
+
+Offer Requested
+✅ Completed (Final Outcome)
+Offer Received (Positive)
+Offer Rejected (Negative)
+Not Eligible (Closed without processing)
+❗ 4. CURRENT ISSUE
+
+Right now:
+
+Final statuses (Offer Received / Rejected / Not Eligible)
+are treated as completed only
+❌ but NOT included in:
+Offer total
+Workload
+Handling time
+
+👉 This causes incorrect reporting
+
+✅ 5. OFFER TOTAL NUMBER (FIX)
+Include ALL Offer-related applications:
+Offer Total Number =
+Enquiries
++ Document Requested
++ On Hold
++ Offer Requested
++ Offer Received
++ Offer Rejected
++ Not Eligible
+
+👉 Offer is a full pipeline, not just “Offer Requested”
+
+✅ 6. WORKLOAD CALCULATION
+Definition:
+
+All applications handled by staff (active + completed)
+
+Include:
+Enquiries
+Document Requested
+On Hold
+Offer Requested
+Offer Received
+Offer Rejected
+Not Eligible
+Formula:
+Workload = Count of all Offer applications assigned to staff
+
+⚠️ IMPORTANT:
+Even if application is completed → MUST be included in workload
+
+✅ 7. COMPLETION COUNT
+Completed Offer Cases:
+Offer Received
+Offer Rejected
+Not Eligible
+Formula:
+Completed Cases =
+Offer Received + Offer Rejected + Not Eligible
+✅ 8. AVG HANDLING TIME
+Definition:
+
+Time taken to handle an application (from assignment to latest status)
+
+Include ALL statuses:
+Enquiries
+Document Requested
+On Hold
+Offer Requested
+Offer Received
+Offer Rejected
+Not Eligible
+Formula:
+Handling Time per Case =
+Latest Status Date - Assigned Date
+
+Avg Handling Time =
+Total Handling Time / Total Cases
+
+⚠️ Must include completed cases
+
+✅ 9. AVG COMPLETION TIME
+Only for completed cases:
+Offer Received
+Offer Rejected
+Not Eligible
+Formula:
+Completion Time per Case =
+Final Status Date - Assigned Date
+
+Avg Completion Time =
+Total Completion Time / Completed Cases
+✅ 10. STAGE ANALYSIS (FUNNEL)
+Flow:
+Enquiries
+   ↓
+Document Requested / On Hold
+   ↓
+Offer Requested
+   ↓
+Offer Received / Offer Rejected / Not Eligible
+Metrics:
+Conversion Rate:
+Offer Conversion Rate = Offer Received / Offer Requested
+Rejection Rate:
+Offer Rejected / Offer Requested
+Drop Rate:
+Not Eligible / Enquiries
+✅ 11. WORKLOAD OVERVIEW RULE
+
+Include ALL statuses:
+
+✔ Enquiries
+✔ Document Requested
+✔ On Hold
+✔ Offer Requested
+✔ Offer Received
+✔ Offer Rejected
+✔ Not Eligible
+
+❌ Do NOT exclude completed statuses
+
+✅ 12. STAFF PERFORMANCE METRICS
+
+Each staff report must include:
+
+Total Workload
+Completed Cases
+Pending Cases
+Avg Handling Time
+Avg Completion Time
+Offer Conversion Rate
+✅ 13. BUSINESS LOGIC SUMMARY
+Active Cases:
+Enquiries
+Document Requested
+On Hold
+Offer Requested
+Completed Cases:
+Offer Received
+Offer Rejected
+Not Eligible
+Total Cases:
+
+ALL above statuses combined
+
+✅ 14. DEVELOPER IMPLEMENTATION RULES
+🔴 RULE 1
+
+Final statuses MUST be included in:
+
+Workload
+Handling time
+Total count
+🔴 RULE 2
+
+Every record must track:
+
+Assigned Date
+Status Update Date (each stage)
+🔴 RULE 3
+
+Maintain full status history
+
+Example:
+
+Enquiries → 01 Jan
+Document Requested → 03 Jan
+Offer Requested → 07 Jan
+Offer Received → 12 Jan
+🔴 RULE 4
+
+Dashboard logic:
+
+Latest Status → Current View
+Full History → Time Calculations
+✅ FINAL SHORT VERSION (FOR DEV)
+
+For Offer Applications report:
+
+Include in Total & Workload:
+
+Enquiries, Document Requested, On Hold, Offer Requested,
+Offer Received, Offer Rejected, Not Eligible
+
+Completed Cases:
+
+Offer Received, Offer Rejected, Not Eligible
+
+Avg Handling Time:
+
+Include ALL statuses
+
+Avg Completion Time:
+
+Only completed cases
+
+Stage Flow:
+
+Enquiries → Document Requested / On Hold → Offer Requested → Offer Received / Rejected / Not Eligible

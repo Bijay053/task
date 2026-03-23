@@ -14,12 +14,22 @@ import backend.schemas as schemas
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
+# ─── Status definitions ───────────────────────────────────────────────────────
+
+GS_ALL_STATUSES      = {"Review", "GS submitted", "GS onhold", "GS approved", "GS Rejected"}
+GS_COMPLETED_STATUSES = {"GS approved", "GS Rejected"}
+GS_ACTIVE_STATUSES   = {"Review", "GS submitted", "GS onhold"}
+
+OFFER_ALL_STATUSES      = {"Enquiries", "Document Requested", "On Hold", "Offer Requested",
+                           "Offer Received", "Offer Rejected", "Not Eligible"}
+OFFER_COMPLETED_STATUSES = {"Offer Received", "Offer Rejected", "Not Eligible"}
+OFFER_ACTIVE_STATUSES    = {"Enquiries", "Document Requested", "On Hold", "Offer Requested"}
+
 
 def require_manager(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     from fastapi import HTTPException
     if current_user.role in ("admin", "manager"):
         return current_user
-    # Allow custom roles that have can_view on the "reports" department
     BASE_ROLES = {"admin", "manager", "team_leader", "agent"}
     if current_user.role not in BASE_ROLES:
         perm = db.query(models.RolePermission).filter(
@@ -57,8 +67,16 @@ def performance_report(
         q = db.query(models.Application).filter(
             models.Application.assigned_to_id == user.id
         )
-        if department:
-            q = q.filter(models.Application.department == department)
+        if department == "gs":
+            q = q.filter(
+                models.Application.department == "gs",
+                models.Application.application_status.in_(list(GS_ALL_STATUSES)),
+            )
+        elif department == "offer":
+            q = q.filter(
+                models.Application.department == "offer",
+                models.Application.application_status.in_(list(OFFER_ALL_STATUSES)),
+            )
         if dt_from:
             q = q.filter(models.Application.created_at >= dt_from)
         if dt_to:
@@ -66,8 +84,16 @@ def performance_report(
 
         apps = q.all()
 
-        gs_count = sum(1 for a in apps if a.department == "gs")
-        offer_count = sum(1 for a in apps if a.department == "offer")
+        # gs_count: apps in GS department with valid GS statuses
+        gs_count = sum(
+            1 for a in apps
+            if a.department == "gs" and a.application_status in GS_ALL_STATUSES
+        )
+        # offer_count: apps in Offer department with valid Offer statuses
+        offer_count = sum(
+            1 for a in apps
+            if a.department == "offer" and a.application_status in OFFER_ALL_STATUSES
+        )
 
         breakdown: dict = {}
         for app in apps:
@@ -88,20 +114,39 @@ def performance_report(
 
 @router.get("/staff-timing", response_model=List[schemas.StaffTimingReport])
 def staff_timing_report(
+    department: Optional[str] = Query("gs"),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     _: models.User = Depends(require_manager),
 ):
     """
-    For each staff member, compute average handling time on GS applications
+    For each staff member, compute average handling time on GS or Offer applications
     using ActivityLog data (status change timestamps).
+
+    GS:
+      - Total  = Review + GS submitted + GS onhold + GS approved + GS Rejected
+      - Completed = GS approved + GS Rejected
+      - Pending   = Review + GS submitted + GS onhold
+
+    Offer:
+      - Total  = Enquiries + Document Requested + On Hold + Offer Requested +
+                 Offer Received + Offer Rejected + Not Eligible
+      - Completed = Offer Received + Offer Rejected + Not Eligible
+      - Pending   = Enquiries + Document Requested + On Hold + Offer Requested
     """
     now = datetime.utcnow()
     dt_from = _parse_date(date_from)
     dt_to = _parse_date(date_to)
 
-    FINAL_STATUSES = {"Visa Granted", "Visa Refused", "GS Rejected", "GS approved", "Refund Requested"}
+    dept = department if department in ("gs", "offer") else "gs"
+
+    if dept == "gs":
+        all_statuses = GS_ALL_STATUSES
+        completed_statuses = GS_COMPLETED_STATUSES
+    else:
+        all_statuses = OFFER_ALL_STATUSES
+        completed_statuses = OFFER_COMPLETED_STATUSES
 
     users = db.query(models.User).filter(models.User.is_active == True).all()
     result = []
@@ -109,16 +154,17 @@ def staff_timing_report(
     for user in users:
         q = db.query(models.Application).filter(
             models.Application.assigned_to_id == user.id,
-            models.Application.department == "gs",
+            models.Application.department == dept,
+            models.Application.application_status.in_(list(all_statuses)),
         )
         if dt_from:
             q = q.filter(models.Application.created_at >= dt_from)
         if dt_to:
             q = q.filter(models.Application.created_at < datetime(dt_to.year, dt_to.month, dt_to.day, 23, 59, 59))
 
-        gs_apps = q.all()
+        apps = q.all()
 
-        if not gs_apps:
+        if not apps:
             result.append(schemas.StaffTimingReport(
                 user_id=user.id, full_name=user.full_name, role=user.role,
                 total_gs=0, pending_gs=0, completed_gs=0,
@@ -127,7 +173,7 @@ def staff_timing_report(
             ))
             continue
 
-        app_ids = [a.id for a in gs_apps]
+        app_ids = [a.id for a in apps]
 
         status_logs = (
             db.query(models.ActivityLog)
@@ -151,35 +197,48 @@ def staff_timing_report(
         pending_count = 0
         completed_count = 0
 
-        for app in gs_apps:
-            is_completed = app.application_status in FINAL_STATUSES
+        for app in apps:
+            is_completed = app.application_status in completed_statuses
             if is_completed:
                 completed_count += 1
             else:
                 pending_count += 1
 
-            if app.assigned_date:
-                ref = app.assigned_date
-                app_id_logs = logs_by_app.get(app.id)
+            app_id_logs = logs_by_app.get(app.id)
+            ref = app.assigned_date or app.created_at.date() if hasattr(app, 'assigned_date') and app.assigned_date else None
+
+            # ── Avg Handling Time: include ALL apps (active + completed) ──────
+            if ref:
+                ref_dt = datetime.combine(ref, datetime.min.time()) if hasattr(ref, 'year') and not hasattr(ref, 'hour') else ref
                 if is_completed and app_id_logs:
                     last_log = app_id_logs[-1]
-                    days = (last_log.changed_at - datetime.combine(ref, datetime.min.time())).total_seconds() / 86400
+                    days = (last_log.changed_at - ref_dt).total_seconds() / 86400
                 else:
-                    days = (now - datetime.combine(ref, datetime.min.time())).total_seconds() / 86400
+                    days = (now - ref_dt).total_seconds() / 86400
                 handling_days_list.append(max(0, days))
 
-            app_id_logs = logs_by_app.get(app.id)
-            if is_completed and app_id_logs:
-                last_log = app_id_logs[-1]
-                comp_days = (last_log.changed_at - app.created_at).total_seconds() / 86400
+            # ── Avg Completion Time: only completed apps ───────────────────────
+            if is_completed:
+                ref_dt_for_comp = (
+                    datetime.combine(app.assigned_date, datetime.min.time())
+                    if app.assigned_date else app.created_at
+                )
+                if app_id_logs:
+                    last_log = app_id_logs[-1]
+                    comp_days = (last_log.changed_at - ref_dt_for_comp).total_seconds() / 86400
+                else:
+                    # No log — use current time as best estimate
+                    comp_days = (now - ref_dt_for_comp).total_seconds() / 86400
                 completion_days_list.append(max(0, comp_days))
 
+            # ── Avg First Action ───────────────────────────────────────────────
             if app_id_logs:
                 first_log = app_id_logs[0]
                 fa_days = (first_log.changed_at - app.created_at).total_seconds() / 86400
                 first_action_days_list.append(max(0, fa_days))
 
-            logs = logs_by_app.get(app.id, [])
+            # ── Stage duration breakdown ───────────────────────────────────────
+            logs = app_id_logs or []
             if logs:
                 init_status = logs[0].old_value
                 if init_status:
@@ -205,7 +264,7 @@ def staff_timing_report(
             user_id=user.id,
             full_name=user.full_name,
             role=user.role,
-            total_gs=len(gs_apps),
+            total_gs=len(apps),
             pending_gs=pending_count,
             completed_gs=completed_count,
             avg_handling_days=avg(handling_days_list),
@@ -230,13 +289,18 @@ def stage_analysis(
     Stage-wise time analysis: for each status/stage, compute average, min, max time
     applications spend in that stage, using ActivityLog status change events.
     Optionally filter by assigned staff (user_id) and date range.
+
+    Only statuses relevant to the selected department are included.
     """
     now = datetime.utcnow()
     dt_from = _parse_date(date_from)
     dt_to = _parse_date(date_to)
 
+    valid_statuses = GS_ALL_STATUSES if department == "gs" else OFFER_ALL_STATUSES
+
     q = db.query(models.Application).filter(
-        models.Application.department == department
+        models.Application.department == department,
+        models.Application.application_status.in_(list(valid_statuses)),
     )
     if user_id:
         q = q.filter(models.Application.assigned_to_id == user_id)
@@ -245,13 +309,12 @@ def stage_analysis(
     if dt_to:
         q = q.filter(models.Application.created_at < datetime(dt_to.year, dt_to.month, dt_to.day, 23, 59, 59))
 
-    gs_apps = q.all()
+    apps = q.all()
 
-    if not gs_apps:
+    if not apps:
         return []
 
-    app_ids = [a.id for a in gs_apps]
-    app_map = {a.id: a for a in gs_apps}
+    app_ids = [a.id for a in apps]
 
     status_logs = (
         db.query(models.ActivityLog)
@@ -270,7 +333,7 @@ def stage_analysis(
     stage_durations: dict = {}
     current_stages: dict = {}
 
-    for app in gs_apps:
+    for app in apps:
         logs = logs_by_app.get(app.id, [])
 
         current_stage = app.application_status
@@ -278,18 +341,18 @@ def stage_analysis(
 
         if logs:
             init_status = logs[0].old_value
-            if init_status:
+            if init_status and init_status in valid_statuses:
                 init_days = (logs[0].changed_at - app.created_at).total_seconds() / 86400
                 stage_durations.setdefault(init_status, []).append(max(0, init_days))
 
             for i in range(len(logs) - 1):
                 from_status = logs[i].new_value
-                if from_status:
+                if from_status and from_status in valid_statuses:
                     days_in = (logs[i + 1].changed_at - logs[i].changed_at).total_seconds() / 86400
                     stage_durations.setdefault(from_status, []).append(max(0, days_in))
 
             current = logs[-1].new_value
-            if current:
+            if current and current in valid_statuses:
                 days_in = (now - logs[-1].changed_at).total_seconds() / 86400
                 stage_durations.setdefault(current, []).append(max(0, days_in))
         else:
@@ -304,6 +367,8 @@ def stage_analysis(
     ]
 
     all_statuses = list(dict.fromkeys(known_statuses + list(stage_durations.keys()) + list(current_stages.keys())))
+    # Only keep statuses valid for this department
+    all_statuses = [s for s in all_statuses if s in valid_statuses]
 
     result = []
     for status in all_statuses:

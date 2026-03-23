@@ -1,0 +1,231 @@
+GS Applications Report Calculation Instruction
+1. Scope
+
+This report is only for the GS Application team and only for GS-related statuses.
+
+It should calculate data in:
+
+Workload Overview
+Staff Handling Time
+Stage Analysis
+GS Total Number
+Workload Calculation
+Avg Handling Time
+Avg Completion Time
+2. GS Statuses to Include
+
+The following statuses must be included in GS report calculations:
+
+Review
+GS submitted
+GS onhold
+GS approved
+GS Rejected
+
+These statuses are part of the GS application process and must not be excluded.
+
+3. Current Issue
+
+At the moment, these statuses are treated as completed outcome statuses, but they are not included properly in:
+
+GS total number
+Workload calculation
+Avg handling time
+Avg completion time
+
+Because of this, the report is showing incorrect numbers.
+
+4. Correct GS Workflow
+
+The GS team workflow should be treated as:
+
+Review → GS submitted → GS approved / GS Rejected / GS onhold
+Meaning of each stage
+Review = staff is checking documents and preparing case
+GS submitted = GS application has been submitted
+GS approved = positive GS outcome
+GS Rejected = negative GS outcome
+GS onhold = GS process is pending / paused / waiting
+5. GS Total Number Calculation
+Correct rule:
+
+GS Total Number must include all GS-related applications, not only “GS submitted”.
+
+Include these statuses:
+Review
+GS submitted
+GS onhold
+GS approved
+GS Rejected
+Formula logic:
+GS Total Number = Count of all applications where status is:
+Review, GS submitted, GS onhold, GS approved, or GS Rejected
+6. Workload Calculation
+Definition:
+
+Workload means all GS cases a staff member is handling or has handled within the selected date range.
+
+Include in workload:
+Review
+GS submitted
+GS onhold
+GS approved
+GS Rejected
+Rule:
+
+Even if a case is already completed with GS approved or GS Rejected, it must still be counted in workload because staff handled that case.
+
+Formula logic:
+Workload = Count of all GS applications assigned to the staff
+where status is Review, GS submitted, GS onhold, GS approved, or GS Rejected
+7. Completion Count
+Completed GS cases are:
+GS approved
+GS Rejected
+Onhold is not completed:
+GS onhold should remain part of workload
+but should not be counted as completed unless your business rule says otherwise
+Formula logic:
+Completed GS Cases = Count of applications where status is:
+GS approved or GS Rejected
+8. Avg Handling Time
+Definition:
+
+Average handling time means the average number of days/hours taken by staff to handle a GS application until its latest/current GS status.
+
+Calculation rule:
+Start date = Assigned Date or first GS work start date
+End date = Latest GS status update date
+Include these statuses in handling time:
+Review
+GS submitted
+GS onhold
+GS approved
+GS Rejected
+Important:
+
+If a case reaches GS approved or GS Rejected, it must be included in average handling time.
+It must not be excluded just because it is completed.
+
+Formula logic:
+Handling Time per Case = Latest GS Status Date - Assigned Date
+Avg Handling Time = Total Handling Time of all included GS cases / Total included GS cases
+9. Avg Completion Time
+Definition:
+
+Average completion time means the average time taken to fully complete the GS process.
+
+Completed statuses for GS process:
+GS approved
+GS Rejected
+Do not include in completion time:
+Review
+GS submitted
+GS onhold
+Formula logic:
+Completion Time per Case = Final GS Outcome Date - Assigned Date
+Avg Completion Time = Total Completion Time of completed GS cases / Total completed GS cases
+10. Stage Analysis
+
+Stage Analysis for GS Applications should show movement across these stages:
+
+Review → GS submitted → GS approved / GS Rejected / GS onhold
+Suggested stage metrics:
+Total in Review
+Total GS submitted
+Total GS approved
+Total GS Rejected
+Total GS onhold
+Suggested conversion metrics:
+GS Approval Rate = GS approved / GS submitted
+GS Rejection Rate = GS Rejected / GS submitted
+GS Onhold Rate = GS onhold / GS submitted
+11. Workload Overview Rules
+
+In Workload Overview, the system must count all GS-related applications handled by staff.
+
+Include:
+Review
+GS submitted
+GS onhold
+GS approved
+GS Rejected
+Do not exclude:
+GS approved
+GS Rejected
+
+Because these are final outcomes of GS applications and must remain part of team workload statistics.
+
+12. Staff Handling Time Rules
+
+For each staff member:
+
+Count all assigned GS applications in the allowed statuses
+Calculate handling time using assigned date to latest GS status date
+Include completed cases also
+Staff report should show:
+Staff name
+Total GS workload
+Completed GS cases
+Pending GS cases
+Avg handling time
+Avg completion time
+13. Business Logic Summary
+Active GS cases:
+Review
+GS submitted
+GS onhold
+Completed GS cases:
+GS approved
+GS Rejected
+Total GS cases:
+Review
+GS submitted
+GS onhold
+GS approved
+GS Rejected
+14. Developer Instruction
+
+Please update the report logic so that for GS Applications reports only:
+
+GS Total Number includes:
+Review
+GS submitted
+GS onhold
+GS approved
+GS Rejected
+Workload Calculation includes:
+Review
+GS submitted
+GS onhold
+GS approved
+GS Rejected
+Completion Count includes only:
+GS approved
+GS Rejected
+Avg Handling Time includes:
+Review
+GS submitted
+GS onhold
+GS approved
+GS Rejected
+Avg Completion Time includes only completed GS cases:
+GS approved
+GS Rejected
+Stage Analysis must follow:
+Review → GS submitted → GS approved / GS Rejected / GS onhold
+Final outcome statuses must not be excluded from workload and time calculations.
+Final short version for developer
+
+For GS Applications report, count these statuses in total GS and workload:
+Review, GS submitted, GS onhold, GS approved, GS Rejected.
+
+Count only GS approved and GS Rejected as completed cases.
+
+For Avg Handling Time, include all GS statuses above.
+
+For Avg Completion Time, include only completed cases:
+GS approved and GS Rejected.
+
+Stage flow should be:
+Review → GS submitted → GS approved / GS Rejected / GS onhold.

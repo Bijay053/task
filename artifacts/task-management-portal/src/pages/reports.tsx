@@ -79,6 +79,7 @@ export default function Reports() {
     setReportTab(tab);
     window.history.replaceState(null, "", `${window.location.pathname}?tab=${tab}`);
   };
+  const [timingDept, setTimingDept] = useState<"gs" | "offer">("gs");
   const [stagesDept, setStagesDept] = useState<"gs" | "offer">("gs");
   const [stagesUserId, setStagesUserId] = useState<string>("");
   const [dateFrom, setDateFrom] = useState(() => {
@@ -102,6 +103,7 @@ export default function Reports() {
   });
 
   const timingParams = {
+    department: timingDept,
     ...(dateFrom ? { date_from: dateFrom } : {}),
     ...(dateTo ? { date_to: dateTo } : {}),
   };
@@ -158,6 +160,17 @@ export default function Reports() {
                     className={cn("px-4 py-1.5 text-sm font-medium rounded-lg transition-colors",
                       deptFilter === d ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
                     {d === "" ? "All Depts" : d === "gs" ? "GS Dept" : "Offer Dept"}
+                  </button>
+                ))}
+              </div>
+            )}
+            {reportTab === "timing" && (
+              <div className="flex gap-2 bg-muted/40 border border-border rounded-xl overflow-hidden p-1">
+                {(["gs", "offer"] as const).map((d) => (
+                  <button key={d} onClick={() => setTimingDept(d)}
+                    className={cn("px-4 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                      timingDept === d ? "bg-card shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                    {d === "gs" ? "GS Dept" : "Offer Dept"}
                   </button>
                 ))}
               </div>
@@ -321,7 +334,7 @@ export default function Reports() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><Users className="w-6 h-6 text-blue-600" /></div>
-                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s: number, p: any) => s + p.total_gs, 0)}</div><div className="text-sm text-muted-foreground">Total GS Apps</div></div>
+                  <div><div className="text-2xl font-bold">{staffTiming.reduce((s: number, p: any) => s + p.total_gs, 0)}</div><div className="text-sm text-muted-foreground">Total {timingDept === "gs" ? "GS" : "Offer"} Apps</div></div>
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
@@ -349,7 +362,7 @@ export default function Reports() {
                     <tr>
                       <th>Staff Member</th>
                       <th>Role</th>
-                      <th className="text-center">GS Total</th>
+                      <th className="text-center">{timingDept === "gs" ? "GS" : "Offer"} Total</th>
                       <th className="text-center">Pending</th>
                       <th className="text-center">Completed</th>
                       <th style={{ minWidth: "200px" }}>Avg Handling Time</th>
