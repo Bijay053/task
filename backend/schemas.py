@@ -464,6 +464,8 @@ class StageReport(BaseModel):
     is_active_stage: bool = True
     total_transitions: int
     avg_days: Optional[float]
+    median_days: Optional[float]
+    p90_days: Optional[float]      # 90th percentile — 90% of apps exit faster than this
     min_days: Optional[float]
     max_days: Optional[float]
     currently_in_stage: int

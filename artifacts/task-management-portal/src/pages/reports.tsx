@@ -753,8 +753,10 @@ export default function Reports() {
                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Clock className="w-6 h-6 text-primary" /></div>
                       <div>
                         <div className="text-2xl font-bold">{fmtDays(bottleneck?.avg_days ?? null)}</div>
-                        <div className="text-sm text-muted-foreground">Longest Avg Stage</div>
-                        <div className="text-xs text-muted-foreground">active stages only</div>
+                        <div className="text-sm text-muted-foreground font-medium truncate max-w-[160px]" title={bottleneck?.status}>
+                          {bottleneck?.status ?? "—"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Longest Avg Stage</div>
                       </div>
                     </Card>
                     <Card className="p-5 flex items-center gap-4">
@@ -809,19 +811,34 @@ export default function Reports() {
                               <div>Stage Entries</div>
                               <div className="font-normal text-xs text-muted-foreground">(incl. revisits)</div>
                             </th>
-                            <th style={{ minWidth: "240px" }}>Avg Time in Stage</th>
+                            <th style={{ minWidth: "220px" }}>
+                              <div>Avg Time in Stage</div>
+                              <div className="font-normal text-xs text-muted-foreground">mean (exit−entry per case)</div>
+                            </th>
+                            <th className="text-center">
+                              <div>Median</div>
+                              <div className="font-normal text-xs text-muted-foreground">50th pct</div>
+                            </th>
+                            <th className="text-center">
+                              <div>P90</div>
+                              <div className="font-normal text-xs text-muted-foreground">90th pct</div>
+                            </th>
                             <th className="text-center">Min</th>
                             <th className="text-center">Max</th>
                           </tr>
                         </thead>
                         <tbody>
                           {stageLoading ? (
-                            <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Loading stage data...</td></tr>
+                            <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">Loading stage data...</td></tr>
                           ) : activeStages.length === 0 ? (
-                            <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No stage data yet. Status changes will populate this as applications move through stages.</td></tr>
-                          ) : (
-                            [...activeStages].sort((a: any, b: any) => (b.avg_days ?? 0) - (a.avg_days ?? 0)).map((stage: any) => {
+                            <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No stage data yet. Status changes will populate this as applications move through stages.</td></tr>
+                          ) : (() => {
+                            const maxP90 = Math.max(1, ...activeStages.map((s: any) => s.p90_days ?? 0));
+                            return [...activeStages].sort((a: any, b: any) => (b.avg_days ?? 0) - (a.avg_days ?? 0)).map((stage: any) => {
                               const isBottleneck = bottleneck?.status === stage.status;
+                              // SLA indicator: p90 > 2 days = critical, > 1 day = slow
+                              const p90 = stage.p90_days;
+                              const slaStatus = p90 == null ? null : p90 > 2 ? "critical" : p90 > 1 ? "slow" : "good";
                               return (
                                 <tr key={stage.status} className="align-middle">
                                   <td>
@@ -843,12 +860,30 @@ export default function Reports() {
                                       color={isBottleneck ? "bg-red-400" : "bg-primary"}
                                     />
                                   </td>
+                                  {/* Median */}
+                                  <td className="text-center">
+                                    <span className="text-sm font-semibold text-slate-700">{fmtDays(stage.median_days)}</span>
+                                  </td>
+                                  {/* P90 with SLA colour */}
+                                  <td className="text-center">
+                                    {p90 == null ? (
+                                      <span className="text-sm text-muted-foreground">—</span>
+                                    ) : (
+                                      <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold",
+                                        slaStatus === "good"     ? "bg-green-100 text-green-700"
+                                        : slaStatus === "slow"   ? "bg-amber-100 text-amber-700"
+                                        : "bg-red-100 text-red-700"
+                                      )}>
+                                        {fmtDays(p90)}
+                                      </span>
+                                    )}
+                                  </td>
                                   <td className="text-center text-sm text-muted-foreground">{fmtDays(stage.min_days)}</td>
                                   <td className="text-center text-sm text-muted-foreground">{fmtDays(stage.max_days)}</td>
                                 </tr>
                               );
-                            })
-                          )}
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>

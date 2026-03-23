@@ -495,6 +495,18 @@ def stage_analysis(
     # ── Build ordered list: active stages first, then outcomes ─────────────────
     ordered_stages = list(active_stages) + list(outcome_statuses)
 
+    def _avg(lst):    return round(sum(lst) / len(lst), 1) if lst else None
+    def _median(lst):
+        if not lst: return None
+        s = sorted(lst)
+        n = len(s)
+        return round((s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2), 1)
+    def _p90(lst):
+        if not lst: return None
+        s = sorted(lst)
+        idx = min(int(len(s) * 0.9), len(s) - 1)
+        return round(s[idx], 1)
+
     result = []
     for status in ordered_stages:
         durations = stage_durations.get(status, [])
@@ -504,7 +516,9 @@ def stage_analysis(
             department=dept,
             is_active_stage=is_active,
             total_transitions=transitions.get(status, 0),
-            avg_days=round(sum(durations) / len(durations), 1) if durations else None,
+            avg_days=_avg(durations),
+            median_days=_median(durations),
+            p90_days=_p90(durations),
             min_days=round(min(durations), 1) if durations else None,
             max_days=round(max(durations), 1) if durations else None,
             currently_in_stage=currently_here.get(status, 0),
