@@ -39,10 +39,11 @@ export function BulkUploadButton({ department, onSuccess }: BulkUploadButtonProp
       <input ref={fileRef} type="file" accept=".xlsx" className="hidden" onChange={handleFile} />
       <Button
         variant="outline"
+        size="sm"
         onClick={() => fileRef.current?.click()}
         isLoading={uploadMut.isPending}
       >
-        <Upload className="w-4 h-4 mr-2" />
+        <Upload className="w-3.5 h-3.5 mr-1.5" />
         Upload Excel
       </Button>
 

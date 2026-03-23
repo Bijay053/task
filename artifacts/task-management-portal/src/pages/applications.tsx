@@ -332,23 +332,23 @@ export default function GsApplications() {
         ) : (
           <>
             {/* ── Full header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
               <div>
-                <h1 className="text-3xl font-display font-bold tracking-tight">GS Applications</h1>
-                <p className="text-muted-foreground mt-1">Global Study applications — visa &amp; university tracking.</p>
+                <h1 className="text-xl font-display font-bold tracking-tight">GS Applications</h1>
+                <p className="text-muted-foreground text-xs mt-0.5">Global Study applications — visa &amp; university tracking.</p>
               </div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex rounded-xl border border-border overflow-hidden bg-muted/40">
-                  <button onClick={() => changeView("table")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                    <List className="w-4 h-4" />Table
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex rounded-lg border border-border overflow-hidden bg-muted/40">
+                  <button onClick={() => changeView("table")} className={cn("flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors", viewMode === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                    <List className="w-3.5 h-3.5" />Table
                   </button>
-                  <button onClick={() => changeView("kanban")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                    <LayoutGrid className="w-4 h-4" />Board
+                  <button onClick={() => changeView("kanban")} className={cn("flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors", viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                    <LayoutGrid className="w-3.5 h-3.5" />Board
                   </button>
                 </div>
                 <BulkUploadButton department="gs" />
-                {canEdit("gs") && <Button size="lg" onClick={handleOpenCreate}><Plus className="w-5 h-5 mr-2" />New GS App</Button>}
-                <button onClick={toggleHeader} title="Minimize header" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground text-xs font-medium">
+                {canEdit("gs") && <Button size="sm" onClick={handleOpenCreate}><Plus className="w-4 h-4 mr-1" />New GS App</Button>}
+                <button onClick={toggleHeader} title="Minimize header" className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground text-xs font-medium">
                   <ChevronUp className="w-3.5 h-3.5" />Minimize
                 </button>
               </div>
