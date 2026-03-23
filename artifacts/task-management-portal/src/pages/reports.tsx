@@ -474,7 +474,7 @@ export default function Reports() {
                             </th>
                             <th style={{ minWidth: "200px" }}>
                               <div>Weighted Score</div>
-                              <div className="font-normal text-xs text-muted-foreground">GS×3 · Visa×2 · Offer×1</div>
+                              <div className="font-normal text-xs text-muted-foreground">share of total · GS×3 · Visa×2 · Offer×1</div>
                             </th>
                             <th style={{ minWidth: "320px" }}>Status Breakdown</th>
                           </tr>
@@ -520,7 +520,7 @@ export default function Reports() {
                                   <td>
                                     {(() => {
                                       const wScore = p.weighted_workload ?? 0;
-                                      const wPct = Math.min(100, Math.round((wScore / maxWeighted) * 100));
+                                      const wPct = totalWeighted > 0 ? Math.round((wScore / totalWeighted) * 100) : 0;
                                       return (
                                         <div className="flex items-center gap-2">
                                           <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
