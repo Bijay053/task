@@ -298,10 +298,12 @@ def staff_timing_report(
                         outlier_count += 1
 
             # ── Avg First Action ───────────────────────────────────────────────
-            # ONLY the first log whose new_value is NOT a final/completion status.
-            # This measures "how quickly did staff first TOUCH the case?" — expected
-            # to be hours. If the very first log is the final decision (single-step
-            # close), we skip it so First Action ≠ Handling.
+            # Measures: first non-final status touch - app.created_at
+            # Always uses created_at (real timestamp) NOT assigned_date (date-only,
+            # snaps to midnight and inflates the interval by hours or days).
+            # Capped at 7 days — anything longer is a stale/untouched case and
+            # should not skew the "responsiveness" average.
+            FA_OUTLIER_MAX_DAYS = 7.0
             if app_logs:
                 first_intermediate = None
                 for log in app_logs:
@@ -309,8 +311,9 @@ def staff_timing_report(
                         first_intermediate = log
                         break
                 if first_intermediate:
-                    fa_days = max(0, (first_intermediate.changed_at - ref_dt).total_seconds() / 86400)
-                    if fa_days >= OUTLIER_MIN_DAYS:
+                    fa_ref = app.created_at          # always real timestamp
+                    fa_days = max(0, (first_intermediate.changed_at - fa_ref).total_seconds() / 86400)
+                    if OUTLIER_MIN_DAYS <= fa_days <= FA_OUTLIER_MAX_DAYS:
                         first_action_days_list.append(fa_days)
 
             # ── Stage duration breakdown ───────────────────────────────────────

@@ -667,7 +667,16 @@ export default function Reports() {
                                   <td><span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", roleBadge.cls)}>{roleBadge.label}</span></td>
                                   <td className="text-center font-bold">{p.total_gs}</td>
                                   <td className="text-center">
-                                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{p.pending_gs}</span>
+                                    <div className="flex flex-col items-center gap-0.5">
+                                      <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium",
+                                        (p.pending_gs ?? 0) > 40
+                                          ? "bg-red-100 text-red-700 font-bold"
+                                          : "bg-amber-100 text-amber-700"
+                                      )}>{p.pending_gs}</span>
+                                      {(p.pending_gs ?? 0) > 40 && (
+                                        <span className="text-[10px] font-bold text-red-600 uppercase tracking-wide">Overloaded</span>
+                                      )}
+                                    </div>
                                   </td>
                                   <td className="text-center">
                                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{p.completed_gs}</span>
