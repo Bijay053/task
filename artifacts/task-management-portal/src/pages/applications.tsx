@@ -13,7 +13,7 @@ import { ApplicationHistory } from "@/components/application-history";
 import { KanbanBoard } from "@/components/kanban-board";
 import { TableScrollWrapper } from "@/components/table-scroll-wrapper";
 import { BulkUploadButton } from "@/components/bulk-upload-button";
-import { Search, Plus, FileEdit, LayoutGrid, List, Trash2 } from "lucide-react";
+import { Search, Plus, FileEdit, LayoutGrid, List, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -107,6 +107,14 @@ export default function GsApplications() {
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const p = new URLSearchParams(window.location.search).get("view");
     return p === "kanban" ? "kanban" : "table";
+  });
+  const [headerCollapsed, setHeaderCollapsed] = useState(() =>
+    localStorage.getItem("gs_header_collapsed") === "1"
+  );
+  const toggleHeader = () => setHeaderCollapsed(v => {
+    const next = !v;
+    localStorage.setItem("gs_header_collapsed", next ? "1" : "0");
+    return next;
   });
 
   const changeView = (mode: ViewMode) => {
@@ -300,78 +308,105 @@ export default function GsApplications() {
 
   return (
     <Layout>
-      <div className="h-full flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
-          <div>
-            <h1 className="text-3xl font-display font-bold tracking-tight">GS Applications</h1>
-            <p className="text-muted-foreground mt-1">Global Study applications — visa &amp; university tracking.</p>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex rounded-xl border border-border overflow-hidden bg-muted/40">
-              <button onClick={() => changeView("table")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                <List className="w-4 h-4" />Table
-              </button>
-              <button onClick={() => changeView("kanban")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                <LayoutGrid className="w-4 h-4" />Board
+      <div className="h-full flex flex-col gap-2">
+        {/* ── Collapsed bar (shown when minimized) ── */}
+        {headerCollapsed ? (
+          <div className="flex items-center justify-between gap-3 shrink-0 px-1 py-1">
+            <span className="text-sm font-semibold text-muted-foreground">GS Applications</span>
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-lg border border-border overflow-hidden bg-muted/40">
+                <button onClick={() => changeView("table")} className={cn("flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors", viewMode === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                  <List className="w-3.5 h-3.5" />Table
+                </button>
+                <button onClick={() => changeView("kanban")} className={cn("flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors", viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                  <LayoutGrid className="w-3.5 h-3.5" />Board
+                </button>
+              </div>
+              <BulkUploadButton department="gs" />
+              {canEdit("gs") && <Button size="sm" onClick={handleOpenCreate}><Plus className="w-4 h-4 mr-1" />New GS App</Button>}
+              <button onClick={toggleHeader} title="Expand header" className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+                <ChevronDown className="w-4 h-4" />
               </button>
             </div>
-            <BulkUploadButton department="gs" />
-            {canEdit("gs") && <Button size="lg" onClick={handleOpenCreate}><Plus className="w-5 h-5 mr-2" />New GS App</Button>}
           </div>
-        </div>
+        ) : (
+          <>
+            {/* ── Full header ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+              <div>
+                <h1 className="text-3xl font-display font-bold tracking-tight">GS Applications</h1>
+                <p className="text-muted-foreground mt-1">Global Study applications — visa &amp; university tracking.</p>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex rounded-xl border border-border overflow-hidden bg-muted/40">
+                  <button onClick={() => changeView("table")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "table" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                    <List className="w-4 h-4" />Table
+                  </button>
+                  <button onClick={() => changeView("kanban")} className={cn("flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors", viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                    <LayoutGrid className="w-4 h-4" />Board
+                  </button>
+                </div>
+                <BulkUploadButton department="gs" />
+                {canEdit("gs") && <Button size="lg" onClick={handleOpenCreate}><Plus className="w-5 h-5 mr-2" />New GS App</Button>}
+                <button onClick={toggleHeader} title="Minimize header" className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+                  <ChevronUp className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
 
-        {/* Pinned status quick-filter tabs */}
-        {pinnedTabStatuses.length > 0 && (
-          <div className="flex gap-1 flex-wrap shrink-0 border-b border-border pb-0">
-            <button
-              onClick={() => setStatusFilter("")}
-              className={cn(
-                "px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 -mb-px transition-colors",
-                statusFilter === "" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >All</button>
-            {pinnedTabStatuses.map((s: string) => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(prev => prev === s ? "" : s)}
-                className={cn(
-                  "px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 -mb-px transition-colors flex items-center gap-1.5",
-                  statusFilter === s ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"
+            {/* Pinned status quick-filter tabs */}
+            {pinnedTabStatuses.length > 0 && (
+              <div className="flex gap-1 flex-wrap shrink-0 border-b border-border pb-0">
+                <button
+                  onClick={() => setStatusFilter("")}
+                  className={cn(
+                    "px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 -mb-px transition-colors",
+                    statusFilter === "" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"
+                  )}
+                >All</button>
+                {pinnedTabStatuses.map((s: string) => (
+                  <button
+                    key={s}
+                    onClick={() => setStatusFilter(prev => prev === s ? "" : s)}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 -mb-px transition-colors flex items-center gap-1.5",
+                      statusFilter === s ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {statusColors[s] && (
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: statusColors[s].bg }} />
+                    )}
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+            <Card className="p-4 flex flex-col sm:flex-row gap-4 bg-muted/30 shrink-0">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                <Input placeholder="Search by student name..." className="pl-10 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+              <div className="flex gap-4">
+                {viewMode === "table" && (
+                  <div className="min-w-[180px]">
+                    <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-card">
+                      <option value="">All Statuses</option>
+                      {statusChoices.map(s => <option key={s} value={s}>{s}</option>)}
+                    </Select>
+                  </div>
                 )}
-              >
-                {statusColors[s] && (
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: statusColors[s].bg }} />
+                {(canViewAllUsers("gs") || canViewMappedUsers("gs")) && (
+                  <div className="min-w-[180px]">
+                    <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="bg-card">
+                      <option value="">{canViewAllUsers("gs") ? "All Assignees" : "My Team"}</option>
+                      {(canViewAllUsers("gs") ? users : myTeamUsers)?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                    </Select>
+                  </div>
                 )}
-                {s}
-              </button>
-            ))}
-          </div>
+              </div>
+            </Card>
+          </>
         )}
-
-        <Card className="p-4 flex flex-col sm:flex-row gap-4 bg-muted/30 shrink-0">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
-            <Input placeholder="Search by student name..." className="pl-10 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <div className="flex gap-4">
-            {viewMode === "table" && (
-              <div className="min-w-[180px]">
-                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-card">
-                  <option value="">All Statuses</option>
-                  {statusChoices.map(s => <option key={s} value={s}>{s}</option>)}
-                </Select>
-              </div>
-            )}
-            {(canViewAllUsers("gs") || canViewMappedUsers("gs")) && (
-              <div className="min-w-[180px]">
-                <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="bg-card">
-                  <option value="">{canViewAllUsers("gs") ? "All Assignees" : "My Team"}</option>
-                  {(canViewAllUsers("gs") ? users : myTeamUsers)?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
-                </Select>
-              </div>
-            )}
-          </div>
-        </Card>
 
         {canDelete("gs") && selectedIds.size > 0 && (
           <div className="flex items-center gap-3 px-4 py-2.5 bg-destructive/10 border border-destructive/30 rounded-lg shrink-0">
