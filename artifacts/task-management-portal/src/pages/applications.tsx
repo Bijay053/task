@@ -103,6 +103,7 @@ export default function GsApplications() {
   const [editingApp, setEditingApp] = useState<any>(null);
   const [formError, setFormError] = useState("");
   const [agentInput, setAgentInput] = useState("");
+  const [agentDropdownOpen, setAgentDropdownOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const p = new URLSearchParams(window.location.search).get("view");
     return p === "kanban" ? "kanban" : "table";
@@ -274,7 +275,11 @@ export default function GsApplications() {
     setFormError("");
     try {
       if (editingApp) {
-        await updateMut.mutateAsync({ appId: editingApp.id, data });
+        const updatedApp = await updateMut.mutateAsync({ appId: editingApp.id, data });
+        queryClient.setQueriesData({ queryKey: ["/api/applications"] }, (old: any) => {
+          if (!Array.isArray(old)) return old;
+          return old.map((a: any) => a.id === updatedApp.id ? updatedApp : a);
+        });
       } else {
         await createMut.mutateAsync({ data });
       }
@@ -411,7 +416,7 @@ export default function GsApplications() {
                     <th>University</th>
                     <th>Course</th>
                     <th>Intake</th>
-                    <th>Submitted</th>
+                    <th>GS Submitted</th>
                     <th>Verification</th>
                     <th>Status</th>
                     <th>Ext. Agent</th>
@@ -574,7 +579,7 @@ export default function GsApplications() {
               <Input key={`${editingApp?.id ?? "new"}-intake-${autofillKey}`} name="intake" defaultValue={autofill?.intake ?? editingApp?.intake ?? ""} placeholder="e.g. Feb 2025" />
             </div>
             <div className="space-y-2">
-              <Label>Submitted Date</Label>
+              <Label>GS Submitted Date</Label>
               <Input type="date" name="submitted_date" defaultValue={editingApp?.submitted_date || ""} />
             </div>
             <div className="space-y-2">
@@ -597,21 +602,32 @@ export default function GsApplications() {
               <Label>External Agent (Sub-Agent / Partner)</Label>
               <div className="relative">
                 <input
-                  list="gs-agents-datalist"
                   value={agentInput}
-                  onChange={e => setAgentInput(e.target.value)}
+                  onChange={e => { setAgentInput(e.target.value); setAgentDropdownOpen(true); }}
+                  onFocus={() => setAgentDropdownOpen(true)}
+                  onBlur={() => setTimeout(() => setAgentDropdownOpen(false), 150)}
                   placeholder="Type or select agent…"
+                  autoComplete="off"
                   className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
                 {agentInput && (
-                  <button type="button" onClick={() => setAgentInput("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs">✕</button>
+                  <button type="button" onClick={() => { setAgentInput(""); setAgentDropdownOpen(false); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs px-1">✕</button>
+                )}
+                {agentDropdownOpen && agents && agents.filter(a => agentInput.length > 0 && a.name.toLowerCase().includes(agentInput.toLowerCase())).length > 0 && (
+                  <ul className="absolute z-50 w-full mt-1 bg-card border border-border rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                    {agents.filter(a => a.name.toLowerCase().includes(agentInput.toLowerCase())).map(a => (
+                      <li
+                        key={a.id}
+                        onMouseDown={() => { setAgentInput(`${a.name}${a.company_name ? ` (${a.company_name})` : ""}`); setAgentDropdownOpen(false); }}
+                        className="px-3 py-2 text-sm cursor-pointer hover:bg-accent flex items-center justify-between"
+                      >
+                        <span>{a.name}</span>
+                        {a.company_name && <span className="text-xs text-muted-foreground ml-2">{a.company_name}</span>}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
-              <datalist id="gs-agents-datalist">
-                {agents?.map(a => (
-                  <option key={a.id} value={`${a.name}${a.company_name ? ` (${a.company_name})` : ""}`} />
-                ))}
-              </datalist>
             </div>
             <div className="space-y-2">
               <Label>Internal Assignee (Staff)</Label>
