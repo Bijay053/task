@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const IDLE_TIMEOUT_MS  = 30 * 60 * 1000;
+const IDLE_TIMEOUT_MS  = 60 * 60 * 1000;
 const WARN_BEFORE_MS   =  5 * 60 * 1000;
 const WARN_DURATION_MS =  5 * 60 * 1000;
 
