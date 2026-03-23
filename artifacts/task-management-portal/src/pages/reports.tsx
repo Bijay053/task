@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui-elements";
@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Status classification for color-coded badges in breakdown
+// ─── Status classification ──────────────────────────────────────────────────
 const GS_ACTIVE_SET = new Set([
   "In Review", "GS submitted", "GS onhold",
   "GS document pending", "GS additional document request",
@@ -31,6 +31,79 @@ function statusBadgeCls(status: string): string {
   if (GS_NEGATIVE_SET.has(status) || OFFER_NEGATIVE_SET.has(status))
     return "bg-red-50 text-red-600 border border-red-200";
   return "bg-muted text-muted-foreground";
+}
+
+// Grouped status breakdown: defines display order + category labels
+const STATUS_GROUPS: { label: string; cls: string; statuses: string[] }[] = [
+  {
+    label: "GS Stage",
+    cls: "bg-amber-100 text-amber-800",
+    statuses: [
+      "In Review", "GS submitted", "GS onhold",
+      "GS document pending", "GS additional document request",
+      "Refund Requested",
+    ],
+  },
+  {
+    label: "CoE / Visa",
+    cls: "bg-blue-100 text-blue-800",
+    statuses: ["CoE Requested", "Visa Lodged", "CoE Approved", "Visa Granted", "Visa Refused"],
+  },
+  {
+    label: "GS Outcome",
+    cls: "bg-green-100 text-green-800",
+    statuses: ["GS approved", "GS Rejected", "Withdrawn"],
+  },
+  {
+    label: "Offer",
+    cls: "bg-violet-100 text-violet-800",
+    statuses: ["Enquiries", "Offer Request", "Document Requested", "On Hold", "Offer Received", "Offer Rejected", "Not Eligible"],
+  },
+];
+
+function GroupedBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
+  const rendered: string[] = [];
+  const sections: React.ReactNode[] = [];
+
+  STATUS_GROUPS.forEach(group => {
+    const items = group.statuses
+      .filter(s => breakdown[s] != null && breakdown[s] > 0)
+      .map(s => ({ status: s, count: breakdown[s] }));
+    if (items.length === 0) return;
+    items.forEach(i => rendered.push(i.status));
+    sections.push(
+      <div key={group.label} className="flex flex-wrap gap-1 items-center">
+        <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0", group.cls)}>
+          {group.label}
+        </span>
+        {items.map(({ status, count }) => (
+          <span key={status} className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs", statusBadgeCls(status))}>
+            <span>{status}</span>
+            <span className="font-bold">{count}</span>
+          </span>
+        ))}
+      </div>
+    );
+  });
+
+  // Any leftover statuses not in any group
+  const leftover = Object.entries(breakdown)
+    .filter(([s, c]) => !rendered.includes(s) && c > 0);
+  if (leftover.length > 0) {
+    sections.push(
+      <div key="_other" className="flex flex-wrap gap-1 items-center">
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0 bg-slate-100 text-slate-600">Other</span>
+        {leftover.map(([status, count]) => (
+          <span key={status} className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs", statusBadgeCls(status))}>
+            <span>{status}</span>
+            <span className="font-bold">{count}</span>
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  return <div className="flex flex-col gap-1.5">{sections}</div>;
 }
 
 const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
@@ -270,8 +343,13 @@ export default function Reports() {
               const totalApps = performance.reduce((s: number, p: any) => s + p.total_assigned, 0);
               const totalActive = performance.reduce((s: number, p: any) => s + p.active_count, 0);
               const totalCompleted = performance.reduce((s: number, p: any) => s + p.completed_count, 0);
+              const totalWeighted = performance.reduce((s: number, p: any) => s + (p.weighted_workload ?? 0), 0);
 
-              // Offer conversion rate: sum Offer Received across all breakdown maps
+              // Workload % bar: relative to the busiest staff member (dynamic max)
+              const maxActive = Math.max(1, ...performance.map((p: any) => p.active_count ?? 0));
+              const maxWeighted = Math.max(1, ...performance.map((p: any) => p.weighted_workload ?? 0));
+
+              // Offer conversion rate
               const totalOfferPositive = performance.reduce((s: number, p: any) =>
                 s + (p.status_breakdown?.["Offer Received"] ?? 0), 0);
               const totalOfferNeg = performance.reduce((s: number, p: any) =>
@@ -291,7 +369,7 @@ export default function Reports() {
 
               const showGSDept = !deptFilter || deptFilter === "gs";
               const showOfferDept = !deptFilter || deptFilter === "offer";
-              const colSpanCount = 7 + (showGSDept && showOfferDept ? 2 : 1);
+              const colSpanCount = 8 + (showGSDept && showOfferDept ? 2 : 1);
 
               return (
                 <>
@@ -307,7 +385,8 @@ export default function Reports() {
                       <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0"><AlertTriangle className="w-6 h-6 text-orange-600" /></div>
                       <div>
                         <div className="text-2xl font-bold text-orange-700">{totalActive}</div>
-                        <div className="text-sm text-muted-foreground">Active Workload</div>
+                        <div className="text-sm text-muted-foreground">Active (in-progress)</div>
+                        <div className="text-xs text-muted-foreground">excludes completed</div>
                       </div>
                     </Card>
                     <Card className="p-5 flex items-center gap-4">
@@ -317,41 +396,38 @@ export default function Reports() {
                         <div className="text-sm text-muted-foreground">Completed</div>
                       </div>
                     </Card>
-                    {/* Conversion / approval rate card */}
-                    {deptFilter === "offer" && (
-                      <Card className="p-5 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><TrendingUp className="w-6 h-6 text-blue-600" /></div>
-                        <div>
-                          <div className="text-2xl font-bold text-blue-700">
-                            {conversionRate !== null ? `${conversionRate}%` : "—"}
-                          </div>
-                          <div className="text-sm text-muted-foreground">Offer Conversion Rate</div>
-                          <div className="text-xs text-muted-foreground">{totalOfferPositive} received / {totalOfferPositive + totalOfferNeg} decided</div>
-                        </div>
-                      </Card>
-                    )}
-                    {deptFilter === "gs" && (
-                      <Card className="p-5 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><TrendingUp className="w-6 h-6 text-blue-600" /></div>
-                        <div>
-                          <div className="text-2xl font-bold text-blue-700">
-                            {gsApprovalRate !== null ? `${gsApprovalRate}%` : "—"}
-                          </div>
-                          <div className="text-sm text-muted-foreground">GS Approval Rate</div>
-                          <div className="text-xs text-muted-foreground">{totalGSApproved} approved / {totalGSApproved + totalGSRejected} decided</div>
-                        </div>
-                      </Card>
-                    )}
-                    {!deptFilter && (
-                      <Card className="p-5 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><FileText className="w-6 h-6 text-slate-500" /></div>
-                        <div>
-                          <div className="text-2xl font-bold">{performance.length}</div>
-                          <div className="text-sm text-muted-foreground">Staff Members</div>
-                        </div>
-                      </Card>
-                    )}
+                    {/* 4th card: Weighted Workload Score */}
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shrink-0"><BarChart3 className="w-6 h-6 text-purple-600" /></div>
+                      <div>
+                        <div className="text-2xl font-bold text-purple-700">{totalWeighted}</div>
+                        <div className="text-sm text-muted-foreground">Weighted Load Score</div>
+                        <div className="text-xs text-muted-foreground">GS×3 · CoE/Visa×2 · Offer×1</div>
+                      </div>
+                    </Card>
                   </div>
+
+                  {/* Secondary metric: Approval / Conversion rate */}
+                  {(deptFilter === "offer" || deptFilter === "gs") && (
+                    <div className="shrink-0">
+                      <Card className="p-4 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><TrendingUp className="w-5 h-5 text-blue-600" /></div>
+                        {deptFilter === "offer" ? (
+                          <div>
+                            <span className="font-bold text-blue-700 text-xl">{conversionRate !== null ? `${conversionRate}%` : "—"}</span>
+                            <span className="text-sm text-muted-foreground ml-2">Offer Conversion Rate</span>
+                            <span className="text-xs text-muted-foreground ml-2">({totalOfferPositive} received / {totalOfferPositive + totalOfferNeg} decided)</span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="font-bold text-blue-700 text-xl">{gsApprovalRate !== null ? `${gsApprovalRate}%` : "—"}</span>
+                            <span className="text-sm text-muted-foreground ml-2">GS Approval Rate</span>
+                            <span className="text-xs text-muted-foreground ml-2">({totalGSApproved} approved / {totalGSApproved + totalGSRejected} decided)</span>
+                          </div>
+                        )}
+                      </Card>
+                    </div>
+                  )}
 
                   <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
                     <div className="table-container flex-1 h-full border-0 rounded-none">
@@ -361,12 +437,22 @@ export default function Reports() {
                             <th>Staff Member</th>
                             <th>Role</th>
                             <th className="text-center">Total</th>
-                            <th className="text-center text-amber-700">Active</th>
+                            <th className="text-center text-amber-700">
+                              <div>Active</div>
+                              <div className="font-normal text-xs">(in-progress only)</div>
+                            </th>
                             <th className="text-center text-green-700">Completed</th>
                             {showGSDept && showOfferDept && <th className="text-center">GS Total</th>}
                             {showGSDept && showOfferDept && <th className="text-center">Offer Total</th>}
-                            <th style={{ minWidth: "200px" }}>Active Workload %</th>
-                            <th>Status Breakdown</th>
+                            <th style={{ minWidth: "200px" }}>
+                              <div>Active Workload %</div>
+                              <div className="font-normal text-xs text-muted-foreground">active / max active</div>
+                            </th>
+                            <th style={{ minWidth: "200px" }}>
+                              <div>Weighted Score</div>
+                              <div className="font-normal text-xs text-muted-foreground">GS×3 · CoE/Visa×2 · Offer×1</div>
+                            </th>
+                            <th style={{ minWidth: "320px" }}>Status Breakdown</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -404,20 +490,28 @@ export default function Reports() {
                                           style={{ width: `${pct}%` }}
                                         />
                                       </div>
-                                      <span className="text-xs text-muted-foreground w-14 shrink-0">{p.active_count} ({pct}%)</span>
+                                      <span className="text-xs text-muted-foreground w-16 shrink-0">{p.active_count} ({pct}%)</span>
                                     </div>
                                   </td>
                                   <td>
-                                    <div className="flex flex-wrap gap-1">
-                                      {Object.entries(p.status_breakdown)
-                                        .sort(([, a], [, b]) => (b as number) - (a as number))
-                                        .map(([status, count]) => (
-                                        <span key={status} className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs", statusBadgeCls(status))}>
-                                          <span>{status}</span>
-                                          <span className="font-bold">{count as number}</span>
-                                        </span>
-                                      ))}
-                                    </div>
+                                    {(() => {
+                                      const wScore = p.weighted_workload ?? 0;
+                                      const wPct = Math.min(100, Math.round((wScore / maxWeighted) * 100));
+                                      return (
+                                        <div className="flex items-center gap-2">
+                                          <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
+                                            <div
+                                              className={cn("h-full rounded-full transition-all", wPct > 75 ? "bg-purple-600" : wPct > 50 ? "bg-purple-400" : "bg-purple-300")}
+                                              style={{ width: `${wPct}%` }}
+                                            />
+                                          </div>
+                                          <span className="text-xs text-muted-foreground w-16 shrink-0">{wScore} ({wPct}%)</span>
+                                        </div>
+                                      );
+                                    })()}
+                                  </td>
+                                  <td>
+                                    <GroupedBreakdown breakdown={p.status_breakdown} />
                                   </td>
                                 </tr>
                               );

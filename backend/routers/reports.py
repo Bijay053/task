@@ -30,6 +30,14 @@ GS_ACTIVE_STATUSES = {
 }
 GS_ALL_STATUSES = GS_ACTIVE_STATUSES | GS_COMPLETED_STATUSES
 
+# Weighted workload tiers: GS-core stage = heavy (×3), CoE/Visa = medium (×2), Offer = light (×1)
+GS_WEIGHT3_STATUSES = {
+    "In Review", "GS submitted", "GS onhold",
+    "GS document pending", "GS additional document request",
+    "Refund Requested",
+}
+GS_WEIGHT2_STATUSES = {"CoE Requested", "Visa Lodged"}
+
 # Offer pipeline
 OFFER_COMPLETED_STATUSES = {"Offer Received", "Offer Rejected", "Not Eligible"}
 OFFER_ACTIVE_STATUSES    = {"Document Requested", "On Hold", "Offer Request", "Enquiries"}
@@ -118,6 +126,16 @@ def performance_report(
             or (a.department == "offer" and a.application_status in OFFER_COMPLETED_STATUSES)
         )
 
+        # weighted_workload: GS core (×3) + CoE/Visa (×2) + Offer active (×1)
+        weighted_workload = sum(
+            3 if a.application_status in GS_WEIGHT3_STATUSES else
+            2 if a.application_status in GS_WEIGHT2_STATUSES else
+            1  # Offer active
+            for a in apps
+            if (a.department == "gs" and a.application_status in GS_ACTIVE_STATUSES)
+            or (a.department == "offer" and a.application_status in OFFER_ACTIVE_STATUSES)
+        )
+
         breakdown: dict = {}
         for app in apps:
             breakdown[app.application_status] = breakdown.get(app.application_status, 0) + 1
@@ -132,6 +150,7 @@ def performance_report(
             gs_count=gs_count,
             offer_count=offer_count,
             status_breakdown=breakdown,
+            weighted_workload=weighted_workload,
         ))
 
     return sorted(result, key=lambda x: x.total_assigned, reverse=True)

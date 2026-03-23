@@ -439,6 +439,7 @@ class StaffPerformance(BaseModel):
     gs_count: int
     offer_count: int
     status_breakdown: dict
+    weighted_workload: int = 0   # GS-stage active×3 + CoE/Visa active×2 + Offer active×1
 
 
 class StaffTimingReport(BaseModel):
