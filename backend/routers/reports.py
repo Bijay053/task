@@ -15,15 +15,25 @@ import backend.schemas as schemas
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 # ─── Status definitions ───────────────────────────────────────────────────────
+# GS pipeline: In Review → GS submitted → … → CoE → Visa
 
-GS_ALL_STATUSES      = {"Review", "GS submitted", "GS onhold", "GS approved", "GS Rejected"}
-GS_COMPLETED_STATUSES = {"GS approved", "GS Rejected"}
-GS_ACTIVE_STATUSES   = {"Review", "GS submitted", "GS onhold"}
+GS_COMPLETED_STATUSES = {
+    "GS approved", "GS Rejected",
+    "CoE Approved", "Visa Granted", "Visa Refused",
+    "Withdrawn",
+}
+GS_ACTIVE_STATUSES = {
+    "In Review", "GS submitted", "GS onhold",
+    "GS document pending", "GS additional document request",
+    "Refund Requested",
+    "CoE Requested", "Visa Lodged",
+}
+GS_ALL_STATUSES = GS_ACTIVE_STATUSES | GS_COMPLETED_STATUSES
 
-OFFER_ALL_STATUSES      = {"Enquiries", "Document Requested", "On Hold", "Offer Requested",
-                           "Offer Received", "Offer Rejected", "Not Eligible"}
+# Offer pipeline
 OFFER_COMPLETED_STATUSES = {"Offer Received", "Offer Rejected", "Not Eligible"}
-OFFER_ACTIVE_STATUSES    = {"Enquiries", "Document Requested", "On Hold", "Offer Requested"}
+OFFER_ACTIVE_STATUSES    = {"Document Requested", "On Hold", "Offer Request", "Enquiries"}
+OFFER_ALL_STATUSES       = OFFER_ACTIVE_STATUSES | OFFER_COMPLETED_STATUSES
 
 
 def require_manager(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -84,15 +94,28 @@ def performance_report(
 
         apps = q.all()
 
-        # gs_count: apps in GS department with valid GS statuses
+        # gs_count: ALL GS statuses (active + completed)
         gs_count = sum(
             1 for a in apps
             if a.department == "gs" and a.application_status in GS_ALL_STATUSES
         )
-        # offer_count: apps in Offer department with valid Offer statuses
+        # offer_count: ALL Offer statuses (active + completed)
         offer_count = sum(
             1 for a in apps
             if a.department == "offer" and a.application_status in OFFER_ALL_STATUSES
+        )
+
+        # active_count: only ACTIVE (non-completed) statuses — used for real workload
+        active_count = sum(
+            1 for a in apps
+            if (a.department == "gs" and a.application_status in GS_ACTIVE_STATUSES)
+            or (a.department == "offer" and a.application_status in OFFER_ACTIVE_STATUSES)
+        )
+        # completed_count: final/completed statuses
+        completed_count = sum(
+            1 for a in apps
+            if (a.department == "gs" and a.application_status in GS_COMPLETED_STATUSES)
+            or (a.department == "offer" and a.application_status in OFFER_COMPLETED_STATUSES)
         )
 
         breakdown: dict = {}
@@ -104,6 +127,8 @@ def performance_report(
             full_name=user.full_name,
             role=user.role,
             total_assigned=len(apps),
+            active_count=active_count,
+            completed_count=completed_count,
             gs_count=gs_count,
             offer_count=offer_count,
             status_breakdown=breakdown,

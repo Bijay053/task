@@ -141,6 +141,7 @@ export default function Reports() {
   }
 
   const maxAssigned = Math.max(1, ...(performance?.map((p: any) => p.total_assigned) || [0]));
+  const maxActive = Math.max(1, ...(performance?.map((p: any) => p.active_count) || [0]));
   const maxHandling = Math.max(1, ...(staffTiming?.map((p: any) => p.avg_handling_days ?? 0) || [0]));
   const maxStageDays = Math.max(1, ...(stageData?.map((s: any) => s.avg_days ?? 0) || [0]));
 
@@ -254,12 +255,12 @@ export default function Reports() {
                   <div><div className="text-2xl font-bold">{performance.reduce((sum: number, p: any) => sum + p.total_assigned, 0)}</div><div className="text-sm text-muted-foreground">Total Applications</div></div>
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><TrendingUp className="w-6 h-6 text-green-600" /></div>
-                  <div><div className="text-2xl font-bold">{performance.reduce((sum: number, p: any) => sum + p.gs_count, 0)}</div><div className="text-sm text-muted-foreground">GS Applications</div></div>
+                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0"><AlertTriangle className="w-6 h-6 text-orange-600" /></div>
+                  <div><div className="text-2xl font-bold text-orange-700">{performance.reduce((sum: number, p: any) => sum + p.active_count, 0)}</div><div className="text-sm text-muted-foreground">Active Workload</div></div>
                 </Card>
                 <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center shrink-0"><Award className="w-6 h-6 text-violet-600" /></div>
-                  <div><div className="text-2xl font-bold">{performance.reduce((sum: number, p: any) => sum + p.offer_count, 0)}</div><div className="text-sm text-muted-foreground">Offer Applications</div></div>
+                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
+                  <div><div className="text-2xl font-bold text-green-700">{performance.reduce((sum: number, p: any) => sum + p.completed_count, 0)}</div><div className="text-sm text-muted-foreground">Completed</div></div>
                 </Card>
               </div>
             )}
@@ -271,20 +272,22 @@ export default function Reports() {
                       <th>Staff Member</th>
                       <th>Role</th>
                       <th className="text-center">Total</th>
-                      <th className="text-center">GS</th>
-                      <th className="text-center">Offer</th>
-                      <th style={{ minWidth: "200px" }}>Workload</th>
+                      <th className="text-center text-orange-700">Active</th>
+                      <th className="text-center text-green-700">Completed</th>
+                      <th className="text-center">GS Total</th>
+                      <th className="text-center">Offer Total</th>
+                      <th style={{ minWidth: "200px" }}>Active Workload</th>
                       <th>Status Breakdown</th>
                     </tr>
                   </thead>
                   <tbody>
                     {perfLoading ? (
-                      <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Loading report...</td></tr>
+                      <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">Loading report...</td></tr>
                     ) : performance?.length === 0 ? (
-                      <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
+                      <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">No data found.</td></tr>
                     ) : (
                       performance?.map((p: any) => {
-                        const pct = Math.round((p.total_assigned / maxAssigned) * 100);
+                        const pct = Math.round((p.active_count / maxActive) * 100);
                         const roleBadge = ROLE_BADGE[p.role] || { label: p.role, cls: "bg-slate-100 text-slate-600" };
                         return (
                           <tr key={p.user_id} className="align-top">
@@ -296,14 +299,23 @@ export default function Reports() {
                             </td>
                             <td><span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold", roleBadge.cls)}>{roleBadge.label}</span></td>
                             <td className="text-center font-bold text-lg">{p.total_assigned}</td>
+                            <td className="text-center">
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 min-w-[28px]">{p.active_count}</span>
+                            </td>
+                            <td className="text-center">
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 min-w-[28px]">{p.completed_count}</span>
+                            </td>
                             <td className="text-center text-blue-700 font-semibold">{p.gs_count}</td>
                             <td className="text-center text-violet-700 font-semibold">{p.offer_count}</td>
                             <td>
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
-                                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                  <div
+                                    className={cn("h-full rounded-full transition-all", pct > 75 ? "bg-red-500" : pct > 50 ? "bg-orange-400" : "bg-primary")}
+                                    style={{ width: `${pct}%` }}
+                                  />
                                 </div>
-                                <span className="text-xs text-muted-foreground w-8 shrink-0">{pct}%</span>
+                                <span className="text-xs text-muted-foreground w-14 shrink-0">{p.active_count} ({pct}%)</span>
                               </div>
                             </td>
                             <td>

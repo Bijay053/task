@@ -434,6 +434,8 @@ class StaffPerformance(BaseModel):
     full_name: str
     role: str
     total_assigned: int
+    active_count: int
+    completed_count: int
     gs_count: int
     offer_count: int
     status_breakdown: dict

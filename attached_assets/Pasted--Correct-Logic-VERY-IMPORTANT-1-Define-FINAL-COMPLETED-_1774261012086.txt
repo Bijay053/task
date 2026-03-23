@@ -1,0 +1,164 @@
+✅ Correct Logic (VERY IMPORTANT)
+1. Define FINAL (COMPLETED) STATUSES
+
+These should NOT be counted in workload:
+
+✔ Final Positive Completion
+GS Approved → (stage completed)
+CoE Approved → (stage completed)
+Visa Granted → (FINAL success)
+✔ Final Negative Completion
+GS Rejected
+Visa Refused
+Withdrawn
+
+👉 These must be treated as:
+
+Completed = TRUE
+Active Workload = FALSE
+2. Define ACTIVE WORKLOAD STATUSES
+
+Only these should be counted in workload:
+
+GS Stage (Active)
+In Review
+GS Submitted
+GS On Hold
+GS Document Pending
+CoE Stage (Active)
+CoE Requested
+Visa Stage (Active)
+Visa Lodged
+Pre-stage
+Enquiries
+Document Requested
+
+👉 These = Actual workload
+
+⚠️ Your Current Issue (from screenshot)
+
+Example:
+
+Kejina Maharjan:
+Visa Granted = 10 ❗ (should NOT be workload)
+GS Approved = 17 ❗ (should NOT be workload)
+GS Rejected = 40 ❗ (should NOT be workload)
+
+👉 But your system still shows:
+
+Workload = 100%
+Total = 157
+
+This means:
+👉 You are calculating workload using TOTAL instead of ACTIVE
+
+✅ Correct Workload Formula
+❌ Current (WRONG)
+Workload % = Staff Total / Max Staff Total
+✅ Correct (SHOULD BE)
+Active Workload = Count of ACTIVE statuses only
+
+Workload % = Active Workload / Max Active Workload among staff
+✅ Example Fix
+
+For Kejina:
+
+Total = 157
+
+Break into:
+
+Type	Count
+Completed	10 + 17 + 40 + 7 + etc
+Active	ONLY remaining
+
+👉 Suppose:
+
+Active = 60
+
+Then:
+
+Workload % = 60 / max_active
+❌ GS TOTAL ISSUE
+
+You said:
+
+GS total not counting GS Approved, GS Rejected
+
+✅ Correct GS Total Definition
+GS Total =
+GS Submitted +
+GS Approved +
+GS Rejected +
+GS On Hold +
+GS Pending
+
+👉 ALL GS-related statuses must be included
+
+❌ AVG HANDLING TIME ISSUE
+
+You said:
+
+completion counted but not shown
+
+✅ Correct Logic
+Completion Time =
+(Completed Date - Assigned Date)
+
+Only for:
+
+GS Approved
+GS Rejected
+Visa Granted
+Visa Refused
+
+👉 If not included → Avg time is WRONG
+
+🔥 FINAL CORRECT STRUCTURE
+1. Total Applications
+
+All records
+
+2. Active Workload
+
+Only:
+
+In Review
+GS Submitted
+On Hold
+Visa Lodged
+CoE Requested
+3. Completed
+GS Approved / Rejected
+Visa Granted / Refused
+Withdrawn
+✅ WHAT YOU MUST FIX (Developer Instruction)
+🔧 Backend Fix
+Add flag:
+is_completed = TRUE/FALSE
+Map statuses:
+COMPLETED:
+- GS Approved
+- GS Rejected
+- Visa Granted
+- Visa Refused
+- Withdrawn
+
+ACTIVE:
+- Rest
+🔧 Workload Query
+SELECT COUNT(*) 
+WHERE is_completed = FALSE
+GROUP BY staff
+🔧 GS Calculation Fix
+WHERE stage = 'GS'
+Include ALL GS statuses
+🔧 Avg Handling Time Fix
+WHERE is_completed = TRUE
+Calculate (completed_date - assigned_date)
+✅ FINAL VERDICT
+
+👉 Your dashboard is:
+
+❌ Overcounting workload
+❌ Missing GS totals
+❌ Wrong average time
