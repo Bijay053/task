@@ -347,7 +347,7 @@ export default function OfferApplications() {
             <Card className="p-4 flex flex-col sm:flex-row gap-4 bg-muted/30 shrink-0">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                <Input placeholder="Search by student name..." className="pl-10 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Input placeholder="Search by student name or App ID…" className="pl-10 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
               <div className="flex gap-4">
                 {viewMode === "table" && (

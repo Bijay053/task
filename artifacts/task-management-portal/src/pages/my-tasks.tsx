@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
-import { Card, Button, Modal, Label, Select, Textarea } from "@/components/ui-elements";
+import { Card, Button, Modal, Label, Select, Textarea, Input } from "@/components/ui-elements";
 import { KanbanBoard } from "@/components/kanban-board";
 import { useMyApplications, useListStatuses, useUpdateApplication, useGetMe } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { LayoutGrid, List, Edit2 } from "lucide-react";
+import { LayoutGrid, List, Edit2, Search } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ export default function MyTasks() {
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [dept, setDept] = useState<DeptTab>("gs");
+  const [search, setSearch] = useState("");
   const [editingApp, setEditingApp] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: currentUser } = useGetMe();
@@ -25,8 +26,16 @@ export default function MyTasks() {
   const { data: offerStatuses } = useListStatuses({ department: "offer" });
   const updateMut = useUpdateApplication();
 
-  const applications = dept === "gs" ? gsApps : offerApps;
+  const rawApplications = dept === "gs" ? gsApps : offerApps;
   const isLoading = dept === "gs" ? gsLoading : offerLoading;
+  const applications = search.trim()
+    ? rawApplications?.filter(app => {
+        const q = search.toLowerCase();
+        const name = (app.student?.full_name || (app as any).student_name || "").toLowerCase();
+        const appId = ((app as any).app_id || "").toLowerCase();
+        return name.includes(q) || appId.includes(q);
+      })
+    : rawApplications;
   const rawStatuses = dept === "gs" ? gsStatuses : offerStatuses;
   const statusChoices = rawStatuses?.map(s => s.name) || [];
   const statusColors: Record<string, { bg: string; text: string }> = {};
@@ -96,6 +105,17 @@ export default function MyTasks() {
               )}
             </button>
           ))}
+        </div>
+
+        {/* Search bar */}
+        <div className="relative shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search by student name or App ID…"
+            className="pl-9 bg-card"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
         {viewMode === "table" ? (

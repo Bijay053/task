@@ -174,7 +174,8 @@ def list_applications(
     if search:
         q = q.outerjoin(models.Student).filter(
             models.Student.full_name.ilike(f"%{search}%") |
-            models.Application.student_name.ilike(f"%{search}%")
+            models.Application.student_name.ilike(f"%{search}%") |
+            models.Application.app_id.ilike(f"%{search}%")
         )
     return q.order_by(models.Application.created_at.desc()).all()
 
