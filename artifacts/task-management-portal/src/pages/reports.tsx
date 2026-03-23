@@ -42,38 +42,37 @@ function displayStatus(status: string): string {
   return STATUS_DISPLAY[status] ?? status;
 }
 
-// Grouped status breakdown: defines display order + category labels
+// Grouped status breakdown: Active / Completed ✓ / Closed ✕ / Special
+// Groups are WORKFLOW-ORIENTED (not dept-oriented) so managers see open vs done instantly.
 const STATUS_GROUPS: { label: string; cls: string; statuses: string[] }[] = [
   {
-    label: "GS Stage",
+    // All statuses where work is still in progress (GS + CoE/Visa + Offer)
+    label: "Active",
     cls: "bg-amber-100 text-amber-800",
     statuses: [
       "In Review", "GS submitted", "GS onhold",
       "GS document pending", "GS additional document request",
-      "Refund Requested",
+      "CoE Requested", "Visa Lodged",
+      "Enquiries", "Offer Request", "Document Requested", "On Hold",
     ],
   },
   {
-    label: "CoE / Visa",
-    cls: "bg-blue-100 text-blue-800",
-    statuses: ["CoE Requested", "Visa Lodged", "CoE Approved", "Visa Granted", "Visa Refused"],
-  },
-  {
-    label: "GS Outcome",
+    // Positive final outcomes — case successfully closed
+    label: "Completed ✓",
     cls: "bg-green-100 text-green-800",
-    statuses: ["GS approved", "GS Rejected", "Withdrawn"],
+    statuses: ["GS approved", "CoE Approved", "Visa Granted", "Offer Received"],
   },
   {
-    // Active offer stages — awaiting action / institution response
-    label: "Offer — Active",
+    // Negative final outcomes — rejected, refused, or withdrawn
+    label: "Closed ✕",
+    cls: "bg-red-100 text-red-700",
+    statuses: ["GS Rejected", "Visa Refused", "Withdrawn", "Offer Rejected", "Not Eligible"],
+  },
+  {
+    // Edge cases that need special attention
+    label: "Special",
     cls: "bg-violet-100 text-violet-800",
-    statuses: ["Enquiries", "Offer Request", "Document Requested", "On Hold"],
-  },
-  {
-    // Completed offer stages — final decisions made
-    label: "Offer — Done",
-    cls: "bg-slate-100 text-slate-600",
-    statuses: ["Offer Received", "Offer Rejected", "Not Eligible"],
+    statuses: ["Refund Requested"],
   },
 ];
 
@@ -359,6 +358,7 @@ export default function Reports() {
               const totalApps = performance.reduce((s: number, p: any) => s + p.total_assigned, 0);
               const totalActive = performance.reduce((s: number, p: any) => s + p.active_count, 0);
               const totalCompleted = performance.reduce((s: number, p: any) => s + p.completed_count, 0);
+              const totalOther = performance.reduce((s: number, p: any) => s + (p.other_count ?? 0), 0);
               const totalWeighted = performance.reduce((s: number, p: any) => s + (p.weighted_workload ?? 0), 0);
 
               // Workload % bar: relative to the busiest staff member (dynamic max)
@@ -395,6 +395,10 @@ export default function Reports() {
                       <div>
                         <div className="text-2xl font-bold">{totalApps}</div>
                         <div className="text-sm text-muted-foreground">Total Applications</div>
+                        <div className="text-xs text-muted-foreground">
+                          {totalActive} active · {totalCompleted} completed
+                          {totalOther > 0 && <span className="text-amber-600"> · {totalOther} other</span>}
+                        </div>
                       </div>
                     </Card>
                     <Card className="p-5 flex items-center gap-4">

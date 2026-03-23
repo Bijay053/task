@@ -436,6 +436,7 @@ class StaffPerformance(BaseModel):
     total_assigned: int
     active_count: int
     completed_count: int
+    other_count: int = 0         # apps with unrecognised/null status (total - active - completed)
     gs_count: int
     offer_count: int
     status_breakdown: dict

@@ -140,6 +140,8 @@ def performance_report(
         for app in apps:
             breakdown[app.application_status] = breakdown.get(app.application_status, 0) + 1
 
+        other_count = max(0, len(apps) - active_count - completed_count)
+
         result.append(schemas.StaffPerformance(
             user_id=user.id,
             full_name=user.full_name,
@@ -147,6 +149,7 @@ def performance_report(
             total_assigned=len(apps),
             active_count=active_count,
             completed_count=completed_count,
+            other_count=other_count,
             gs_count=gs_count,
             offer_count=offer_count,
             status_breakdown=breakdown,
