@@ -310,8 +310,8 @@ export default function OfferApplications() {
                 </div>
                 <BulkUploadButton department="offer" />
                 {canEdit("offer") && <Button size="lg" onClick={handleOpenCreate}><Plus className="w-5 h-5 mr-2" />New Offer App</Button>}
-                <button onClick={toggleHeader} title="Minimize header" className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-                  <ChevronUp className="w-4 h-4" />
+                <button onClick={toggleHeader} title="Minimize header" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground text-xs font-medium">
+                  <ChevronUp className="w-3.5 h-3.5" />Minimize
                 </button>
               </div>
             </div>
