@@ -323,21 +323,48 @@ def stage_analysis(
     _: models.User = Depends(require_manager),
 ):
     """
-    Stage-wise time analysis: for each status/stage, compute average, min, max time
-    applications spend in that stage, using ActivityLog status change events.
-    Optionally filter by assigned staff (user_id) and date range.
+    Stage-wise time analysis.
 
-    Only statuses relevant to the selected department are included.
+    KEY DISTINCTION:
+      • ACTIVE STAGES  = process steps where apps can still be "currently here"
+      • OUTCOME STATUSES = final results (app has left the active pipeline)
+
+    GS active stages:   In Review, GS submitted, GS onhold,
+                        GS document pending, GS additional document request
+    GS outcomes:        GS approved, GS Rejected
+
+    Offer active stages: Enquiries, Document Requested, On Hold, Offer Request
+    Offer outcomes:      Offer Received, Offer Rejected, Not Eligible
+
+    "Currently Here" count = only apps whose current status is an active stage.
+    "Avg Time in Stage"    = exit_time - entry_time for apps that left the stage,
+                             + (now - entry_time) for apps still in an active stage.
+                             Outcomes only record the time spent before reaching them
+                             (no ongoing timer after decision).
+    Bottleneck             = highest avg_days among ACTIVE stages only.
     """
     now = datetime.utcnow()
     dt_from = _parse_date(date_from)
     dt_to = _parse_date(date_to)
 
-    valid_statuses = GS_ALL_STATUSES if department == "gs" else OFFER_ALL_STATUSES
+    dept = department if department in ("gs", "offer") else "gs"
 
+    # ── Stage/outcome split ────────────────────────────────────────────────────
+    if dept == "gs":
+        active_stages = {
+            "In Review", "GS submitted", "GS onhold",
+            "GS document pending", "GS additional document request",
+        }
+        outcome_statuses = {"GS approved", "GS Rejected"}
+    else:
+        active_stages = {"Enquiries", "Document Requested", "On Hold", "Offer Request"}
+        outcome_statuses = {"Offer Received", "Offer Rejected", "Not Eligible"}
+
+    all_relevant = active_stages | outcome_statuses
+
+    # ── Query ALL department apps (so we capture full traversal history) ───────
     q = db.query(models.Application).filter(
-        models.Application.department == department,
-        models.Application.application_status.in_(list(valid_statuses)),
+        models.Application.department == dept,
     )
     if user_id:
         q = q.filter(models.Application.assigned_to_id == user_id)
@@ -367,57 +394,74 @@ def stage_analysis(
     for log in status_logs:
         logs_by_app.setdefault(log.application_id, []).append(log)
 
+    # stage_durations[status] = list of days spent in that status
     stage_durations: dict = {}
-    current_stages: dict = {}
+    # transitions[status] = count of apps that passed through (or are in) that status
+    transitions: dict = {}
+    # currently_here[status] = count of apps currently in that active stage
+    currently_here: dict = {}
 
     for app in apps:
         logs = logs_by_app.get(app.id, [])
+        current_status = app.application_status
 
-        current_stage = app.application_status
-        current_stages[current_stage] = current_stages.get(current_stage, 0) + 1
+        # Count "currently here" only for active stages
+        if current_status in active_stages:
+            currently_here[current_status] = currently_here.get(current_status, 0) + 1
 
         if logs:
+            # ── Stage 0: initial status before first logged change ─────────────
             init_status = logs[0].old_value
-            if init_status and init_status in valid_statuses:
-                init_days = (logs[0].changed_at - app.created_at).total_seconds() / 86400
-                stage_durations.setdefault(init_status, []).append(max(0, init_days))
+            if init_status and init_status in all_relevant:
+                duration = (logs[0].changed_at - app.created_at).total_seconds() / 86400
+                stage_durations.setdefault(init_status, []).append(max(0, duration))
+                transitions[init_status] = transitions.get(init_status, 0) + 1
 
+            # ── Middle stages: exited stages (clean exit → entry time known) ───
             for i in range(len(logs) - 1):
                 from_status = logs[i].new_value
-                if from_status and from_status in valid_statuses:
-                    days_in = (logs[i + 1].changed_at - logs[i].changed_at).total_seconds() / 86400
-                    stage_durations.setdefault(from_status, []).append(max(0, days_in))
+                if from_status and from_status in all_relevant:
+                    duration = (logs[i + 1].changed_at - logs[i].changed_at).total_seconds() / 86400
+                    stage_durations.setdefault(from_status, []).append(max(0, duration))
+                    transitions[from_status] = transitions.get(from_status, 0) + 1
 
-            current = logs[-1].new_value
-            if current and current in valid_statuses:
-                days_in = (now - logs[-1].changed_at).total_seconds() / 86400
-                stage_durations.setdefault(current, []).append(max(0, days_in))
+            # ── Current (last) stage ───────────────────────────────────────────
+            current_log_status = logs[-1].new_value
+            if current_log_status and current_log_status in all_relevant:
+                if current_log_status in active_stages:
+                    # Still active: timer is ongoing → use now
+                    duration = (now - logs[-1].changed_at).total_seconds() / 86400
+                    stage_durations.setdefault(current_log_status, []).append(max(0, duration))
+                else:
+                    # Outcome reached: timer stopped when this status was set
+                    # The last logs[i+1] loop above already recorded the time;
+                    # but the very last log (the outcome) has no exit event.
+                    # Record it as 0 (instantaneous outcome — no "time in outcome")
+                    pass
+                transitions[current_log_status] = transitions.get(current_log_status, 0) + 1
         else:
-            days = (now - app.created_at).total_seconds() / 86400
-            stage_durations.setdefault(app.application_status, []).append(max(0, days))
+            # No logs yet — app is sitting in its initial status
+            if current_status in active_stages:
+                duration = (now - app.created_at).total_seconds() / 86400
+                stage_durations.setdefault(current_status, []).append(max(0, duration))
+                transitions[current_status] = transitions.get(current_status, 0) + 1
 
-    known_statuses = [
-        s.name for s in db.query(models.AppStatus).filter(
-            models.AppStatus.department == department,
-            models.AppStatus.is_active == True,
-        ).order_by(models.AppStatus.sort_order).all()
-    ]
-
-    all_statuses = list(dict.fromkeys(known_statuses + list(stage_durations.keys()) + list(current_stages.keys())))
-    # Only keep statuses valid for this department
-    all_statuses = [s for s in all_statuses if s in valid_statuses]
+    # ── Build ordered list: active stages first, then outcomes ─────────────────
+    ordered_stages = list(active_stages) + list(outcome_statuses)
 
     result = []
-    for status in all_statuses:
+    for status in ordered_stages:
         durations = stage_durations.get(status, [])
+        is_active = status in active_stages
         result.append(schemas.StageReport(
             status=status,
-            department=department,
-            total_transitions=len(durations),
+            department=dept,
+            is_active_stage=is_active,
+            total_transitions=transitions.get(status, 0),
             avg_days=round(sum(durations) / len(durations), 1) if durations else None,
             min_days=round(min(durations), 1) if durations else None,
             max_days=round(max(durations), 1) if durations else None,
-            currently_in_stage=current_stages.get(status, 0),
+            currently_in_stage=currently_here.get(status, 0),
         ))
 
     return result

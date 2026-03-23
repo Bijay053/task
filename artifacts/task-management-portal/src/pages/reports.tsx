@@ -427,100 +427,133 @@ export default function Reports() {
         {/* ── Stage Analysis ── */}
         {reportTab === "stages" && (
           <>
-            {stageData && stageData.length > 0 && (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><Layers className="w-6 h-6 text-blue-600" /></div>
-                  <div><div className="text-2xl font-bold">{stageData.length}</div><div className="text-sm text-muted-foreground">Total Stages</div></div>
-                </Card>
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0"><AlertTriangle className="w-6 h-6 text-amber-600" /></div>
-                  <div>
-                    <div className="text-2xl font-bold">{fmtDays(Math.max(...stageData.map((s: any) => s.avg_days ?? 0)))}</div>
-                    <div className="text-sm text-muted-foreground">Longest Avg Stage</div>
+            {stageData && stageData.length > 0 && (() => {
+              const activeStages = stageData.filter((s: any) => s.is_active_stage);
+              const outcomeStatuses = stageData.filter((s: any) => !s.is_active_stage);
+              const bottleneck = [...activeStages].sort((a: any, b: any) => (b.avg_days ?? 0) - (a.avg_days ?? 0))[0];
+              const maxActiveAvg = Math.max(1, ...activeStages.map((s: any) => s.avg_days ?? 0));
+              const totalCurrently = activeStages.reduce((s: number, x: any) => s + x.currently_in_stage, 0);
+
+              return (
+                <>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><Layers className="w-6 h-6 text-blue-600" /></div>
+                      <div><div className="text-2xl font-bold">{activeStages.length}</div><div className="text-sm text-muted-foreground">Active Process Stages</div></div>
+                    </Card>
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0"><AlertTriangle className="w-6 h-6 text-amber-600" /></div>
+                      <div>
+                        <div className="text-2xl font-bold">{fmtDays(Math.max(...activeStages.map((s: any) => s.avg_days ?? 0)))}</div>
+                        <div className="text-sm text-muted-foreground">Longest Avg Stage</div>
+                      </div>
+                    </Card>
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Users className="w-6 h-6 text-primary" /></div>
+                      <div>
+                        <div className="text-2xl font-bold">{totalCurrently}</div>
+                        <div className="text-sm text-muted-foreground">Currently in Pipeline</div>
+                      </div>
+                    </Card>
+                    <Card className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><Timer className="w-6 h-6 text-red-500" /></div>
+                      <div>
+                        {bottleneck ? (
+                          <>
+                            <div className="text-sm font-bold leading-tight">{bottleneck.status}</div>
+                            <div className="text-xs text-muted-foreground">{bottleneck.currently_in_stage} apps · {fmtDays(bottleneck.avg_days)} avg</div>
+                          </>
+                        ) : <div className="text-sm font-bold">—</div>}
+                        <div className="text-xs text-muted-foreground mt-0.5">Biggest Bottleneck</div>
+                      </div>
+                    </Card>
                   </div>
-                </Card>
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 className="w-6 h-6 text-green-600" /></div>
-                  <div>
-                    <div className="text-2xl font-bold">{stageData.reduce((s: number, x: any) => s + x.currently_in_stage, 0)}</div>
-                    <div className="text-sm text-muted-foreground">Apps in Stages</div>
-                  </div>
-                </Card>
-                <Card className="p-5 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center shrink-0"><Timer className="w-6 h-6 text-red-500" /></div>
-                  <div>
-                    {(() => {
-                      const bottleneck = [...stageData].sort((a: any, b: any) => {
-                        const scoreB = (b.avg_days ?? 0) * b.currently_in_stage;
-                        const scoreA = (a.avg_days ?? 0) * a.currently_in_stage;
-                        if (scoreB !== scoreA) return scoreB - scoreA;
-                        return b.currently_in_stage - a.currently_in_stage;
-                      })[0];
-                      return bottleneck ? (
-                        <>
-                          <div className="text-sm font-bold">{bottleneck.status}</div>
-                          <div className="text-xs text-muted-foreground">{bottleneck.currently_in_stage} apps · {fmtDays(bottleneck.avg_days)} avg</div>
-                        </>
-                      ) : <div className="text-sm font-bold">—</div>;
-                    })()}
-                    <div className="text-sm text-muted-foreground mt-0.5">Biggest Bottleneck</div>
-                  </div>
-                </Card>
-              </div>
-            )}
-            <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
-              <div className="table-container flex-1 h-full border-0 rounded-none">
-                <table className="spreadsheet-table w-full">
-                  <thead>
-                    <tr>
-                      <th>Stage / Status</th>
-                      <th className="text-center">Currently Here</th>
-                      <th className="text-center">Transitions</th>
-                      <th style={{ minWidth: "220px" }}>Avg Time in Stage</th>
-                      <th className="text-center">Min</th>
-                      <th className="text-center">Max</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stageLoading ? (
-                      <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Loading stage data...</td></tr>
-                    ) : stageData?.length === 0 ? (
-                      <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No stage data. Status changes will populate this as applications move through stages.</td></tr>
-                    ) : (
-                      [...(stageData || [])].sort((a: any, b: any) => (b.avg_days ?? 0) - (a.avg_days ?? 0)).map((stage: any) => {
-                        const isBottleneck = (stage.avg_days ?? 0) >= maxStageDays * 0.75;
-                        return (
-                          <tr key={stage.status} className="align-middle">
-                            <td>
-                              <div className="flex items-center gap-2">
-                                {isBottleneck && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-                                <span className="font-semibold">{stage.status}</span>
-                              </div>
-                            </td>
-                            <td className="text-center">
-                              <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-semibold", stage.currently_in_stage > 0 ? "bg-blue-100 text-blue-700" : "bg-muted text-muted-foreground")}>
-                                {stage.currently_in_stage}
-                              </span>
-                            </td>
-                            <td className="text-center text-muted-foreground">{stage.total_transitions}</td>
-                            <td>
-                              <DaysBar
-                                days={stage.avg_days}
-                                max={maxStageDays}
-                                color={isBottleneck ? "bg-red-400" : "bg-primary"}
-                              />
-                            </td>
-                            <td className="text-center text-sm text-muted-foreground">{fmtDays(stage.min_days)}</td>
-                            <td className="text-center text-sm text-muted-foreground">{fmtDays(stage.max_days)}</td>
+
+                  <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
+                    <div className="table-container flex-1 h-full border-0 rounded-none">
+                      <table className="spreadsheet-table w-full">
+                        <thead>
+                          <tr>
+                            <th>Process Stage</th>
+                            <th className="text-center">Currently Here</th>
+                            <th className="text-center">Apps Passed Through</th>
+                            <th style={{ minWidth: "240px" }}>Avg Time in Stage</th>
+                            <th className="text-center">Min</th>
+                            <th className="text-center">Max</th>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                        </thead>
+                        <tbody>
+                          {stageLoading ? (
+                            <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Loading stage data...</td></tr>
+                          ) : activeStages.length === 0 ? (
+                            <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">No stage data yet. Status changes will populate this as applications move through stages.</td></tr>
+                          ) : (
+                            <>
+                              {/* ── Active process stages (sorted by avg time desc) ── */}
+                              {[...activeStages].sort((a: any, b: any) => (b.avg_days ?? 0) - (a.avg_days ?? 0)).map((stage: any) => {
+                                const isBottleneck = bottleneck?.status === stage.status;
+                                return (
+                                  <tr key={stage.status} className="align-middle">
+                                    <td>
+                                      <div className="flex items-center gap-2">
+                                        {isBottleneck && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                                        <span className="font-semibold">{stage.status}</span>
+                                      </div>
+                                    </td>
+                                    <td className="text-center">
+                                      <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-semibold", stage.currently_in_stage > 0 ? "bg-blue-100 text-blue-700" : "bg-muted text-muted-foreground")}>
+                                        {stage.currently_in_stage}
+                                      </span>
+                                    </td>
+                                    <td className="text-center text-muted-foreground">{stage.total_transitions}</td>
+                                    <td>
+                                      <DaysBar
+                                        days={stage.avg_days}
+                                        max={maxActiveAvg}
+                                        color={isBottleneck ? "bg-red-400" : "bg-primary"}
+                                      />
+                                    </td>
+                                    <td className="text-center text-sm text-muted-foreground">{fmtDays(stage.min_days)}</td>
+                                    <td className="text-center text-sm text-muted-foreground">{fmtDays(stage.max_days)}</td>
+                                  </tr>
+                                );
+                              })}
+                              {/* ── Outcome statuses separator ── */}
+                              {outcomeStatuses.length > 0 && (
+                                <>
+                                  <tr>
+                                    <td colSpan={6} className="py-1 px-3 bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-t border-b">
+                                      Final Outcomes (not active stages)
+                                    </td>
+                                  </tr>
+                                  {outcomeStatuses.map((stage: any) => (
+                                    <tr key={stage.status} className="align-middle opacity-75">
+                                      <td>
+                                        <div className="flex items-center gap-2">
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                                          <span className="font-medium text-muted-foreground">{stage.status}</span>
+                                        </div>
+                                      </td>
+                                      <td className="text-center">
+                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">—</span>
+                                      </td>
+                                      <td className="text-center text-muted-foreground">{stage.total_transitions}</td>
+                                      <td><span className="text-xs text-muted-foreground italic">No active timer (final state)</span></td>
+                                      <td className="text-center text-sm text-muted-foreground">—</td>
+                                      <td className="text-center text-sm text-muted-foreground">—</td>
+                                    </tr>
+                                  ))}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                </>
+              );
+            })()}
           </>
         )}
       </div>

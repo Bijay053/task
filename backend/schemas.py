@@ -457,6 +457,7 @@ class StaffTimingReport(BaseModel):
 class StageReport(BaseModel):
     status: str
     department: str
+    is_active_stage: bool = True
     total_transitions: int
     avg_days: Optional[float]
     min_days: Optional[float]
