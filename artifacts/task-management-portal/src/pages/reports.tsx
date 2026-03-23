@@ -33,6 +33,15 @@ function statusBadgeCls(status: string): string {
   return "bg-muted text-muted-foreground";
 }
 
+// ─── Display-name aliases (UI only — DB values never change) ────────────────
+const STATUS_DISPLAY: Record<string, string> = {
+  "Offer Request":      "Offer Requested",
+  "Document Requested": "Docs Pending",
+};
+function displayStatus(status: string): string {
+  return STATUS_DISPLAY[status] ?? status;
+}
+
 // Grouped status breakdown: defines display order + category labels
 const STATUS_GROUPS: { label: string; cls: string; statuses: string[] }[] = [
   {
@@ -55,9 +64,16 @@ const STATUS_GROUPS: { label: string; cls: string; statuses: string[] }[] = [
     statuses: ["GS approved", "GS Rejected", "Withdrawn"],
   },
   {
-    label: "Offer",
+    // Active offer stages — awaiting action / institution response
+    label: "Offer — Active",
     cls: "bg-violet-100 text-violet-800",
-    statuses: ["Enquiries", "Offer Request", "Document Requested", "On Hold", "Offer Received", "Offer Rejected", "Not Eligible"],
+    statuses: ["Enquiries", "Offer Request", "Document Requested", "On Hold"],
+  },
+  {
+    // Completed offer stages — final decisions made
+    label: "Offer — Done",
+    cls: "bg-slate-100 text-slate-600",
+    statuses: ["Offer Received", "Offer Rejected", "Not Eligible"],
   },
 ];
 
@@ -78,7 +94,7 @@ function GroupedBreakdown({ breakdown }: { breakdown: Record<string, number> }) 
         </span>
         {items.map(({ status, count }) => (
           <span key={status} className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs", statusBadgeCls(status))}>
-            <span>{status}</span>
+            <span>{displayStatus(status)}</span>
             <span className="font-bold">{count}</span>
           </span>
         ))}
@@ -95,7 +111,7 @@ function GroupedBreakdown({ breakdown }: { breakdown: Record<string, number> }) 
         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0 bg-slate-100 text-slate-600">Other</span>
         {leftover.map(([status, count]) => (
           <span key={status} className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs", statusBadgeCls(status))}>
-            <span>{status}</span>
+            <span>{displayStatus(status)}</span>
             <span className="font-bold">{count}</span>
           </span>
         ))}
