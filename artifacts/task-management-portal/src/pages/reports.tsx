@@ -405,8 +405,12 @@ export default function Reports() {
                       <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0"><AlertTriangle className="w-6 h-6 text-orange-600" /></div>
                       <div>
                         <div className="text-2xl font-bold text-orange-700">{totalActive}</div>
-                        <div className="text-sm text-muted-foreground">Active (in-progress)</div>
-                        <div className="text-xs text-muted-foreground">excludes completed</div>
+                        <div className="text-sm text-muted-foreground">Active Workload</div>
+                        <div className="text-xs text-muted-foreground">
+                          {totalApps > 0
+                            ? `${Math.round((totalActive / totalApps) * 100)}% of total applications`
+                            : "excludes completed"}
+                        </div>
                       </div>
                     </Card>
                     <Card className="p-5 flex items-center gap-4">
