@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { usePermissions } from "@/lib/permission-context";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -13,7 +13,7 @@ import { ApplicationHistory } from "@/components/application-history";
 import { KanbanBoard } from "@/components/kanban-board";
 import { TableScrollWrapper } from "@/components/table-scroll-wrapper";
 import { BulkUploadButton } from "@/components/bulk-upload-button";
-import { Search, Plus, FileEdit, LayoutGrid, List, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Plus, FileEdit, LayoutGrid, List, Trash2, ChevronDown, ChevronUp, Filter, X } from "lucide-react";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -96,6 +96,13 @@ export default function GsApplications() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState<number | "">("");
+  const [agentFilter, setAgentFilter] = useState<number | "">("");
+  const [universityFilter, setUniversityFilter] = useState("");
+  const [intakeFilter, setIntakeFilter] = useState("");
+  const [courseFilter, setCourseFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -129,7 +136,28 @@ export default function GsApplications() {
     search: search || undefined,
     status: statusFilter || undefined,
     assigned_to_id: assigneeFilter ? Number(assigneeFilter) : undefined,
+    agent_id: agentFilter ? Number(agentFilter) : undefined,
   });
+
+  const uniqueUniversities = useMemo(() =>
+    [...new Set((applications || []).map((a: any) => a.university?.name || a.university_name).filter(Boolean))].sort() as string[]
+  , [applications]);
+  const uniqueIntakes = useMemo(() =>
+    [...new Set((applications || []).map((a: any) => a.intake).filter(Boolean))].sort() as string[]
+  , [applications]);
+
+  const filteredApplications = useMemo(() => {
+    let apps: any[] = applications || [];
+    if (universityFilter) apps = apps.filter((a: any) => (a.university?.name || a.university_name || "").toLowerCase().includes(universityFilter.toLowerCase()));
+    if (intakeFilter) apps = apps.filter((a: any) => (a.intake || "").toLowerCase() === intakeFilter.toLowerCase());
+    if (courseFilter) apps = apps.filter((a: any) => (a.course || "").toLowerCase().includes(courseFilter.toLowerCase()));
+    if (dateFrom) apps = apps.filter((a: any) => { const d = (a.created_at || "").split("T")[0]; return d >= dateFrom; });
+    if (dateTo) apps = apps.filter((a: any) => { const d = (a.created_at || "").split("T")[0]; return d <= dateTo; });
+    return apps;
+  }, [applications, universityFilter, intakeFilter, courseFilter, dateFrom, dateTo]);
+
+  const advancedFilterCount = [universityFilter, intakeFilter, courseFilter, dateFrom, dateTo].filter(Boolean).length;
+  const clearAdvancedFilters = () => { setUniversityFilter(""); setIntakeFilter(""); setCourseFilter(""); setDateFrom(""); setDateTo(""); };
 
   const { data: statuses } = useListStatuses({ department: "gs" });
   const { data: users } = useListUsers();
@@ -175,10 +203,10 @@ export default function GsApplications() {
     });
   };
   const toggleSelectAll = () => {
-    if (applications && selectedIds.size === applications.length) {
+    if (filteredApplications.length > 0 && selectedIds.size === filteredApplications.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(applications?.map((a: any) => a.id) || []));
+      setSelectedIds(new Set(filteredApplications.map((a: any) => a.id)));
     }
   };
   const handleBulkDelete = async () => {
@@ -381,29 +409,78 @@ export default function GsApplications() {
                 ))}
               </div>
             )}
-            <Card className="p-4 flex flex-col sm:flex-row gap-4 bg-muted/30 shrink-0">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                <Input placeholder="Search by student name or App ID…" className="pl-10 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
-              </div>
-              <div className="flex gap-4">
-                {viewMode === "table" && (
-                  <div className="min-w-[180px]">
-                    <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-card">
+            <Card className="p-3 flex flex-col gap-3 bg-muted/30 shrink-0">
+              {/* Row 1: search + status + assignee + agent + more-filters toggle */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                  <Input placeholder="Search by student name or App ID…" className="pl-10 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
+                </div>
+                <div className="flex flex-wrap gap-3 items-center">
+                  {viewMode === "table" && (
+                    <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-card min-w-[150px]">
                       <option value="">All Statuses</option>
                       {statusChoices.map(s => <option key={s} value={s}>{s}</option>)}
                     </Select>
-                  </div>
-                )}
-                {(canViewAllUsers("gs") || canViewMappedUsers("gs")) && (
-                  <div className="min-w-[180px]">
-                    <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="bg-card">
+                  )}
+                  {(canViewAllUsers("gs") || canViewMappedUsers("gs")) && (
+                    <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="bg-card min-w-[150px]">
                       <option value="">{canViewAllUsers("gs") ? "All Assignees" : "My Team"}</option>
                       {(canViewAllUsers("gs") ? users : myTeamUsers)?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                     </Select>
-                  </div>
-                )}
+                  )}
+                  <Select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value as any)} className="bg-card min-w-[150px]">
+                    <option value="">All Agents</option>
+                    {agents?.map(a => <option key={a.id} value={a.id}>{a.name}{a.company_name ? ` (${a.company_name})` : ""}</option>)}
+                  </Select>
+                  <button
+                    onClick={() => setShowMoreFilters(v => !v)}
+                    className={cn("flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors", showMoreFilters ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/50")}
+                  >
+                    <Filter className="w-4 h-4" />
+                    Filters
+                    {advancedFilterCount > 0 && (
+                      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white/20 text-xs font-bold">{advancedFilterCount}</span>
+                    )}
+                  </button>
+                </div>
               </div>
+              {/* Row 2: advanced filters (collapsible) */}
+              {showMoreFilters && (
+                <div className="flex flex-wrap gap-3 items-end pt-2 border-t border-border">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">Date From</label>
+                    <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-card w-[150px]" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">Date To</label>
+                    <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-card w-[150px]" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">University</label>
+                    <Select value={universityFilter} onChange={e => setUniversityFilter(e.target.value)} className="bg-card min-w-[180px]">
+                      <option value="">All Universities</option>
+                      {uniqueUniversities.map(u => <option key={u} value={u}>{u}</option>)}
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">Intake</label>
+                    <Select value={intakeFilter} onChange={e => setIntakeFilter(e.target.value)} className="bg-card min-w-[140px]">
+                      <option value="">All Intakes</option>
+                      {uniqueIntakes.map(i => <option key={i} value={i}>{i}</option>)}
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">Course</label>
+                    <Input value={courseFilter} onChange={e => setCourseFilter(e.target.value)} placeholder="Filter by course…" className="bg-card min-w-[160px]" />
+                  </div>
+                  {advancedFilterCount > 0 && (
+                    <button onClick={clearAdvancedFilters} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-destructive/40 text-xs text-destructive hover:bg-destructive/5 transition-colors font-medium">
+                      <X className="w-3.5 h-3.5" />Clear
+                    </button>
+                  )}
+                </div>
+              )}
             </Card>
           </>
         )}
@@ -439,7 +516,7 @@ export default function GsApplications() {
                       <th className="w-10 text-center">
                         <input
                           type="checkbox"
-                          checked={!!applications && applications.length > 0 && selectedIds.size === applications.length}
+                          checked={filteredApplications.length > 0 && selectedIds.size === filteredApplications.length}
                           onChange={toggleSelectAll}
                           className="w-4 h-4 rounded cursor-pointer accent-destructive"
                         />
@@ -464,10 +541,10 @@ export default function GsApplications() {
                 <tbody className="align-top">
                   {isLoading ? (
                     <tr><td colSpan={canDelete("gs") ? 15 : 14} className="text-center py-12 text-muted-foreground">Loading...</td></tr>
-                  ) : applications?.length === 0 ? (
+                  ) : filteredApplications.length === 0 ? (
                     <tr><td colSpan={canDelete("gs") ? 15 : 14} className="text-center py-12 text-muted-foreground">No GS applications found.</td></tr>
                   ) : (
-                    applications?.map(app => (
+                    filteredApplications.map((app: any) => (
                       <tr key={app.id} className={cn("group", canEdit("gs") ? "cursor-pointer" : "cursor-default", selectedIds.has(app.id) ? "bg-destructive/5" : "")} onClick={() => canEdit("gs") && handleOpenEdit(app)}>
                         {canDelete("gs") && (
                           <td className="text-center" onClick={e => e.stopPropagation()}>
