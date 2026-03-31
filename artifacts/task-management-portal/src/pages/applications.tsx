@@ -409,76 +409,105 @@ export default function GsApplications() {
                 ))}
               </div>
             )}
-            <Card className="p-3 flex flex-col gap-3 bg-muted/30 shrink-0">
-              {/* Row 1: search + status + assignee + agent + more-filters toggle */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                  <Input placeholder="Search by student name or App ID…" className="pl-10 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Card className="p-0 overflow-hidden bg-muted/30 shrink-0">
+              {/* ── Row 1: always-visible filter bar ── */}
+              <div className="flex items-center gap-0 overflow-x-auto">
+                {/* Search */}
+                <div className="relative flex-1 min-w-[200px] border-r border-border">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
+                  <input
+                    className="w-full h-10 pl-9 pr-3 bg-card text-sm outline-none placeholder:text-muted-foreground/60"
+                    placeholder="Search by student name or App ID…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
                 </div>
-                <div className="flex flex-wrap gap-3 items-center">
-                  {viewMode === "table" && (
-                    <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-card min-w-[150px]">
+                {/* Status */}
+                {viewMode === "table" && (
+                  <div className="border-r border-border shrink-0">
+                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 px-3 bg-card text-sm outline-none appearance-none cursor-pointer min-w-[130px] text-muted-foreground">
                       <option value="">All Statuses</option>
                       {statusChoices.map(s => <option key={s} value={s}>{s}</option>)}
-                    </Select>
-                  )}
-                  {(canViewAllUsers("gs") || canViewMappedUsers("gs")) && (
-                    <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="bg-card min-w-[150px]">
+                    </select>
+                  </div>
+                )}
+                {/* Assignee */}
+                {(canViewAllUsers("gs") || canViewMappedUsers("gs")) && (
+                  <div className="border-r border-border shrink-0">
+                    <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value as any)} className="h-10 px-3 bg-card text-sm outline-none appearance-none cursor-pointer min-w-[130px] text-muted-foreground">
                       <option value="">{canViewAllUsers("gs") ? "All Assignees" : "My Team"}</option>
                       {(canViewAllUsers("gs") ? users : myTeamUsers)?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
-                    </Select>
-                  )}
-                  <Select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value as any)} className="bg-card min-w-[150px]">
+                    </select>
+                  </div>
+                )}
+                {/* Agent */}
+                <div className="border-r border-border shrink-0">
+                  <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value as any)} className="h-10 px-3 bg-card text-sm outline-none appearance-none cursor-pointer min-w-[120px] text-muted-foreground">
                     <option value="">All Agents</option>
                     {agents?.map(a => <option key={a.id} value={a.id}>{a.name}{a.company_name ? ` (${a.company_name})` : ""}</option>)}
-                  </Select>
-                  <button
-                    onClick={() => setShowMoreFilters(v => !v)}
-                    className={cn("flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors", showMoreFilters ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/50")}
-                  >
-                    <Filter className="w-4 h-4" />
-                    Filters
-                    {advancedFilterCount > 0 && (
-                      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white/20 text-xs font-bold">{advancedFilterCount}</span>
-                    )}
-                  </button>
+                  </select>
                 </div>
-              </div>
-              {/* Row 2: advanced filters (collapsible) */}
-              {showMoreFilters && (
-                <div className="flex flex-wrap gap-3 items-end pt-2 border-t border-border">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-muted-foreground">Date From</label>
-                    <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-card w-[150px]" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-muted-foreground">Date To</label>
-                    <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-card w-[150px]" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-muted-foreground">University</label>
-                    <Select value={universityFilter} onChange={e => setUniversityFilter(e.target.value)} className="bg-card min-w-[180px]">
-                      <option value="">All Universities</option>
-                      {uniqueUniversities.map(u => <option key={u} value={u}>{u}</option>)}
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-muted-foreground">Intake</label>
-                    <Select value={intakeFilter} onChange={e => setIntakeFilter(e.target.value)} className="bg-card min-w-[140px]">
-                      <option value="">All Intakes</option>
-                      {uniqueIntakes.map(i => <option key={i} value={i}>{i}</option>)}
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-muted-foreground">Course</label>
-                    <Input value={courseFilter} onChange={e => setCourseFilter(e.target.value)} placeholder="Filter by course…" className="bg-card min-w-[160px]" />
-                  </div>
+                {/* More filters toggle */}
+                <button
+                  onClick={() => setShowMoreFilters(v => !v)}
+                  className={cn("h-10 flex items-center gap-2 px-4 text-sm font-medium shrink-0 transition-colors whitespace-nowrap", showMoreFilters ? "bg-primary/10 text-primary" : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50")}
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  More Filters
                   {advancedFilterCount > 0 && (
-                    <button onClick={clearAdvancedFilters} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-destructive/40 text-xs text-destructive hover:bg-destructive/5 transition-colors font-medium">
-                      <X className="w-3.5 h-3.5" />Clear
-                    </button>
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold">{advancedFilterCount}</span>
                   )}
+                </button>
+              </div>
+
+              {/* ── Row 2: expanded advanced filters ── */}
+              {showMoreFilters && (
+                <div className="border-t border-border bg-muted/20 px-4 py-3">
+                  <div className="flex flex-wrap gap-x-6 gap-y-3 items-end">
+                    {/* Date range group */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date Range</label>
+                      <div className="flex items-center gap-2">
+                        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                          className="h-8 px-2 rounded border border-border bg-card text-sm outline-none focus:ring-1 focus:ring-primary/40 w-[140px]" />
+                        <span className="text-muted-foreground text-xs font-medium">→</span>
+                        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                          className="h-8 px-2 rounded border border-border bg-card text-sm outline-none focus:ring-1 focus:ring-primary/40 w-[140px]" />
+                      </div>
+                    </div>
+                    {/* University */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">University</label>
+                      <select value={universityFilter} onChange={e => setUniversityFilter(e.target.value)}
+                        className="h-8 px-2 rounded border border-border bg-card text-sm outline-none cursor-pointer focus:ring-1 focus:ring-primary/40 min-w-[180px]">
+                        <option value="">All Universities</option>
+                        {uniqueUniversities.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                    {/* Intake */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Intake</label>
+                      <select value={intakeFilter} onChange={e => setIntakeFilter(e.target.value)}
+                        className="h-8 px-2 rounded border border-border bg-card text-sm outline-none cursor-pointer focus:ring-1 focus:ring-primary/40 min-w-[130px]">
+                        <option value="">All Intakes</option>
+                        {uniqueIntakes.map(i => <option key={i} value={i}>{i}</option>)}
+                      </select>
+                    </div>
+                    {/* Course */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Course</label>
+                      <input value={courseFilter} onChange={e => setCourseFilter(e.target.value)}
+                        placeholder="Type to filter…"
+                        className="h-8 px-2 rounded border border-border bg-card text-sm outline-none focus:ring-1 focus:ring-primary/40 min-w-[160px]" />
+                    </div>
+                    {/* Clear */}
+                    {advancedFilterCount > 0 && (
+                      <button onClick={clearAdvancedFilters}
+                        className="h-8 flex items-center gap-1.5 px-3 rounded border border-destructive/40 text-xs text-destructive hover:bg-destructive/5 transition-colors font-medium shrink-0">
+                        <X className="w-3 h-3" />Clear filters
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </Card>
